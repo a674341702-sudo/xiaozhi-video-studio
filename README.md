@@ -1,177 +1,66 @@
-# Viz — First Local Video Editor
+# 小智一键视频工坊
 
-Viz: the first local video editor for free. No server, no backend, no data leaves your machine. A fully client-side video editor that runs entirely in your browser.
+面向手机和电脑浏览器的视频制作项目，目标是将产品宣传视频与 AI 漫剧制作整合到同一套自动化工作流中。
 
-Developed by **[Zrnge](https://zrnge.com/viz)** — [github.com/zrnge/viz](https://github.com/zrnge/viz).
+> 当前仓库基于开源项目 Viz 二次开发。原作者与上游项目：**[Zrnge](https://zrnge.com/viz)** · [github.com/zrnge/viz](https://github.com/zrnge/viz)。请保留原项目 MIT License 与版权声明。
 
-[![Try it for free now](https://img.shields.io/badge/Try_it_for_free_now-8b5cf6?style=for-the-badge&logo=rocket&logoColor=white)](https://zrnge.com/viz/)
+## 产品方向
 
-Built with **Vanilla JS**, **Vite**, and **[ffmpeg.wasm](https://ffmpegwasm.netlify.app/)**.
+- **产品宣传**：上传商品/门店图片、参考视频和提示词，规划宣传文案与镜头，再自动编排成片。
+- **AI 漫剧**：输入故事梗概和角色素材，规划角色、场景、分镜、对白，再制作视频。
+- **自动剪辑**：复用现有多轨编辑器，组合图片、视频、字幕和音频，并通过 FFmpeg WASM 导出。
+- **手机优先**：优先保证 Android 手机浏览器能够完成上传、策划、预览和短视频导出。
 
-![Dark themed editor](https://img.shields.io/badge/Theme-Dark-0e0e18?style=flat-square)
-![No backend](https://img.shields.io/badge/Backend-None-34d399?style=flat-square)
-![ffmpeg.wasm](https://img.shields.io/badge/FFmpeg-WASM-8b5cf6?style=flat-square)
+## 当前技术基础
 
-## Features
+- Vanilla JavaScript + Vite
+- 多轨视频/图片/文字/音频编辑器
+- Canvas 预览与基础素材处理
+- FFmpeg WASM 浏览器端导出
+- GitHub Actions + GitHub Pages 静态部署
 
-- **Upload** — Drag-and-drop or file picker (MP4, WebM, MOV, PNG/JPEG/GIF/WebP, MP3/WAV/AAC/OGG/M4A)
-- **Multi-track timeline** — Video, image, text, and audio layers with vertical scrolling
-- **Preview** — HTML5 video player with custom controls
-- **Edit** — Trim, split, copy, paste, duplicate, delete, undo/redo
-- **Move between tracks** — Drag clips vertically to compatible tracks
-- **Text overlays** — Font, size, color, and background styling
-- **Audio mixing** — Video audio + audio clips are mixed and exported
-- **Export** — Download the edited video (MP4 via ffmpeg.wasm, WebM fallback)
-- **Project save/load** — Export/import project JSON (timeline + edits; media files must be re-linked)
-- **Keyboard shortcuts** — Space, Ctrl+S, Del, Arrow keys, Ctrl+E/Z/Y/C/V/D
+## 重要说明
 
-## How It Works
+GitHub Pages 只托管静态网页，不提供 AI 模型推理服务。真正的 AI 文案策划、图像/视频生成和高质量中文配音，需要后续接入模型服务或自建后端。FFmpeg 负责剪辑与合成，不会把静态图片本身变成 AI 生成的视频。
 
-All video processing uses [ffmpeg.wasm](https://github.com/nicolo-ribaudo/ffmpeg.wasm), a WebAssembly port of FFmpeg. The WASM core is self-hosted in `public/ffmpeg-core/` so the app works even if third-party CDNs are blocked, with a CDN fallback for resilience.
+在 AI 服务尚未接入前，项目应明确标注能力边界：可以先使用用户素材完成自动镜头编排、图片动态运镜、字幕和基础合成；不得把未执行的生成任务显示成成功。
 
-### Cross-Origin Isolation (COOP/COEP)
+任何第三方 API Key 都必须保存在受保护的服务端环境变量中，不得写入前端代码或提交到 GitHub。默认免费优先，接入付费服务前必须说明费用和额度。
 
-ffmpeg.wasm requires `SharedArrayBuffer`, which needs cross-origin isolation headers:
-- `Cross-Origin-Opener-Policy: same-origin`
-- `Cross-Origin-Embedder-Policy: require-corp`
+## 升级路线
 
-**Local development:** Vite's dev server sets these headers automatically.
+详细设计见 [AI 全自动工作流升级方案](docs/AI_WORKFLOW_ROADMAP.md)。
 
-**GitHub Pages:** Static hosts can't set custom headers, so we use [`coi-serviceworker.js`](https://github.com/nicolo-ribaudo/coi-serviceworker) — a service worker shim that injects the required headers. It causes one automatic page reload on first visit.
+1. 修正部署路径与中文品牌。
+2. 增加产品宣传/AI 漫剧两种工作流入口、素材上传和提示词输入。
+3. 建立 AI 导演策划、结构化分镜、进度与失败重试机制。
+4. 建立无需付费 API 的本地自动成片流程：图片编排、动态运镜、字幕、音乐、时间线和 MP4 导出。
+5. 再逐步接入可选的文本模型、图像/视频生成和中文配音服务。
 
----
+## 本地开发
 
-## Local Development
-
-### Prerequisites
-- [Node.js](https://nodejs.org/) 18+
-- npm 9+
-
-### Setup
+需要 Node.js 20+ 与 npm：
 
 ```bash
-# Clone the repository
-git clone https://github.com/zrnge/viz.git
-cd viz
-
-# Install dependencies
 npm install
-
-# Start development server
 npm run dev
 ```
 
-The dev server starts at `http://localhost:5173` with COOP/COEP headers enabled.
-
-### Build for Production
+生产构建：
 
 ```bash
 npm run build
-```
-
-The `prebuild` script copies the self-hosted ffmpeg core from `node_modules/@ffmpeg/core` to `public/ffmpeg-core/`.
-
-Preview the production build:
-
-```bash
 npm run preview
 ```
 
----
+## GitHub Pages
 
-## GitHub Pages Deployment
+仓库使用 GitHub Actions 构建并部署，默认子路径为：
 
-### Option 1: GitHub Actions (Recommended)
+`/xiaozhi-video-studio/`
 
-1. Push your code to the `main` branch
-2. Go to **Settings → Pages** in your GitHub repo (`https://github.com/zrnge/viz/settings/pages`)
-3. Under **Source**, select **GitHub Actions** — **NOT** "Deploy from a branch"
-4. The included `.github/workflows/deploy.yml` builds and deploys `dist/` on every push to `main`
-5. The site will deploy to `https://zrnge.com/viz/`
-
-> **Important:** If you previously used "Deploy from a branch", GitHub Pages may keep serving the raw source files. After switching to GitHub Actions, go to **Actions** and re-run the latest workflow, then wait 1–2 minutes for the deployment to update.
-
-> **Note:** `vite.config.js` defaults to `base: '/viz/'` for deployments under the `/viz/` subpath (e.g., `zrnge.com/viz/`). If you deploy to a custom-domain root (e.g., `zrnge.com/`), set the `BASE_PATH` environment variable to `/` in the workflow or change the default in `vite.config.js`.
-
-### Option 2: Manual gh-pages Branch
-
-```bash
-npm run build
-npx gh-pages -d dist
-```
-
-Then go to **Settings → Pages** and set the source to `gh-pages` branch.
-
----
-
-## Project Structure
-
-```
-├── public/
-│   ├── coi-serviceworker.js    # Cross-origin isolation shim
-│   ├── 404.html                # SPA redirect for GitHub Pages
-│   └── ffmpeg-core/            # Self-hosted FFmpeg WASM core
-├── scripts/
-│   └── copy-ffmpeg-core.js    # Prebuild copy helper
-├── src/
-│   ├── main.js                 # App orchestrator
-│   ├── style.css               # Dark theme + glassmorphism styles
-│   ├── composition.js          # Composition data model
-│   ├── ffmpeg-worker.js        # FFmpeg loading, audio mix, export
-│   ├── multi-timeline.js        # Multi-track timeline
-│   ├── canvas-preview.js       # Preview renderer + transforms
-│   ├── video-player.js         # HTML5 video player wrapper
-│   ├── toolbar.js              # Toolbar buttons & shortcuts
-│   ├── upload.js               # Drag-and-drop upload
-│   ├── media-manager.js        # Add video/image/text/audio
-│   ├── properties-panel.js     # Element properties editor
-│   ├── context-menu.js         # Right-click menu
-│   ├── clipboard.js            # Copy/paste/duplicate/delete
-│   └── utils.js                # Helpers (formatTime, validation, toasts)
-├── index.html                  # SPA entry point
-├── vite.config.js              # Vite config (base path, headers, chunks)
-├── package.json
-└── README.md
-```
-
-## Keyboard Shortcuts
-
-| Key | Action |
-|-----|--------|
-| `Space` | Play / Pause |
-| `Ctrl+S` | Split at playhead |
-| `Del` / `Backspace` | Delete element |
-| `Ctrl+E` | Export |
-| `Ctrl+C` / `Ctrl+V` | Copy / Paste |
-| `Ctrl+D` | Duplicate |
-| `Ctrl+Z` / `Ctrl+Y` | Undo / Redo |
-| `←` / `→` | Skip back/forward |
-| `Shift+←` / `Shift+→` | Frame step |
-
-## Developer
-
-Made with ❤️ by **[Zrnge](https://zrnge.com/viz)**.
-
-- Website: [zrnge.com/viz](https://zrnge.com/viz)
-- Source: [github.com/zrnge/viz](https://github.com/zrnge/viz)
-
-## Troubleshooting
-
-### Site loads unstyled or shows 404 for `/src/main.js` and `coi-serviceworker.js`
-
-This means GitHub Pages is serving the raw source files instead of the built `dist/` output.
-
-**Fix:**
-1. Go to `https://github.com/zrnge/viz/settings/pages`
-2. Set **Source** to **GitHub Actions**
-3. Save, then go to `https://github.com/zrnge/viz/actions`
-4. Re-run the latest workflow
-5. Wait 1–2 minutes and hard-refresh `https://zrnge.com/viz/`
-
-### Workflow fails with "Failed to create deployment (status: 404)"
-
-GitHub Pages is not enabled. Follow the steps above and set the source to **GitHub Actions** first.
+请在仓库 Settings → Pages 中选择 GitHub Actions 作为部署来源。
 
 ## License
 
-MIT
+本项目沿用上游 MIT License。上游版权与许可文件应随仓库保留。
