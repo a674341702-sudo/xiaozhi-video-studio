@@ -1,8 +1,8 @@
 import { defineConfig } from 'vite';
 
-// Resolve base path from env; defaults to '/viz/' for the canonical repo URL.
+// Resolve base path from env; defaults to '/xiaozhi-video-studio/' for the canonical repo URL.
 // Set BASE_PATH env var to '/' for a custom-domain root deployment.
-const base = process.env.BASE_PATH || '/viz/';
+const base = process.env.BASE_PATH || '/xiaozhi-video-studio/';
 
 // During `vite build` we still want absolute base paths so asset URLs are
 // emitted correctly. During dev the relative ./src/main.js in index.html is
@@ -16,7 +16,7 @@ export default defineConfig({
     name: 'fix-relative-src',
     transformIndexHtml(html) {
       // In production, strip the dev-only GitHub Pages fallback block and
-      // rewrite relative src paths to absolute /viz/ URLs.
+      // rewrite relative src paths to absolute /xiaozhi-video-studio/ URLs.
       return html
         .replace(/<!--\s*GitHub Pages path fix[\s\S]*?\(function\(\)\s*\{[\s\S]*?\}\)\(\);\s*<\/script>\s*/, '')
         .replace('src="./src/main.js"', `src="${base}src/main.js"`)
