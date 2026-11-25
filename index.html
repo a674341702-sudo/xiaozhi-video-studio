@@ -11,13 +11,13 @@
   <script>
     (function() {
       const path = location.pathname.replace(/\/[^\/]*$/, '/');
-      window.小智视频_BASE_PATH = path.endsWith('/xiaozhi-video-studio/') ? '/xiaozhi-video-studio/' : '/';
+      window.VIZ_BASE_PATH = path.endsWith('/xiaozhi-video-studio/') ? '/xiaozhi-video-studio/' : '/';
     })();
   </script>
   <script src="./coi-serviceworker.js" id="coi-script"></script>
 
   <!--
-    GitHub Pages path fix: if this file is served raw from /viz/ instead of the
+    GitHub Pages path fix: if this file is served raw from /xiaozhi-video-studio/ instead of the
     built dist/, patch the main module and COI worker to absolute /xiaozhi-video-studio/ paths
     BEFORE the browser requests them. Vite normally rewrites these at build time.
   -->
