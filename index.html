@@ -1,29 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Viz — First Local Video Editor</title>
-  <meta name="description" content="Viz: the first local video editor for free. No server, no backend, no data leaves your machine. Edit videos, images, text, and audio entirely in your browser." />
+  <title>小智一键视频工坊｜AI 视频工作流</title>
+  <meta name="description" content="小智一键视频工坊：产品宣传与 AI 漫剧视频工作流，支持素材上传、自动分镜策划、视频剪辑与导出。" />
   <meta name="theme-color" content="#07070d" />
 
   <!-- COI SERVICE WORKER -->
   <script>
     (function() {
       const path = location.pathname.replace(/\/[^\/]*$/, '/');
-      window.VIZ_BASE_PATH = path.endsWith('/viz/') ? '/viz/' : '/';
+      window.小智视频_BASE_PATH = path.endsWith('/xiaozhi-video-studio/') ? '/xiaozhi-video-studio/' : '/';
     })();
   </script>
   <script src="./coi-serviceworker.js" id="coi-script"></script>
 
   <!--
     GitHub Pages path fix: if this file is served raw from /viz/ instead of the
-    built dist/, patch the main module and COI worker to absolute /viz/ paths
+    built dist/, patch the main module and COI worker to absolute /xiaozhi-video-studio/ paths
     BEFORE the browser requests them. Vite normally rewrites these at build time.
   -->
   <script>
     (function() {
-      const base = '/viz/';
+      const base = '/xiaozhi-video-studio/';
       if (location.pathname.startsWith(base)) {
         const main = document.getElementById('main-script');
         const coi = document.getElementById('coi-script');
@@ -45,13 +45,13 @@
         <div class="app-logo-icon">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
         </div>
-        <span class="app-logo-text">VIZ</span>
-        <span class="app-logo-badge">LOCAL · FREE · PRIVATE</span>
+        <span class="app-logo-text">小智视频</span>
+        <span class="app-logo-badge">AI WORKFLOW · BROWSER EDITOR</span>
       </div>
       <div class="header-center">
-        <span class="header-filename" id="header-filename">Multi-Track Project</span>
+        <span class="header-filename" id="header-filename">新建视频项目</span>
         <span class="header-dot active" id="header-dot"></span>
-        <span class="header-status" id="header-status">Ready</span>
+        <span class="header-status" id="header-status">就绪</span>
       </div>
       <div class="header-right">
         <button class="tool-btn" id="btn-new-project" type="button" title="New Project">New</button>
@@ -269,14 +269,14 @@
   <script>
     // Fallback for when GitHub Pages serves the raw source index.html instead of
     // the built dist/index.html. Vite normally rewrites these paths during build.
-    // If the relative module fails, reload with absolute /viz/ paths.
+    // If the relative module fails, reload with absolute /xiaozhi-video-studio/ paths.
     (function() {
-      const base = '/viz/';
+      const base = '/xiaozhi-video-studio/';
       const mainScript = document.getElementById('main-script');
       const coiScript = document.getElementById('coi-script');
       if (location.pathname.startsWith(base) && mainScript) {
         mainScript.addEventListener('error', function() {
-          console.warn('[Viz] Source index.html served under /viz/; retrying with absolute paths.');
+          console.warn('[小智视频] Source index.html served under /xiaozhi-video-studio/; retrying with absolute paths.');
           mainScript.src = base + 'src/main.js';
           if (coiScript) coiScript.src = base + 'coi-serviceworker.js';
         });
