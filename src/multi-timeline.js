@@ -41,7 +41,7 @@ export class MultiTimeline {
     this.container.innerHTML = `
       <div class="multitimeline-header-bar">
         <div class="multitimeline-track-headers-title">
-          <span>TRACKS</span>
+          <span>轨道</span>
         </div>
         <div class="multitimeline-ruler-wrapper" id="mt-ruler-wrapper">
           <canvas class="multitimeline-ruler-canvas" id="mt-ruler-canvas"></canvas>
@@ -153,8 +153,8 @@ export class MultiTimeline {
         <span class="mt-sidebar-icon">${icon}</span>
         <span class="mt-sidebar-name">${escapeHtml(track.name)}</span>
         <div class="mt-sidebar-actions">
-          <button class="mt-track-btn ${!track.visible ? 'active-off' : ''}" data-action="toggle-visible" data-track="${track.id}" title="Toggle Visibility">👁️</button>
-          <button class="mt-track-btn ${track.muted ? 'active-off' : ''}" data-action="toggle-mute" data-track="${track.id}" title="Toggle Mute">🔇</button>
+          <button class="mt-track-btn ${!track.visible ? 'active-off' : ''}" data-action="toggle-visible" data-track="${track.id}" title="切换显示">👁️</button>
+          <button class="mt-track-btn ${track.muted ? 'active-off' : ''}" data-action="toggle-mute" data-track="${track.id}" title="切换静音">🔇</button>
         </div>
       `;
 
