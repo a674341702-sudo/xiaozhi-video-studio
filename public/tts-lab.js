@@ -13,15 +13,26 @@ async function loadModel() {
     status('正在加载中文语音引擎……');
     const { KokoroTTS } = await import('https://esm.sh/@uzen/kokoro-js@1.2.4?bundle');
     const hasWebGPU = Boolean(navigator.gpu);
-    const device = hasWebGPU ? 'webgpu' : 'wasm';
-    status('正在下载/加载普通话模型（首次可能需要较长时间）……\n运行方式：' + (hasWebGPU ? '尝试 WebGPU' : 'WASM 兼容模式'));
-    // q4f16 is a documented Kokoro.js option and is substantially smaller
-    // than fp32, which is more suitable for first-time downloads on phones.
-    const engine = await KokoroTTS.from_pretrained(MODEL_ID, {
+    const options = {
       dtype: 'q4f16',
-      device,
       voicePath: VOICE_PATH
-    });
+    };
+    // Some phones expose navigator.gpu but cannot initialize a usable adapter.
+    // Retry with WASM so a WebGPU startup failure does not block all TTS.
+    if (hasWebGPU) {
+      status('正在尝试手机 GPU 加速，并加载普通话模型（首次下载可能较久）……');
+      try {
+        const engine = await KokoroTTS.from_pretrained(MODEL_ID, { ...options, device: 'webgpu' });
+        tts = engine;
+        return engine;
+      } catch (gpuError) {
+        console.warn('[中文配音] WebGPU 初始化失败，改用 WASM：', gpuError);
+        status('手机 GPU 模式不可用，正在切换兼容模式（WASM）……');
+      }
+    } else {
+      status('正在加载普通话模型（首次下载可能较久）……\\n运行方式：WASM 兼容模式');
+    }
+    const engine = await KokoroTTS.from_pretrained(MODEL_ID, { ...options, device: 'wasm' });
     tts = engine;
     return engine;
   })();
