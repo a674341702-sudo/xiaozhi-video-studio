@@ -133,6 +133,31 @@ export class CanvasPreview {
     return t;
   }
 
+  _drawMediaClip(ctx, element, clip) {
+    if (clip.fit !== 'cover') {
+      ctx.drawImage(element, clip.x, clip.y, clip.width, clip.height);
+      return;
+    }
+
+    const sourceWidth = element.videoWidth || element.naturalWidth || element.width;
+    const sourceHeight = element.videoHeight || element.naturalHeight || element.height;
+    if (!sourceWidth || !sourceHeight) return;
+
+    const sourceRatio = sourceWidth / sourceHeight;
+    const targetRatio = clip.width / clip.height;
+    let sx = 0, sy = 0, sw = sourceWidth, sh = sourceHeight;
+
+    if (sourceRatio > targetRatio) {
+      sw = sourceHeight * targetRatio;
+      sx = (sourceWidth - sw) / 2;
+    } else {
+      sh = sourceWidth / targetRatio;
+      sy = (sourceHeight - sh) / 2;
+    }
+
+    ctx.drawImage(element, sx, sy, sw, sh, clip.x, clip.y, clip.width, clip.height);
+  }
+
   _renderVideoClipAtTime(ctx, clip, time) {
     if (!clip.element) return;
     const video = clip.element;
@@ -143,7 +168,7 @@ export class CanvasPreview {
     }
 
     try {
-      ctx.drawImage(video, clip.x, clip.y, clip.width, clip.height);
+      this._drawMediaClip(ctx, video, clip);
     } catch (e) {}
   }
 
@@ -194,14 +219,14 @@ export class CanvasPreview {
   _renderVideoClip(ctx, clip) {
     if (!clip.element) return;
     try {
-      ctx.drawImage(clip.element, clip.x, clip.y, clip.width, clip.height);
+      this._drawMediaClip(ctx, clip.element, clip);
     } catch (e) {}
   }
 
   _renderImageClip(ctx, clip) {
     if (!clip.element) return;
     try {
-      ctx.drawImage(clip.element, clip.x, clip.y, clip.width, clip.height);
+      this._drawMediaClip(ctx, clip.element, clip);
     } catch (e) {}
   }
 
