@@ -99,6 +99,11 @@ if (typeof window === 'undefined') {
                     const cached = await cache.match(r);
                     if (cached) return cached;
                     if (r.mode === "navigate") {
+                        // A first visit often caches the root URL ("/") rather than
+                        // "index.html". Try both forms so offline home navigation works.
+                        const appRoot = new URL("./", self.registration.scope).toString();
+                        const rootFallback = await cache.match(appRoot);
+                        if (rootFallback) return rootFallback;
                         const appEntry = new URL("index.html", self.registration.scope).toString();
                         const fallback = await cache.match(appEntry);
                         if (fallback) return fallback;
