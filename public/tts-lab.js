@@ -50,8 +50,8 @@ async function loadModel() {
 
 // 将分段生成的 Float32 PCM 直接写入一个 WAV 文件，避免再创建一份完整 PCM 副本。
 // 分块构造 WAV：避免一次性申请与整段音频等大的连续 ArrayBuffer。
-function chunksToWav(chunks, sampleRate) {
-  const totalSamples = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+function chunksToWav(pcmChunks, sampleRate) {
+  const totalSamples = pcmChunks.reduce((sum, chunk) => sum + chunk.length, 0);
   if (!totalSamples) throw new Error('没有生成有效的语音采样数据。');
   const dataSize = totalSamples * 2;
   if (dataSize > 0xffffffff - 36) throw new Error('生成的配音文件过大，请缩短文案后重试。');
@@ -76,14 +76,7 @@ function chunksToWav(chunks, sampleRate) {
   view.setUint32(40, dataSize, true);
 
   const parts = [header];
-  for (const chunk of chunks) {
-    const pcm = new Int16Array(chunk.length);
-    for (let i = 0; i < chunk.length; i++) {
-      const value = Math.max(-1, Math.min(1, Number.isFinite(chunk[i]) ? chunk[i] : 0));
-      pcm[i] = value < 0 ? value * 32768 : value * 32767;
-    }
-    parts.push(pcm);
-  }
+  for (const pcm of pcmChunks) parts.push(pcm);
   return new Blob(parts, { type: 'audio/wav' });
 }
 
@@ -98,7 +91,7 @@ $('generate').addEventListener('click', async () => {
   try {
     const engine = await loadModel();
     status('中文模型已就绪，正在分段合成语音……');
-    const chunks = [];
+    const pcmChunks = [];
     let sampleRate = 24000;
     let chunkCount = 0;
     for await (const part of engine.stream(text, {
@@ -111,11 +104,17 @@ $('generate').addEventListener('click', async () => {
         throw new Error('分段语音数据格式不正确，请反馈此提示。');
       }
       sampleRate = Number(raw.sampling_rate || raw.samplingRate || sampleRate);
-      chunks.push(samples);
+      // Convert immediately so the whole utterance's Float32 chunks are not retained.
+      const pcm = new Int16Array(samples.length);
+      for (let i = 0; i < samples.length; i++) {
+        const value = Math.max(-1, Math.min(1, Number.isFinite(samples[i]) ? samples[i] : 0));
+        pcm[i] = value < 0 ? value * 32768 : value * 32767;
+      }
+      pcmChunks.push(pcm);
       chunkCount++;
       status('正在生成普通话配音……\n已完成 ' + chunkCount + ' 段，请保持页面打开。');
     }
-    const blob = chunksToWav(chunks, sampleRate);
+    const blob = chunksToWav(pcmChunks, sampleRate);
     if (!(blob instanceof Blob) || blob.size < 1000) throw new Error('语音文件生成失败或内容为空。');
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     audioUrl = URL.createObjectURL(blob);
