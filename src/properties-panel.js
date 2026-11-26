@@ -156,11 +156,11 @@ export class PropertiesPanel {
           <span class="prop-section-title">画面变换与位置</span>
           <div class="prop-grid-2">
             <div class="prop-field">
-              <label>X (px)</label>
+              <label>横向位置（像素）</label>
               <input type="number" id="prop-x" value="${clip.x}">
             </div>
             <div class="prop-field">
-              <label>Y (px)</label>
+              <label>纵向位置（像素）</label>
               <input type="number" id="prop-y" value="${clip.y}">
             </div>
             <div class="prop-field">
@@ -209,9 +209,9 @@ export class PropertiesPanel {
           <div class="prop-row">
             <label>对齐方式</label>
             <div class="prop-segmented" id="prop-text-align">
-              <button type="button" class="seg-btn ${clip.textAlign === 'left' ? 'active' : ''}" data-align="left">L</button>
-              <button type="button" class="seg-btn ${clip.textAlign === 'center' ? 'active' : ''}" data-align="center">C</button>
-              <button type="button" class="seg-btn ${clip.textAlign === 'right' ? 'active' : ''}" data-align="right">R</button>
+              <button type="button" class="seg-btn ${clip.textAlign === 'left' ? 'active' : ''}" data-align="left" title="左对齐" aria-label="左对齐">L</button>
+              <button type="button" class="seg-btn ${clip.textAlign === 'center' ? 'active' : ''}" data-align="center" title="居中对齐" aria-label="居中对齐">C</button>
+              <button type="button" class="seg-btn ${clip.textAlign === 'right' ? 'active' : ''}" data-align="right" title="右对齐" aria-label="右对齐">R</button>
             </div>
           </div>
           <div class="prop-row">
