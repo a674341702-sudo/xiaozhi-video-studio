@@ -1,162 +1,225 @@
 /**
- * 小智一键视频工坊 - 本地自动成片工作流
- * 第一阶段使用浏览器本地处理，不冒充云端 AI 推理。
+ * 小智·商家短视频生产线
+ * 手机优先的本地工作流：商家资料 → 素材 → 文案/镜头 → 配乐/配音 → 时间线 → MP4。
+ * 当前不冒充云端 AI：脚本由本地模板辅助；配乐与配音通过用户上传的合法音频文件混入成片。
  */
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
 
   const style = document.createElement('style');
   style.textContent = `
-    #xiaozhi-workflow-launcher{position:fixed;right:18px;top:76px;z-index:1800;border:0;border-radius:999px;padding:12px 17px;background:linear-gradient(120deg,#7c3aed,#0891b2);color:#fff;font-weight:700;box-shadow:0 8px 28px #0006;cursor:pointer}
-    #xiaozhi-workflow{position:fixed;inset:0;z-index:1900;background:#080812ee;display:none;align-items:center;justify-content:center;padding:14px;color:#f5f5ff;font:14px/1.5 system-ui,sans-serif}
+    #xiaozhi-workflow-launcher{position:fixed;right:16px;bottom:18px;z-index:1800;border:0;border-radius:999px;padding:14px 18px;background:linear-gradient(120deg,#7c3aed,#0891b2);color:#fff;font-weight:800;box-shadow:0 8px 28px #0007;cursor:pointer}
+    #xiaozhi-workflow{position:fixed;inset:0;z-index:1900;background:#080812f5;display:none;align-items:center;justify-content:center;padding:10px;color:#f5f5ff;font:14px/1.5 system-ui,sans-serif}
     #xiaozhi-workflow.open{display:flex}
-    .xzw-card{width:min(720px,100%);max-height:92vh;overflow:auto;background:#171728;border:1px solid #383852;border-radius:18px;padding:20px;box-shadow:0 20px 70px #0009}
-    .xzw-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.xzw-head h2{font-size:21px;margin:0}
-    .xzw-close{background:#292940;color:#fff;border:0;border-radius:9px;padding:8px 12px}
-    .xzw-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
-    .xzw-mode{border:1px solid #454563;border-radius:12px;padding:13px;background:#202039;color:#eee;text-align:left;cursor:pointer}
-    .xzw-mode.active{border-color:#a78bfa;background:#30264d}
-    .xzw-mode strong{display:block;font-size:15px;margin-bottom:3px}
-    .xzw-field{display:block;margin:13px 0}.xzw-field span{display:block;color:#c5c5dc;margin-bottom:7px}
-    .xzw-field textarea,.xzw-field select,.xzw-field input{box-sizing:border-box;width:100%;border:1px solid #454563;background:#10101d;color:#fff;border-radius:10px;padding:11px;font:inherit}
-    .xzw-field textarea{min-height:90px;resize:vertical}
-    .xzw-file{border:1px dashed #66668a;border-radius:12px;padding:14px;background:#111121}
-    .xzw-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
-    .xzw-primary,.xzw-secondary{border:0;border-radius:10px;padding:12px 17px;font-weight:700;cursor:pointer}
-    .xzw-primary{background:#8b5cf6;color:white;flex:1}.xzw-secondary{background:#303047;color:#eee}
-    .xzw-note{color:#aaaac2;font-size:12px;margin-top:12px}
-    .xzw-status{margin-top:14px;padding:11px;border-radius:10px;background:#111121;color:#c4b5fd;white-space:pre-wrap}
-    .xzw-shot{padding:8px 10px;border-bottom:1px solid #34344a;color:#ddd}
-    @media(max-width:560px){#xiaozhi-workflow-launcher{right:10px;top:auto;bottom:18px}.xzw-card{padding:15px}.xzw-head h2{font-size:18px}}
+    .xzw-card{box-sizing:border-box;width:min(760px,100%);height:min(94dvh,900px);overflow:auto;background:#151526;border:1px solid #383852;border-radius:20px;padding:18px;box-shadow:0 20px 70px #000b}
+    .xzw-head{position:sticky;top:-18px;z-index:2;display:flex;justify-content:space-between;align-items:center;gap:12px;background:#151526;padding:8px 0 12px}.xzw-head h2{font-size:20px;margin:0}
+    .xzw-close,.xzw-secondary{background:#303047;color:#fff;border:0;border-radius:10px;padding:10px 13px}
+    .xzw-intro{color:#b9b9d0;margin:0 0 14px}
+    .xzw-steps{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0 18px}
+    .xzw-step{padding:8px 4px;border-radius:9px;background:#222238;color:#aaa;text-align:center;font-size:12px}
+    .xzw-step b{display:block;color:#c4b5fd;font-size:14px}
+    .xzw-section{border:1px solid #33334b;background:#1c1c30;border-radius:14px;padding:13px;margin:12px 0}
+    .xzw-section h3{font-size:15px;margin:0 0 10px}
+    .xzw-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+    .xzw-field{display:block;margin:9px 0}.xzw-field span{display:block;color:#c5c5dc;margin-bottom:6px;font-size:13px}
+    .xzw-field textarea,.xzw-field select,.xzw-field input{box-sizing:border-box;width:100%;border:1px solid #454563;background:#10101d;color:#fff;border-radius:10px;padding:11px;font:inherit;min-height:42px}
+    .xzw-field textarea{min-height:86px;resize:vertical}
+    .xzw-file{border:1px dashed #66668a;border-radius:12px;padding:12px;background:#111121}
+    .xzw-note{color:#a5a5bf;font-size:12px;margin:7px 0 0}
+    .xzw-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+    .xzw-primary{border:0;border-radius:11px;padding:13px 17px;font-weight:800;background:linear-gradient(120deg,#7c3aed,#0891b2);color:#fff;cursor:pointer;flex:1;min-height:46px}
+    .xzw-primary:disabled{opacity:.55}
+    .xzw-status{margin-top:13px;padding:12px;border-radius:10px;background:#10101d;color:#c4b5fd;white-space:pre-wrap}
+    .xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}
+    .xzw-badge{display:inline-block;padding:3px 7px;border-radius:6px;background:#30264d;color:#c4b5fd;font-size:11px}
+    @media(max-width:560px){#xiaozhi-workflow{padding:0;align-items:stretch}.xzw-card{height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.xzw-head{top:-14px}.xzw-head h2{font-size:18px}.xzw-grid{grid-template-columns:1fr}.xzw-steps{grid-template-columns:repeat(4,1fr)}}
   `;
   document.head.appendChild(style);
 
   const launcher = document.createElement('button');
   launcher.id = 'xiaozhi-workflow-launcher';
-  launcher.textContent = '✦ 小智自动成片';
+  launcher.textContent = '✦ 商家短视频生产线';
   document.body.appendChild(launcher);
 
   const modal = document.createElement('div');
   modal.id = 'xiaozhi-workflow';
   modal.innerHTML = `
-    <section class="xzw-card" role="dialog" aria-modal="true" aria-label="小智自动成片">
-      <div class="xzw-head"><h2>✦ 小智一键视频工坊</h2><button class="xzw-close" type="button">关闭</button></div>
-      <p style="color:#b9b9d0;margin:8px 0 0">选择用途，上传素材，写下想表达的内容，自动编排到时间线。</p>
-      <div class="xzw-modes">
-        <button class="xzw-mode active" data-mode="product"><strong>🛍 产品宣传</strong><small>商品介绍、门店探店、短视频带货</small></button>
-        <button class="xzw-mode" data-mode="comic"><strong>🎬 AI 漫剧</strong><small>故事分镜、角色画面、对白字幕</small></button>
+    <section class="xzw-card" role="dialog" aria-modal="true" aria-label="商家短视频生产线">
+      <div class="xzw-head"><h2>✦ 小智·商家短视频生产线</h2><button class="xzw-close" type="button">关闭</button></div>
+      <p class="xzw-intro">把商家素材和介绍放进来，自动整理成镜头、字幕和时间线。目标：一条约30秒的竖屏宣传视频。</p>
+      <div class="xzw-steps"><div class="xzw-step"><b>01</b>商家资料</div><div class="xzw-step"><b>02</b>素材上传</div><div class="xzw-step"><b>03</b>文案镜头</div><div class="xzw-step"><b>04</b>配音导出</div></div>
+
+      <div class="xzw-section">
+        <h3>01 · 商家资料</h3>
+        <div class="xzw-grid">
+          <label class="xzw-field"><span>门店 / 品牌名称</span><input id="xzw-shop" placeholder="例如：XX咖啡"></label>
+          <label class="xzw-field"><span>行业类型</span><select id="xzw-industry"><option value="餐饮探店">餐饮探店</option><option value="商品宣传">商品 / 产品</option><option value="服装穿搭">服装穿搭</option><option value="美容美发">美容美发</option><option value="酒店民宿">酒店 / 民宿</option><option value="休闲娱乐">休闲娱乐</option><option value="其他门店">其他门店</option></select></label>
+        </div>
+        <label class="xzw-field"><span>主打产品 / 服务</span><input id="xzw-product" placeholder="例如：手冲咖啡、招牌牛肉面"></label>
+        <label class="xzw-field"><span>门店地址 / 到店方式</span><input id="xzw-address" placeholder="例如：昆明市五华区……"></label>
+        <label class="xzw-field"><span>优惠活动（没有可不填）</span><input id="xzw-offer" placeholder="例如：新客到店立减、双人套餐"></label>
+        <label class="xzw-field"><span>宣传重点 / 商家原始文案</span><textarea id="xzw-copy" placeholder="把商家介绍、产品卖点、价格、特色、活动等直接粘贴进来。也可以只写几句关键词。"></textarea></label>
+        <div class="xzw-grid">
+          <label class="xzw-field"><span>视频风格</span><select id="xzw-style"><option value="高级质感">高级质感</option><option value="真实探店">真实探店</option><option value="活泼种草">活泼种草</option><option value="促销转化">促销转化</option></select></label>
+          <label class="xzw-field"><span>目标时长</span><select id="xzw-length"><option value="30">约30秒</option><option value="20">约20秒</option><option value="45">约45秒</option></select></label>
+        </div>
+        <button class="xzw-secondary" id="xzw-save-profile" type="button">保存商家资料到本机</button>
+        <p class="xzw-note">只保存文字资料在当前浏览器，不会上传云端。请勿填写顾客隐私信息。</p>
       </div>
-      <label class="xzw-field"><span>上传图片 / 视频素材（可多选）</span><div class="xzw-file"><input id="xzw-files" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mov" multiple><div class="xzw-note">建议先用 3–8 张图片或几段短视频。手机端请控制素材大小。</div></div></label>
-      <label class="xzw-field"><span id="xzw-prompt-label">产品 / 门店介绍</span><textarea id="xzw-prompt" placeholder="例如：昆明一家环境舒适的咖啡店，主打手冲咖啡，突出环境、口味和到店体验。"></textarea></label>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
-        <label class="xzw-field"><span>视频画幅</span><select id="xzw-ratio"><option value="9:16">竖屏 9:16（抖音）</option><option value="16:9">横屏 16:9</option><option value="1:1">正方形 1:1</option><option value="4:5">小红书 4:5</option></select></label>
-        <label class="xzw-field"><span>每个图片镜头时长</span><select id="xzw-duration"><option value="3">3 秒</option><option value="4" selected>4 秒</option><option value="5">5 秒</option><option value="6">6 秒</option></select></label>
+
+      <div class="xzw-section">
+        <h3>02 · 上传拍摄素材</h3>
+        <label class="xzw-field"><span>门店照片 / 产品照片 / 视频（可多选）</span><div class="xzw-file"><input id="xzw-files" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mov" multiple><p class="xzw-note">建议 4–8 个素材；手机首测每次不超过8个，单个视频尽量不超过40MB。优先使用清晰、稳定、光线好的原片。</p></div></label>
+        <div id="xzw-file-summary" class="xzw-note">尚未选择素材</div>
       </div>
-      <label class="xzw-field"><span>背景音乐（可选，上传音频）</span><input id="xzw-audio" type="file" accept="audio/*"></label>
-      <div class="xzw-actions"><button class="xzw-primary" id="xzw-generate" type="button">✦ 自动策划并加入时间线</button><button class="xzw-secondary" id="xzw-export" type="button">导出视频</button></div>
-      <div class="xzw-status" id="xzw-status">等待上传素材。完成编排后，可回到编辑器预览并导出 MP4。</div>
+
+      <div class="xzw-section">
+        <h3>03 · 生成宣传文案与镜头安排</h3>
+        <label class="xzw-field"><span>配音稿（可修改；留空则按宣传重点生成字幕稿）</span><textarea id="xzw-narration" placeholder="可粘贴希望旁白说出来的完整内容。生成后可以修改，再用手机录音或上传AI配音。"></textarea></label>
+        <label class="xzw-field"><span>画面字幕（可选；默认自动生成）</span><textarea id="xzw-captions" placeholder="每行一句字幕。留空时根据商家信息生成分镜字幕。"></textarea></label>
+        <div class="xzw-grid">
+          <label class="xzw-field"><span>视频画幅</span><select id="xzw-ratio"><option value="9:16">9:16 竖屏（抖音）</option><option value="4:5">4:5（小红书）</option><option value="1:1">1:1 方形</option><option value="16:9">16:9 横屏</option></select></label>
+          <label class="xzw-field"><span>字幕样式</span><select id="xzw-subtitle"><option value="bold">醒目粗体</option><option value="clean">简洁高级</option></select></label>
+        </div>
+      </div>
+
+      <div class="xzw-section">
+        <h3>04 · 配乐与配音</h3>
+        <label class="xzw-field"><span>背景音乐（上传已获授权的音乐文件）</span><input id="xzw-music" type="file" accept="audio/*"></label>
+        <label class="xzw-field"><span>配音文件（手机录音或外部AI配音均可）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
+        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。当前版本先支持上传音频并混入成片；自动AI语音合成需要接入TTS服务，不能在未接服务时假称已生成。</p>
+      </div>
+
+      <div class="xzw-actions"><button class="xzw-primary" id="xzw-generate" type="button">✦ 自动编排30秒商家视频</button><button class="xzw-secondary" id="xzw-export" type="button">导出 MP4</button></div>
+      <div class="xzw-status" id="xzw-status">等待商家资料和素材。编排完成后可预览、修改字幕，再导出视频。</div>
       <div id="xzw-shots"></div>
-      <p class="xzw-note">说明：当前版本在浏览器本地完成规则化分镜、素材编排、动态缩放与字幕；尚未连接云端生成式 AI，不会自动生成全新人物或视频片段。导出使用原有 FFmpeg 引擎，手机性能和素材大小会影响速度。</p>
+      <p class="xzw-note">首版使用浏览器本地规则化脚本与剪辑，不会凭空生成不存在的店铺画面。视频导出依赖手机内存和浏览器性能；建议先用少量素材、720×1280测试。请确保素材和音乐有商用授权。</p>
     </section>`;
   document.body.appendChild(modal);
 
-  let mode = 'product';
   const $ = (id) => modal.querySelector('#' + id);
   const setStatus = (message) => { $('xzw-status').textContent = message; };
+  const profileKeys = ['shop','industry','product','address','offer','copy','style','length'];
+  const readProfile = () => Object.fromEntries(profileKeys.map(key => [key, $('xzw-' + key).value]));
+  const saveProfile = () => {
+    try { localStorage.setItem('xiaozhi-merchant-profile-v1', JSON.stringify(readProfile())); setStatus('商家资料已保存在这台手机的当前浏览器中。'); }
+    catch (e) { setStatus('浏览器暂时无法保存资料，请检查存储空间。'); }
+  };
+  try {
+    const saved = JSON.parse(localStorage.getItem('xiaozhi-merchant-profile-v1') || 'null');
+    if (saved) profileKeys.forEach(key => { if (saved[key] !== undefined) $('xzw-' + key).value = saved[key]; });
+  } catch (e) {}
+  $('xzw-save-profile').addEventListener('click', saveProfile);
   launcher.addEventListener('click', () => modal.classList.add('open'));
   modal.querySelector('.xzw-close').addEventListener('click', () => modal.classList.remove('open'));
-  modal.addEventListener('click', (event) => { if (event.target === modal) modal.classList.remove('open'); });
-  modal.querySelectorAll('.xzw-mode').forEach((button) => button.addEventListener('click', () => {
-    mode = button.dataset.mode;
-    modal.querySelectorAll('.xzw-mode').forEach((b) => b.classList.toggle('active', b === button));
-    $('xzw-prompt-label').textContent = mode === 'product' ? '产品 / 门店介绍' : '漫剧故事梗概 / 角色对白';
-    $('xzw-prompt').placeholder = mode === 'product'
-      ? '例如：介绍商品特点、使用场景和购买理由。'
-      : '例如：一个年轻人误入古代昆仑秘境，遇见守山少女，发现自己的身世秘密。';
-  }));
+  modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); });
+  $('xzw-files').addEventListener('change', () => {
+    const files = Array.from($('xzw-files').files || []);
+    const size = files.reduce((n, f) => n + f.size, 0);
+    $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
+  });
+
+  function makeScript(profile) {
+    const shop = profile.shop.trim() || '这家宝藏门店';
+    const product = profile.product.trim() || profile.industry;
+    const offer = profile.offer.trim();
+    const detail = profile.copy.trim();
+    const address = profile.address.trim();
+    const style = profile.style;
+    const hook = profile.industry === '餐饮探店' ? '在昆明想吃点不一样的？这家店值得收藏。'
+      : profile.industry === '酒店民宿' ? '来这里住一晚，给自己一个放松的理由。'
+      : profile.industry === '服装穿搭' ? '想找到适合自己的风格？来看看这家。'
+      : profile.industry === '美容美发' ? '想让自己状态焕然一新？这家可以了解一下。'
+      : '好东西不只看外表，更要看细节和体验。';
+    const lines = [hook, shop + '，主打' + product + '。', detail ? detail.slice(0, 70) : '从产品细节到实际体验，每一处都值得你亲自感受。', offer || '喜欢的话，不妨到店了解更多。', address ? '地址：' + address : '记得收藏，方便下次到店。'];
+    if (style === '促销转化' && offer) lines[0] = '这次到店福利别错过：' + offer + '。';
+    if (style === '活泼种草') lines[0] = '挖到一家值得分享的好店！' + shop + '走起。';
+    return lines.filter(Boolean);
+  }
 
   $('xzw-generate').addEventListener('click', async () => {
     const files = Array.from($('xzw-files').files || []);
-    const prompt = $('xzw-prompt').value.trim();
-    const duration = Number($('xzw-duration').value) || 4;
-    if (!files.length) { setStatus('请先上传至少一张图片或一段视频素材。'); return; }
-    if (files.length > 12) { setStatus('为照顾手机性能，第一版每次最多处理 12 个素材。'); return; }
+    const profile = readProfile();
+    if (!files.length) { setStatus('请先上传至少一张照片或一段视频。'); return; }
+    if (files.length > 8) { setStatus('首版手机模式每次最多8个素材，建议先挑最能展示门店的素材。'); return; }
+    const totalBytes = files.reduce((n, f) => n + f.size, 0);
+    if (totalBytes > 160 * 1024 * 1024 || files.some(f => f.size > 40 * 1024 * 1024)) {
+      setStatus('素材总量请控制在160MB以内，单个文件不超过40MB，以免手机浏览器内存不足。'); return;
+    }
+    if (composition.clips.length && !window.confirm('开始新的视频编排会清空当前编辑器时间线。确定继续吗？')) return;
 
     const ratio = $('xzw-ratio').value;
-    const dimensions = { '9:16':[1080,1920], '16:9':[1920,1080], '1:1':[1080,1080], '4:5':[1080,1350] }[ratio];
-    composition.setDimensions(dimensions[0], dimensions[1]);
-    const imageFiles = files.filter(f => f.type.startsWith('image/'));
-    const videoFiles = files.filter(f => f.type.startsWith('video/'));
+    const dims = { '9:16':[720,1280], '4:5':[720,900], '1:1':[720,720], '16:9':[1280,720] }[ratio];
+    const targetSeconds = Number(profile.length) || 30;
+    const perShot = Math.max(2.5, Math.min(5, targetSeconds / files.length));
+    const script = $('xzw-narration').value.trim() ? $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean) : makeScript(profile);
+    const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
+    const captions = customCaptions.length ? customCaptions : script;
     const textTrack = composition.tracks.find(t => t.type === 'text');
-    const sentences = prompt
-      ? prompt.split(/[。！？!?；;\n]+/).map(s => s.trim()).filter(Boolean)
-      : [];
-    const productCaptions = ['看见细节，发现不一样的品质','从真实体验出发，感受每一处用心','把喜欢的理由，分享给更多人','现在就来了解更多'];
-    const comicCaptions = ['故事，就从这一刻开始','命运的相遇，正在悄然发生','新的线索，指向未知的远方','下一幕，即将揭晓'];
-    const captions = sentences.length ? sentences : (mode === 'product' ? productCaptions : comicCaptions);
-    const shots = [];
+    const musicFile = $('xzw-music').files?.[0];
+    const voiceFile = $('xzw-voice').files?.[0];
+
     $('xzw-generate').disabled = true;
-    setStatus('正在导入素材并安排镜头……请保持页面打开。');
     $('xzw-shots').innerHTML = '';
+    setStatus('正在准备画布并导入素材，请不要关闭页面……');
     try {
+      composition.clear();
+      composition.setDimensions(dims[0], dims[1]);
       let cursor = 0;
-      const ordered = [...files];
-      for (let i = 0; i < ordered.length; i++) {
-        const file = ordered[i];
+      const shots = [];
+      for (let i = 0; i < files.length && cursor < targetSeconds; i++) {
+        const file = files[i];
         const clip = await mediaManager.importFile(file, { startTime: cursor });
         if (!clip) throw new Error('素材导入失败：' + file.name);
+        const shotDuration = Math.min(perShot, targetSeconds - cursor, clip.type === 'video' ? Math.max(1, clip.duration) : perShot);
+        clip.duration = shotDuration;
+        clip.trimEnd = (clip.trimStart || 0) + shotDuration;
         if (clip.type === 'image') {
-          clip.duration = duration;
-          clip.trimEnd = duration;
-          clip.keyframes = {
-            scale: [
-              { time: clip.startTime, value: 1, easing: 'easeInOut' },
-              { time: clip.startTime + duration, value: 1.1, easing: 'easeInOut' }
-            ]
-          };
+          clip.keyframes = { scale: [
+            { time: clip.startTime, value: 1, easing: 'easeInOut' },
+            { time: clip.startTime + shotDuration, value: 1.12, easing: 'easeInOut' }
+          ]};
         }
-        const shotDuration = clip.duration || duration;
-        const caption = captions[i % captions.length];
-        if (textTrack) {
-          composition.addClip({
-            trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
-            text: caption, startTime: clip.startTime, duration: shotDuration,
-            x: Math.round(composition.width * 0.08),
-            y: Math.round(composition.height * 0.72),
-            width: Math.round(composition.width * 0.84), height: Math.round(composition.height * 0.16),
-            fontSize: Math.max(34, Math.round(composition.width * 0.038)),
-            fontFamily: 'Arial', fontWeight: 'bold', color: '#ffffff',
-            bgColor: 'rgba(0,0,0,0.48)', textAlign: 'center'
-          });
-        }
-        shots.push({ name: file.name, caption, start: clip.startTime, duration: shotDuration });
-        cursor = clip.startTime + shotDuration + 0.08;
+        const caption = captions[i % captions.length] || profile.shop || '到店体验，发现更多精彩';
+        if (textTrack) composition.addClip({
+          trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
+          text: caption, startTime: cursor, duration: shotDuration,
+          x: Math.round(composition.width * 0.07), y: Math.round(composition.height * 0.70),
+          width: Math.round(composition.width * 0.86), height: Math.round(composition.height * 0.18),
+          fontSize: Math.max(28, Math.round(composition.width * 0.045)),
+          fontFamily: 'Arial', fontWeight: 'bold', color: '#ffffff',
+          bgColor: $('xzw-subtitle').value === 'clean' ? 'rgba(0,0,0,0.24)' : 'rgba(0,0,0,0.58)',
+          textAlign: 'center'
+        });
+        shots.push({name:file.name,caption,start:cursor,duration:shotDuration});
+        cursor += shotDuration;
         onCompositionChanged();
       }
-
-      const audioFile = $('xzw-audio').files?.[0];
-      if (audioFile) await mediaManager.importFile(audioFile, { startTime: 0 });
+      if (musicFile) {
+        const music = await mediaManager.importFile(musicFile, { startTime: 0, trackIndex: 4 });
+        if (music) { music.volume = 0.22; music.duration = Math.min(cursor, music.duration); music.trimEnd = (music.trimStart || 0) + music.duration; }
+      }
+      if (voiceFile) {
+        const voice = await mediaManager.importFile(voiceFile, { startTime: 0, trackIndex: 5 });
+        if (voice) { voice.volume = 1; voice.duration = Math.min(cursor, voice.duration); voice.trimEnd = (voice.trimStart || 0) + voice.duration; }
+      }
       onCompositionChanged();
       canvasPreview.setCurrentTime(0);
-      setStatus('已完成 ' + shots.length + ' 个镜头的本地自动编排。请点击预览播放；确认无误后可导出视频。');
-      $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">本次镜头安排</h3>' +
-        shots.map((s,i) => '<div class="xzw-shot">' + (i+1) + '. ' + escapeHtml(s.name) + ' · ' + s.duration.toFixed(1) + ' 秒<br><small>' + escapeHtml(s.caption) + '</small></div>').join('');
+      saveProfile();
+      setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。');
+      $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">镜头清单</h3>' +
+        shots.map((s,i) => '<div class="xzw-shot"><span class="xzw-badge">镜头 '+(i+1)+'</span> '+escapeHtml(s.name)+' · '+s.duration.toFixed(1)+'秒<br><small>'+escapeHtml(s.caption)+'</small></div>').join('');
     } catch (error) {
-      console.error('[小智自动成片]', error);
-      setStatus('编排中断：' + (error?.message || '未知错误') + '。已加入时间线的素材会保留，可检查后重试。');
+      console.error('[小智商家短视频]', error);
+      setStatus('编排中断：' + (error?.message || '未知错误') + '。已加入时间线的素材会保留，请检查后重试。');
     } finally {
       $('xzw-generate').disabled = false;
     }
   });
 
-  $('xzw-export').addEventListener('click', () => {
-    modal.classList.remove('open');
-    onExport();
-  });
+  $('xzw-export').addEventListener('click', () => { modal.classList.remove('open'); onExport(); });
 }
 
 function escapeHtml(value) {
-  return String(value).replace(/[&<>"']/g, (ch) => ({
-    '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#39;'
-  }[ch]));
+  return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
 }
