@@ -92,7 +92,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <label class="xzw-field"><span>配音文件（手机录音或中文AI配音文件）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
         <p class="xzw-note"><a href="./tts-lab.html" target="_blank" rel="noopener">✦ 打开中文配音实验室（普通话）</a>：生成并试听后，下载 WAV，再回到这里上传。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
-        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室目前独立运行，生成后下载 WAV 再上传；尚未完成与主工作台的一键直连。</p>
+        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室目前独立运行，生成后下载 WAV 再上传；尚未完成与主工作台的一键直连。</p>
       </div>
 
       <label class="xzw-field"><span>手机导出方案</span><select id="xzw-export-preset"><option value="mobile">手机稳定优先 · 720p / 24fps / 中等画质</option><option value="clear">画面清晰优先 · 720p / 30fps / 高画质</option></select></label>
