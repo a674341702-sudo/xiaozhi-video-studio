@@ -151,7 +151,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const ratio = $('xzw-ratio').value;
     const dims = { '9:16':[720,1280], '4:5':[720,900], '1:1':[720,720], '16:9':[1280,720] }[ratio];
     const targetSeconds = Number(profile.length) || 30;
-    const perShot = Math.max(2.5, Math.min(5, targetSeconds / files.length));
+    const perShot = Math.max(2.5, targetSeconds / files.length);
     const script = $('xzw-narration').value.trim() ? $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean) : makeScript(profile);
     const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
     const captions = customCaptions.length ? customCaptions : script;
@@ -165,6 +165,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     try {
       composition.clear();
       composition.setDimensions(dims[0], dims[1]);
+      const exportWidth = document.getElementById('export-width');
+      const exportHeight = document.getElementById('export-height');
+      if (exportWidth) exportWidth.value = String(dims[0]);
+      if (exportHeight) exportHeight.value = String(dims[1]);
       let cursor = 0;
       const shots = [];
       for (let i = 0; i < files.length && cursor < targetSeconds; i++) {
