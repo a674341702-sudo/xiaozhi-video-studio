@@ -46,10 +46,10 @@ export class MediaManager {
     this.audioInput.click();
   }
 
-  addText(textStr = 'NEW TEXT') {
+  addText(textStr = '新建文字') {
     const textTrack = this.comp.tracks.find(t => t.type === 'text');
     if (!textTrack) {
-      showToast('No text track available', 'error');
+      showToast('没有可用的文字轨道', 'error');
       return;
     }
 
@@ -73,7 +73,7 @@ export class MediaManager {
       textAlign: 'center'
     });
 
-    showToast(`Added Text: "${textStr}"`, 'success');
+    showToast(`已添加文字： "${textStr}"`, 'success');
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
   }
@@ -81,7 +81,7 @@ export class MediaManager {
   async importFile(file, { startTime = 0, trackIndex = null } = {}) {
     const type = this._detectType(file);
     if (!type) {
-      showToast(`Unsupported file type: ${file.name}`, 'error');
+      showToast(`不支持的文件类型： ${file.name}`, 'error');
       return;
     }
 
@@ -115,7 +115,7 @@ export class MediaManager {
       }
     }
     if (!videoTrack) {
-      showToast('No video track available', 'error');
+      showToast('没有可用的视频轨道', 'error');
       return;
     }
 
@@ -176,7 +176,7 @@ export class MediaManager {
       });
     }
 
-    showToast(`Added Video: ${file.name}`, 'success');
+    showToast(`已添加视频： ${file.name}`, 'success');
     this.videoInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
@@ -232,7 +232,7 @@ export class MediaManager {
     });
 
     if (this.onMediaUrlRegistered) this.onMediaUrlRegistered(clip.id, objectUrl);
-    showToast(`Added Image: ${file.name}`, 'success');
+    showToast(`已添加图片： ${file.name}`, 'success');
     this.imageInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
@@ -279,7 +279,7 @@ export class MediaManager {
     });
 
     if (this.onMediaUrlRegistered) this.onMediaUrlRegistered(clip.id, objectUrl);
-    showToast(`Added Audio: ${file.name}`, 'success');
+    showToast(`已添加音频： ${file.name}`, 'success');
     this.audioInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
