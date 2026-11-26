@@ -9,7 +9,7 @@ function status(message) { $('status').textContent = message; }
 function explainTTSError(error) {
   const message = String(error?.message || error || '');
   if (/failed to fetch|networkerror|load failed|fetch failed|网络|超时/i.test(message)) {
-    return '网络连接失败：配音程序或约166MB的中文模型/声音文件没有成功下载。中国大陆网络访问 Hugging Face、esm.sh 可能不稳定。请切换稳定 Wi-Fi 后重试；这不是你操作错了。';
+    return '网络连接失败：配音程序或中文模型/声音文件没有成功下载。中国大陆网络访问 Hugging Face、esm.sh 可能不稳定。请切换稳定 Wi-Fi 后重试；这不是你操作错了。';
   }
   if (/out of memory|memory|allocation failed|array buffer/i.test(message)) {
     return '手机可用内存不足：请关闭其他应用，刷新页面后先用短句测试；如果仍失败，说明这台手机可能无法顺利运行本地中文模型。';
@@ -26,12 +26,7 @@ async function loadModel() {
     status('正在加载中文语音引擎……');
     const { KokoroTTS } = await import('https://esm.sh/@uzen/kokoro-js@1.2.4?bundle');
     const hasWebGPU = Boolean(navigator.gpu);
-    const options = {
-      dtype: 'q4f16',
-      voicePath: VOICE_PATH
-    };
-    // Some phones expose navigator.gpu but cannot initialize a usable adapter.
-    // Retry with WASM so a WebGPU startup failure does not block all TTS.
+    const options = { dtype: 'q4f16', voicePath: VOICE_PATH };
     if (hasWebGPU) {
       status('正在尝试手机 GPU 加速，并加载普通话模型（首次下载可能较久）……');
       try {
@@ -53,6 +48,40 @@ async function loadModel() {
   catch (error) { loadingPromise = null; throw error; }
 }
 
+// 将分段生成的 Float32 PCM 直接写入一个 WAV 文件，避免再创建一份完整 PCM 副本。
+function chunksToWav(chunks, sampleRate) {
+  const totalSamples = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
+  if (!totalSamples) throw new Error('没有生成有效的语音采样数据。');
+  const dataSize = totalSamples * 2;
+  const buffer = new ArrayBuffer(44 + dataSize);
+  const view = new DataView(buffer);
+  const writeText = (offset, value) => {
+    for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
+  };
+  writeText(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeText(8, 'WAVE');
+  writeText(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, 1, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, sampleRate * 2, true);
+  view.setUint16(32, 2, true);
+  view.setUint16(34, 16, true);
+  writeText(36, 'data');
+  view.setUint32(40, dataSize, true);
+  let offset = 44;
+  for (const chunk of chunks) {
+    for (let i = 0; i < chunk.length; i++) {
+      const value = Math.max(-1, Math.min(1, Number.isFinite(chunk[i]) ? chunk[i] : 0));
+      view.setInt16(offset, value < 0 ? value * 32768 : value * 32767, true);
+      offset += 2;
+    }
+  }
+  return new Blob([buffer], { type: 'audio/wav' });
+}
+
 $('generate').addEventListener('click', async () => {
   const text = $('script').value.trim();
   if (!text) { status('请先输入中文配音文案。'); return; }
@@ -63,12 +92,25 @@ $('generate').addEventListener('click', async () => {
   $('download').hidden = true;
   try {
     const engine = await loadModel();
-    status('中文模型已就绪，正在合成语音……');
-    const audio = await engine.generate(text, {
+    status('中文模型已就绪，正在分段合成语音……');
+    const chunks = [];
+    let sampleRate = 24000;
+    let chunkCount = 0;
+    for await (const part of engine.stream(text, {
       voice: $('voice').value,
       speed: Number($('speed').value)
-    });
-    const blob = audio.toBlob();
+    })) {
+      const raw = part?.audio;
+      const samples = raw?.audio;
+      if (!(samples instanceof Float32Array) || !samples.length) {
+        throw new Error('分段语音数据格式不正确，请反馈此提示。');
+      }
+      sampleRate = Number(raw.sampling_rate || raw.samplingRate || sampleRate);
+      chunks.push(samples);
+      chunkCount++;
+      status('正在生成普通话配音……\n已完成 ' + chunkCount + ' 段，请保持页面打开。');
+    }
+    const blob = chunksToWav(chunks, sampleRate);
     if (!(blob instanceof Blob) || blob.size < 1000) throw new Error('语音文件生成失败或内容为空。');
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     audioUrl = URL.createObjectURL(blob);
@@ -76,7 +118,7 @@ $('generate').addEventListener('click', async () => {
     $('player').hidden = false;
     $('download').href = audioUrl;
     $('download').hidden = false;
-    status('生成成功！请先播放检查发音、语速和停顿；满意后下载 WAV，再回到主工作台上传配音文件。');
+    status('生成成功！共分段生成 ' + chunkCount + ' 段。请先试听发音、语速和停顿；满意后下载 WAV，再回到主工作台上传配音文件。');
   } catch (error) {
     console.error('[中文配音实验室]', error);
     status('生成失败：' + explainTTSError(error));
