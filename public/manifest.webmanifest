@@ -1,0 +1,22 @@
+{
+  "id": "./",
+  "name": "小智商家短视频生产线",
+  "short_name": "小智视频",
+  "description": "手机制作商家宣传短视频",
+  "lang": "zh-CN",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#07070d",
+  "theme_color": "#07070d",
+  "categories": ["video", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
