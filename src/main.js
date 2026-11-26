@@ -171,7 +171,7 @@ function initApp() {
 
   bindControls();
   bindDropHandlers();
-  loadFFmpegInBackground();
+  // Load the large FFmpeg WASM engine only when the user exports, preserving phone memory during editing.
   onCompositionChanged();
   updateHeaderProjectName();
   initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, onExport: handleExport });
