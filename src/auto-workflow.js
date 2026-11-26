@@ -89,9 +89,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       <div class="xzw-section">
         <h3>04 · 配乐与配音</h3>
         <label class="xzw-field"><span>背景音乐（上传已获授权的音乐文件）</span><input id="xzw-music" type="file" accept="audio/*"></label>
-        <label class="xzw-field"><span>配音文件（手机录音或外部AI配音均可）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
+        <label class="xzw-field"><span>配音文件（手机录音或中文AI配音文件）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
+        <p class="xzw-note"><a href="./tts-lab.html" target="_blank" rel="noopener">✦ 打开中文配音实验室（普通话）</a>：生成并试听后，下载 WAV，再回到这里上传。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
-        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。当前版本先支持上传音频并混入成片；自动AI语音合成需要接入TTS服务，不能在未接服务时假称已生成。</p>
+        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室目前独立运行，生成后下载 WAV 再上传；尚未完成与主工作台的一键直连。</p>
       </div>
 
       <label class="xzw-field"><span>手机导出方案</span><select id="xzw-export-preset"><option value="mobile">手机稳定优先 · 720p / 24fps / 中等画质</option><option value="clear">画面清晰优先 · 720p / 30fps / 高画质</option></select></label>
