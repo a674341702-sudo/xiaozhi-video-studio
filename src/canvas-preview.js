@@ -311,9 +311,16 @@ export class CanvasPreview {
   }
 
   _bindEvents() {
-    this.canvas.addEventListener('mousedown', (e) => this._onMouseDown(e));
-    window.addEventListener('mousemove', (e) => this._onMouseMove(e));
-    window.addEventListener('mouseup', () => this._onMouseUp());
+    // Pointer Events support mouse, pen and touch on phones/tablets.
+    this.canvas.style.touchAction = 'none';
+    this.canvas.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'touch') e.preventDefault();
+      this.canvas.setPointerCapture?.(e.pointerId);
+      this._onMouseDown(e);
+    });
+    this.canvas.addEventListener('pointermove', (e) => this._onMouseMove(e));
+    this.canvas.addEventListener('pointerup', () => this._onMouseUp());
+    this.canvas.addEventListener('pointercancel', () => this._onMouseUp());
 
     this.canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
