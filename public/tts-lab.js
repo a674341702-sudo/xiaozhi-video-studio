@@ -49,12 +49,15 @@ async function loadModel() {
 }
 
 // 将分段生成的 Float32 PCM 直接写入一个 WAV 文件，避免再创建一份完整 PCM 副本。
+// 分块构造 WAV：避免一次性申请与整段音频等大的连续 ArrayBuffer。
 function chunksToWav(chunks, sampleRate) {
   const totalSamples = chunks.reduce((sum, chunk) => sum + chunk.length, 0);
   if (!totalSamples) throw new Error('没有生成有效的语音采样数据。');
   const dataSize = totalSamples * 2;
-  const buffer = new ArrayBuffer(44 + dataSize);
-  const view = new DataView(buffer);
+  if (dataSize > 0xffffffff - 36) throw new Error('生成的配音文件过大，请缩短文案后重试。');
+
+  const header = new ArrayBuffer(44);
+  const view = new DataView(header);
   const writeText = (offset, value) => {
     for (let i = 0; i < value.length; i++) view.setUint8(offset + i, value.charCodeAt(i));
   };
@@ -71,15 +74,17 @@ function chunksToWav(chunks, sampleRate) {
   view.setUint16(34, 16, true);
   writeText(36, 'data');
   view.setUint32(40, dataSize, true);
-  let offset = 44;
+
+  const parts = [header];
   for (const chunk of chunks) {
+    const pcm = new Int16Array(chunk.length);
     for (let i = 0; i < chunk.length; i++) {
       const value = Math.max(-1, Math.min(1, Number.isFinite(chunk[i]) ? chunk[i] : 0));
-      view.setInt16(offset, value < 0 ? value * 32768 : value * 32767, true);
-      offset += 2;
+      pcm[i] = value < 0 ? value * 32768 : value * 32767;
     }
+    parts.push(pcm);
   }
-  return new Blob([buffer], { type: 'audio/wav' });
+  return new Blob(parts, { type: 'audio/wav' });
 }
 
 $('generate').addEventListener('click', async () => {
