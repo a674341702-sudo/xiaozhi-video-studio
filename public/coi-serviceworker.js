@@ -26,7 +26,7 @@
  */
 let coepCredentialless = false;
 if (typeof window === 'undefined') {
-    const APP_CACHE = "xiaozhi-video-shell-v1";
+    const APP_CACHE = "xiaozhi-video-shell-v2";
     self.addEventListener("install", () => self.skipWaiting());
     self.addEventListener("activate", (event) => event.waitUntil((async () => {
         const keys = await caches.keys();
@@ -72,7 +72,10 @@ if (typeof window === 'undefined') {
                 requestPath.includes("/icons/") ||
                 requestPath.endsWith("/index.html") ||
                 requestPath.endsWith("/manifest.webmanifest") ||
-                requestPath.endsWith("/pwa-install.js")
+                requestPath.endsWith("/pwa-install.js") ||
+                requestPath.endsWith("/coi-serviceworker.js") ||
+                requestPath.endsWith("/tts-lab.html") ||
+                requestPath.endsWith("/tts-lab.js")
             );
             try {
                 const response = await fetch(request);
