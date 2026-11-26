@@ -15,8 +15,10 @@ async function loadModel() {
     const hasWebGPU = Boolean(navigator.gpu);
     const device = hasWebGPU ? 'webgpu' : 'wasm';
     status('正在下载/加载普通话模型（首次可能需要较长时间）……\n运行方式：' + (hasWebGPU ? '尝试 WebGPU' : 'WASM 兼容模式'));
+    // q4f16 is a documented Kokoro.js option and is substantially smaller
+    // than fp32, which is more suitable for first-time downloads on phones.
     const engine = await KokoroTTS.from_pretrained(MODEL_ID, {
-      dtype: 'fp32',
+      dtype: 'q4f16',
       device,
       voicePath: VOICE_PATH
     });
