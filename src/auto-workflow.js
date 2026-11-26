@@ -94,7 +94,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。当前版本先支持上传音频并混入成片；自动AI语音合成需要接入TTS服务，不能在未接服务时假称已生成。</p>
       </div>
 
-      <div class="xzw-actions"><button class="xzw-primary" id="xzw-generate" type="button">✦ 自动编排30秒商家视频</button><button class="xzw-secondary" id="xzw-export" type="button">导出 MP4</button></div>
+      <label class="xzw-field"><span>手机导出方案</span><select id="xzw-export-preset"><option value="mobile">手机稳定优先 · 720p / 24fps / 中等画质</option><option value="clear">画面清晰优先 · 720p / 30fps / 高画质</option></select></label>
+      <p class="xzw-note">手机稳定优先方案会减少视频帧数和编码负担，更适合先在手机上测试；不同手机的内存和浏览器仍会影响导出结果。</p>
+      <div class="xzw-actions"><button class="xzw-primary" id="xzw-generate" type="button">✦ 自动编排商家视频</button><button class="xzw-secondary" id="xzw-export" type="button">导出 MP4</button></div>
       <div class="xzw-status" id="xzw-status">等待商家资料和素材。编排完成后可预览、修改字幕，再导出视频。</div>
       <div id="xzw-shots"></div>
       <p class="xzw-note">首版使用浏览器本地规则化脚本与剪辑，不会凭空生成不存在的店铺画面。视频导出依赖手机内存和浏览器性能；建议先用少量素材、720×1280测试。请确保素材和音乐有商用授权。</p>
@@ -259,7 +261,15 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     }
   });
 
-  $('xzw-export').addEventListener('click', () => { modal.classList.remove('open'); onExport(); });
+  $('xzw-export').addEventListener('click', () => {
+    const preset = $('xzw-export-preset').value;
+    const fps = document.getElementById('export-fps');
+    const quality = document.getElementById('export-quality');
+    if (fps) fps.value = preset === 'clear' ? '30' : '24';
+    if (quality) quality.value = preset === 'clear' ? 'high' : 'medium';
+    modal.classList.remove('open');
+    onExport();
+  });
 }
 
 function escapeHtml(value) {
