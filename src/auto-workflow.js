@@ -129,7 +129,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const detail = profile.copy.trim();
     const address = profile.address.trim();
     const style = profile.style;
-    const hook = profile.industry === '餐饮探店' ? '在昆明想吃点不一样的？这家店值得收藏。'
+    const hook = profile.industry === '餐饮探店' ? '想找一家值得打卡的好店？先看看这家。'
       : profile.industry === '酒店民宿' ? '来这里住一晚，给自己一个放松的理由。'
       : profile.industry === '服装穿搭' ? '想找到适合自己的风格？来看看这家。'
       : profile.industry === '美容美发' ? '想让自己状态焕然一新？这家可以了解一下。'
