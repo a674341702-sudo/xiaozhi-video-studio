@@ -269,8 +269,8 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   if (totalFramesEstimate > maxFrames) {
     throw new Error(`手机安全导出最多支持约 ${Math.floor(maxFrames / fps)} 秒（当前设置会生成 ${totalFramesEstimate} 帧）。请缩短视频，或选择较低帧率后重试。`);
   }
-  if (width * height > 1280 * 1280) {
-    throw new Error('手机导出建议使用720p左右画幅，请降低输出分辨率后重试。');
+  if (width * height > 1920 * 1080) {
+    throw new Error('当前导出分辨率过高，手机端建议使用720p左右画幅后重试。');
   }
 
   if (onProgress) onProgress(0, 'Loading FFmpeg');
