@@ -106,7 +106,7 @@ export class PropertiesPanel {
       if (bgTrans) bgTrans.checked = clip.bgColor === 'transparent';
       const alignBtns = this.container.querySelectorAll('#prop-text-align .seg-btn');
       alignBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.align === (clip.text对齐方式 || 'center'));
+        btn.classList.toggle('active', btn.dataset.align === (clip.textAlign || 'center'));
       });
       const boldEl = document.getElementById('prop-text-bold');
       if (boldEl) boldEl.checked = clip.fontWeight === 'bold';
@@ -126,7 +126,8 @@ export class PropertiesPanel {
     const hasAudio = clip.type === 'video' || clip.type === 'audio';
     const hasKeyframes = clip.keyframes && Object.keys(clip.keyframes).length > 0;
 
-    const safeType = escapeHtml(clip.type.toUpperCase());
+    const typeNames = { video: '视频', image: '图片', text: '文字', audio: '音频' };
+    const safeType = escapeHtml(typeNames[clip.type] || clip.type);
     const safeText = escapeHtml(clip.text || '');
 
     this.container.innerHTML = `
@@ -208,9 +209,9 @@ export class PropertiesPanel {
           <div class="prop-row">
             <label>对齐方式</label>
             <div class="prop-segmented" id="prop-text-align">
-              <button type="button" class="seg-btn ${clip.text对齐方式 === 'left' ? 'active' : ''}" data-align="left">L</button>
-              <button type="button" class="seg-btn ${clip.text对齐方式 === 'center' ? 'active' : ''}" data-align="center">C</button>
-              <button type="button" class="seg-btn ${clip.text对齐方式 === 'right' ? 'active' : ''}" data-align="right">R</button>
+              <button type="button" class="seg-btn ${clip.textAlign === 'left' ? 'active' : ''}" data-align="left">L</button>
+              <button type="button" class="seg-btn ${clip.textAlign === 'center' ? 'active' : ''}" data-align="center">C</button>
+              <button type="button" class="seg-btn ${clip.textAlign === 'right' ? 'active' : ''}" data-align="right">R</button>
             </div>
           </div>
           <div class="prop-row">
@@ -314,11 +315,11 @@ export class PropertiesPanel {
           <span class="prop-section-title">分辨率（像素）</span>
           <div class="canvas-prop-grid">
             <div class="prop-field">
-              <label>Width</label>
+              <label>宽度</label>
               <input type="number" min="100" max="7680" id="canvas-width" value="${this.comp.width}">
             </div>
             <div class="prop-field">
-              <label>Height</label>
+              <label>高度</label>
               <input type="number" min="100" max="7680" id="canvas-height" value="${this.comp.height}">
             </div>
           </div>
@@ -464,7 +465,7 @@ export class PropertiesPanel {
             clip.customFontUrl = dataUrl;
             this.comp.saveSnapshot();
             if (this.onChange) this.onChange();
-            showToast(`自定义 font loaded: ${file.name}`, 'success');
+            showToast(`自定义字体已加载： ${file.name}`, 'success');
           }).catch((err) => {
             showToast('自定义字体加载失败： ' + file.name, 'error');
             console.error(err);
@@ -483,7 +484,7 @@ export class PropertiesPanel {
     const alignBtns = this.container.querySelectorAll('#prop-text-align .seg-btn');
     alignBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        clip.text对齐方式 = btn.dataset.align;
+        clip.textAlign = btn.dataset.align;
         alignBtns.forEach(b => b.classList.toggle('active', b === btn));
         this.comp.saveSnapshot();
         if (this.onChange) this.onChange();
