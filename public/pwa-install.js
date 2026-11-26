@@ -15,8 +15,8 @@
     Object.assign(installButton.style, {
       position: "fixed",
       right: "14px",
-      bottom: "max(14px, env(safe-area-inset-bottom))",
-      zIndex: "99999",
+      top: "max(54px, calc(env(safe-area-inset-top) + 54px))",
+      zIndex: "1700",
       border: "1px solid rgba(255,255,255,.18)",
       borderRadius: "999px",
       padding: "12px 18px",
