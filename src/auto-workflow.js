@@ -18,7 +18,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}
     .xzw-mode{border:1px solid #454563;border-radius:12px;padding:13px;background:#202039;color:#eee;text-align:left;cursor:pointer}
     .xzw-mode.active{border-color:#a78bfa;background:#30264d}
-    .xzw-mode strong{display:block;font-size:15px;margin-bottom:3px}\n    .xzw-mode small{font-size:11px;line-height:1.4;display:block}
+    .xzw-mode strong{display:block;font-size:15px;margin-bottom:3px}
+    .xzw-mode small{font-size:11px;line-height:1.4;display:block}
     .xzw-field{display:block;margin:13px 0}.xzw-field span{display:block;color:#c5c5dc;margin-bottom:7px}
     .xzw-field textarea,.xzw-field select,.xzw-field input{box-sizing:border-box;width:100%;border:1px solid #454563;background:#10101d;color:#fff;border-radius:10px;padding:11px;font:inherit}
     .xzw-field textarea{min-height:90px;resize:vertical}
