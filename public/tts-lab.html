@@ -28,6 +28,6 @@ audio{width:100%;margin-top:12px}a{color:#f0c76d}.warn{color:#f4cd82;font-size:1
 <audio id="player" controls hidden></audio>
 <a id="download" hidden download="小智中文配音.wav">下载 WAV 配音文件</a>
 </div>
-<div class="panel warn">实验版说明：此页面使用开源中文语音模型，模型从 Hugging Face 下载，语音合成在浏览器本地执行。首次模型下载较大，手机性能、浏览器 WebGPU 支持和网络状况都会影响速度。当前是独立测试页，尚未与主工作台自动打通；请先确认能成功生成和播放，再用于商家交付。</div>
+<div class="panel warn">实验版说明：此页面使用开源中文语音模型，语音在浏览器本地合成。首次需下载约166MB模型，以及配套程序和声音文件；建议使用稳定 Wi-Fi。模型目前托管在 Hugging Face，配音程序从 esm.sh 加载，中国大陆网络环境可能无法稳定访问，因此暂不能保证每台手机都能加载成功。手机性能和浏览器也会影响生成速度。当前是独立测试页，尚未与主工作台自动打通；请先确认能成功生成、播放和下载，再用于商家交付。</div>
 <script type="module" src="./tts-lab.js"></script>
 </body></html>
