@@ -188,6 +188,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const textTrack = composition.tracks.find(t => t.type === 'text');
     const musicFile = $('xzw-music').files?.[0];
     const voiceFile = $('xzw-voice').files?.[0];
+    const audioFiles = [musicFile, voiceFile].filter(Boolean);
+    const audioBytes = audioFiles.reduce((total, file) => total + file.size, 0);
+    const maxAudioFileBytes = 40 * 1024 * 1024;
+    if (audioFiles.some(file => !file.size || file.size > maxAudioFileBytes) || audioBytes > 60 * 1024 * 1024) {
+      setStatus('配乐和配音文件请分别控制在40MB以内、合计不超过60MB。手机首测建议使用较短的MP3或WAV文件，避免导出时占用过多内存。');
+      return;
+    }
 
     $('xzw-generate').disabled = true;
     $('xzw-shots').innerHTML = '';
