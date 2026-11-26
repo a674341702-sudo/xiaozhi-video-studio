@@ -6,12 +6,12 @@ import { formatTime, escapeHtml, showToast } from './utils.js';
 import { setKeyframe } from './keyframes.js';
 
 const ASPECT_PRESETS = {
-  '16:9': { ratio: 16 / 9, name: '16:9 Landscape', default: { width: 1920, height: 1080 } },
-  '9:16': { ratio: 9 / 16, name: '9:16 Portrait', default: { width: 1080, height: 1920 } },
-  '1:1': { ratio: 1, name: '1:1 Square', default: { width: 1080, height: 1080 } },
-  '4:5': { ratio: 4 / 5, name: '4:5 Vertical', default: { width: 1080, height: 1350 } },
-  '4:3': { ratio: 4 / 3, name: '4:3 Classic', default: { width: 1440, height: 1080 } },
-  '21:9': { ratio: 21 / 9, name: '21:9 Ultrawide', default: { width: 2560, height: 1080 } },
+  '16:9': { ratio: 16 / 9, name: '16:9 横屏', default: { width: 1920, height: 1080 } },
+  '9:16': { ratio: 9 / 16, name: '9:16 竖屏', default: { width: 1080, height: 1920 } },
+  '1:1': { ratio: 1, name: '1:1 正方形', default: { width: 1080, height: 1080 } },
+  '4:5': { ratio: 4 / 5, name: '4:5 竖版', default: { width: 1080, height: 1350 } },
+  '4:3': { ratio: 4 / 3, name: '4:3 经典', default: { width: 1440, height: 1080 } },
+  '21:9': { ratio: 21 / 9, name: '21:9 超宽屏', default: { width: 2560, height: 1080 } },
 };
 
 function getAspectRatioPreset(width, height) {
@@ -106,7 +106,7 @@ export class PropertiesPanel {
       if (bgTrans) bgTrans.checked = clip.bgColor === 'transparent';
       const alignBtns = this.container.querySelectorAll('#prop-text-align .seg-btn');
       alignBtns.forEach(btn => {
-        btn.classList.toggle('active', btn.dataset.align === (clip.textAlign || 'center'));
+        btn.classList.toggle('active', btn.dataset.align === (clip.text对齐方式 || 'center'));
       });
       const boldEl = document.getElementById('prop-text-bold');
       if (boldEl) boldEl.checked = clip.fontWeight === 'bold';
@@ -132,19 +132,19 @@ export class PropertiesPanel {
     this.container.innerHTML = `
       <div class="panel-header compact">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/><path d="M14 9h7"/><path d="M14 15h7"/></svg>
-        <span>Properties: ${safeType}</span>
+        <span>素材属性：${safeType}</span>
       </div>
       <div class="properties-body">
 
         <!-- Time & Duration -->
         <div class="prop-section">
-          <span class="prop-section-title">TIMING & DURATION</span>
+          <span class="prop-section-title">时间与时长</span>
           <div class="prop-row">
-            <label>Start Time (s)</label>
+            <label>开始时间（秒）</label>
             <input type="number" step="0.1" min="0" id="prop-start" value="${clip.startTime}">
           </div>
           <div class="prop-row">
-            <label>Duration (s)</label>
+            <label>持续时间（秒）</label>
             <input type="number" step="0.1" min="0.5" id="prop-duration" value="${clip.duration}">
           </div>
         </div>
@@ -152,7 +152,7 @@ export class PropertiesPanel {
         ${isVisual ? `
         <!-- Transform -->
         <div class="prop-section">
-          <span class="prop-section-title">TRANSFORM & POSITION</span>
+          <span class="prop-section-title">画面变换与位置</span>
           <div class="prop-grid-2">
             <div class="prop-field">
               <label>X (px)</label>
@@ -163,16 +163,16 @@ export class PropertiesPanel {
               <input type="number" id="prop-y" value="${clip.y}">
             </div>
             <div class="prop-field">
-              <label>Width (px)</label>
+              <label>宽度（像素）</label>
               <input type="number" min="10" id="prop-w" value="${clip.width}">
             </div>
             <div class="prop-field">
-              <label>Height (px)</label>
+              <label>高度（像素）</label>
               <input type="number" min="10" id="prop-h" value="${clip.height}">
             </div>
           </div>
           <div class="prop-row" style="margin-top: 6px;">
-            <label>Opacity</label>
+            <label>不透明度</label>
             <input type="range" min="0" max="1" step="0.05" id="prop-opacity" value="${clip.opacity}">
             <span class="prop-val-display" id="prop-opacity-val">${Math.round(clip.opacity * 100)}%</span>
           </div>
@@ -182,17 +182,17 @@ export class PropertiesPanel {
         ${isText ? `
         <!-- Text Properties -->
         <div class="prop-section">
-          <span class="prop-section-title">TEXT STYLING</span>
+          <span class="prop-section-title">文字样式</span>
           <div class="prop-row-col">
-            <label>Text Content</label>
+            <label>字幕内容</label>
             <textarea id="prop-text-content" rows="4">${safeText}</textarea>
           </div>
           <div class="prop-row">
-            <label>Font Size</label>
+            <label>字体大小</label>
             <input type="number" min="12" max="300" id="prop-text-size" value="${clip.fontSize}">
           </div>
           <div class="prop-row">
-            <label>Font Family</label>
+            <label>字体</label>
             <select id="prop-text-font">
               <option value="Inter" ${clip.fontFamily === 'Inter' ? 'selected' : ''}>Inter</option>
               <option value="JetBrains Mono" ${clip.fontFamily === 'JetBrains Mono' ? 'selected' : ''}>JetBrains Mono</option>
@@ -202,50 +202,50 @@ export class PropertiesPanel {
             </select>
           </div>
           <div class="prop-row">
-            <label>Custom Font</label>
+            <label>自定义字体</label>
             <input type="file" id="prop-text-font-file" accept=".ttf,.otf,.woff,.woff2">
           </div>
           <div class="prop-row">
-            <label>Align</label>
+            <label>对齐方式</label>
             <div class="prop-segmented" id="prop-text-align">
-              <button type="button" class="seg-btn ${clip.textAlign === 'left' ? 'active' : ''}" data-align="left">L</button>
-              <button type="button" class="seg-btn ${clip.textAlign === 'center' ? 'active' : ''}" data-align="center">C</button>
-              <button type="button" class="seg-btn ${clip.textAlign === 'right' ? 'active' : ''}" data-align="right">R</button>
+              <button type="button" class="seg-btn ${clip.text对齐方式 === 'left' ? 'active' : ''}" data-align="left">L</button>
+              <button type="button" class="seg-btn ${clip.text对齐方式 === 'center' ? 'active' : ''}" data-align="center">C</button>
+              <button type="button" class="seg-btn ${clip.text对齐方式 === 'right' ? 'active' : ''}" data-align="right">R</button>
             </div>
           </div>
           <div class="prop-row">
-            <label>Bold</label>
+            <label>加粗</label>
             <input type="checkbox" id="prop-text-bold" ${clip.fontWeight === 'bold' ? 'checked' : ''}>
           </div>
           <div class="prop-row">
-            <label>Text Color</label>
+            <label>文字颜色</label>
             <input type="color" id="prop-text-color" value="${clip.color}">
           </div>
           <div class="prop-row">
-            <label>Background</label>
+            <label>背景颜色</label>
             <input type="color" id="prop-text-bg" value="${clip.bgColor === 'transparent' ? '#000000' : clip.bgColor}">
           </div>
           <div class="prop-row">
-            <label>Transparent BG</label>
+            <label>背景透明</label>
             <input type="checkbox" id="prop-text-bg-transparent" ${clip.bgColor === 'transparent' ? 'checked' : ''}>
           </div>
         ` : ''}
 
         ${hasAudio ? `
-        <!-- Audio Volume -->
+        <!-- Audio 音量 -->
         <div class="prop-section">
-          <span class="prop-section-title">AUDIO</span>
+          <span class="prop-section-title">音频</span>
           <div class="prop-row">
-            <label>Volume</label>
+            <label>音量</label>
             <input type="range" min="0" max="2" step="0.05" id="prop-volume" value="${clip.volume ?? 1}">
             <span class="prop-val-display" id="prop-volume-val">${Math.round((clip.volume ?? 1) * 100)}%</span>
           </div>
           <div class="prop-row">
-            <label>Fade In (s)</label>
+            <label>淡入（秒）</label>
             <input type="number" min="0" step="0.1" id="prop-fade-in" value="${clip.fadeIn || 0}">
           </div>
           <div class="prop-row">
-            <label>Fade Out (s)</label>
+            <label>淡出（秒）</label>
             <input type="number" min="0" step="0.1" id="prop-fade-out" value="${clip.fadeOut || 0}">
           </div>
         </div>
@@ -253,18 +253,18 @@ export class PropertiesPanel {
 
         <!-- Keyframes -->
         <div class="prop-section">
-          <span class="prop-section-title">KEYFRAMES</span>
+          <span class="prop-section-title">关键帧动画</span>
           <div class="prop-row">
-            <button class="tool-btn" id="prop-kf-position" type="button">+ Position</button>
-            <button class="tool-btn" id="prop-kf-scale" type="button">+ Scale</button>
+            <button class="tool-btn" id="prop-kf-position" type="button">+ 位置</button>
+            <button class="tool-btn" id="prop-kf-scale" type="button">+ 缩放</button>
           </div>
           <div class="prop-row" style="margin-top: 4px;">
-            <button class="tool-btn" id="prop-kf-rotation" type="button">+ Rotation</button>
-            <button class="tool-btn" id="prop-kf-opacity" type="button">+ Opacity</button>
+            <button class="tool-btn" id="prop-kf-rotation" type="button">+ 旋转</button>
+            <button class="tool-btn" id="prop-kf-opacity" type="button">+ 不透明度</button>
           </div>
           ${hasKeyframes ? `
           <div class="prop-row" style="margin-top: 6px;">
-            <span class="prop-val-display">${Object.keys(clip.keyframes).length} animated properties</span>
+            <span class="prop-val-display">${Object.keys(clip.keyframes).length} 个动画属性</span>
           </div>
           ` : ''}
         </div>
@@ -272,7 +272,7 @@ export class PropertiesPanel {
         <div class="prop-actions">
           <button class="tool-btn danger wide" id="prop-delete-btn" type="button">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-            Delete Element
+            删除素材
           </button>
         </div>
 
@@ -291,27 +291,27 @@ export class PropertiesPanel {
     this.container.innerHTML = `
       <div class="panel-header compact">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18"/><path d="M9 21V9"/></svg>
-        <span>Canvas & Project Settings</span>
+        <span>画布与项目设置</span>
       </div>
       <div class="properties-body">
 
         <div class="prop-section">
-          <span class="prop-section-title">ASPECT RATIO PRESET</span>
+          <span class="prop-section-title">画面比例</span>
           <div class="prop-row">
             <select id="canvas-ratio-select" style="width: 100%;">
-              <option value="16:9" ${ratio === '16:9' ? 'selected' : ''}>16:9 Landscape</option>
-              <option value="9:16" ${ratio === '9:16' ? 'selected' : ''}>9:16 Portrait</option>
-              <option value="1:1" ${ratio === '1:1' ? 'selected' : ''}>1:1 Square</option>
-              <option value="4:5" ${ratio === '4:5' ? 'selected' : ''}>4:5 Vertical</option>
-              <option value="4:3" ${ratio === '4:3' ? 'selected' : ''}>4:3 Classic</option>
-              <option value="21:9" ${ratio === '21:9' ? 'selected' : ''}>21:9 Ultrawide</option>
-              <option value="custom" ${ratio === 'custom' ? 'selected' : ''}>Custom</option>
+              <option value="16:9" ${ratio === '16:9' ? 'selected' : ''}>16:9 横屏</option>
+              <option value="9:16" ${ratio === '9:16' ? 'selected' : ''}>9:16 竖屏</option>
+              <option value="1:1" ${ratio === '1:1' ? 'selected' : ''}>1:1 正方形</option>
+              <option value="4:5" ${ratio === '4:5' ? 'selected' : ''}>4:5 竖版</option>
+              <option value="4:3" ${ratio === '4:3' ? 'selected' : ''}>4:3 经典</option>
+              <option value="21:9" ${ratio === '21:9' ? 'selected' : ''}>21:9 超宽屏</option>
+              <option value="custom" ${ratio === 'custom' ? 'selected' : ''}>自定义</option>
             </select>
           </div>
         </div>
 
         <div class="prop-section">
-          <span class="prop-section-title">RESOLUTION (PX)</span>
+          <span class="prop-section-title">分辨率（像素）</span>
           <div class="canvas-prop-grid">
             <div class="prop-field">
               <label>Width</label>
@@ -328,16 +328,16 @@ export class PropertiesPanel {
             <button class="canvas-scale-btn" data-w="1280" data-h="720">720p</button>
             <button class="canvas-scale-btn" data-w="960" data-h="540">540p</button>
           </div>
-          <button class="tool-btn wide" id="canvas-apply-btn" type="button" style="margin-top: 10px;">Apply Settings</button>
+          <button class="tool-btn wide" id="canvas-apply-btn" type="button" style="margin-top: 10px;">应用设置</button>
         </div>
 
         <div class="prop-section">
-          <span class="prop-section-title">PROJECT SUMMARY</span>
+          <span class="prop-section-title">项目概览</span>
           <div class="canvas-summary">
-            <div><strong>Duration:</strong> ${formatTime(duration)}</div>
-            <div><strong>Tracks:</strong> ${trackCount}</div>
-            <div><strong>Clips:</strong> ${clipCount}</div>
-            <div><strong>Resolution:</strong> ${this.comp.width}×${this.comp.height}</div>
+            <div><strong>时长：</strong> ${formatTime(duration)}</div>
+            <div><strong>轨道数：</strong> ${trackCount}</div>
+            <div><strong>素材数：</strong> ${clipCount}</div>
+            <div><strong>分辨率：</strong> ${this.comp.width}×${this.comp.height}</div>
           </div>
         </div>
 
@@ -464,16 +464,16 @@ export class PropertiesPanel {
             clip.customFontUrl = dataUrl;
             this.comp.saveSnapshot();
             if (this.onChange) this.onChange();
-            showToast(`Custom font loaded: ${file.name}`, 'success');
+            showToast(`自定义 font loaded: ${file.name}`, 'success');
           }).catch((err) => {
-            showToast('Failed to load custom font: ' + file.name, 'error');
+            showToast('自定义字体加载失败： ' + file.name, 'error');
             console.error(err);
           }).finally(() => {
             fontFileEl.value = '';
           });
         };
         reader.onerror = () => {
-          showToast('Failed to read custom font: ' + file.name, 'error');
+          showToast('自定义字体读取失败： ' + file.name, 'error');
           fontFileEl.value = '';
         };
         reader.readAsDataURL(file);
@@ -483,7 +483,7 @@ export class PropertiesPanel {
     const alignBtns = this.container.querySelectorAll('#prop-text-align .seg-btn');
     alignBtns.forEach(btn => {
       btn.addEventListener('click', () => {
-        clip.textAlign = btn.dataset.align;
+        clip.text对齐方式 = btn.dataset.align;
         alignBtns.forEach(b => b.classList.toggle('active', b === btn));
         this.comp.saveSnapshot();
         if (this.onChange) this.onChange();
@@ -556,7 +556,7 @@ export class PropertiesPanel {
         clip.keyframes = setKeyframe(clip.keyframes, property, currentTime, value, 'linear');
         this.comp.saveSnapshot();
         if (this.onChange) this.onChange();
-        showToast(`Keyframe added: ${property}`, 'success');
+        showToast(`已添加关键帧： ${property}`, 'success');
       });
     };
 
