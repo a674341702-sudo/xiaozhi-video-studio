@@ -262,6 +262,16 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   const height = options.height || composition.height || 1080;
   const fps = options.fps || 30;
   const quality = options.quality || 'high';
+  const totalFramesEstimate = Math.ceil(duration * fps);
+  // FFmpeg.wasm keeps imported frames in its virtual filesystem until encoding.
+  // Bound the workload on phones before allocating hundreds of large JPEG frames.
+  const maxFrames = options.mobileSafe === false ? 1800 : 900;
+  if (totalFramesEstimate > maxFrames) {
+    throw new Error(`手机安全导出最多支持约 ${Math.floor(maxFrames / fps)} 秒（当前设置会生成 ${totalFramesEstimate} 帧）。请缩短视频，或选择较低帧率后重试。`);
+  }
+  if (width * height > 1280 * 1280) {
+    throw new Error('手机导出建议使用720p左右画幅，请降低输出分辨率后重试。');
+  }
 
   if (onProgress) onProgress(0, 'Loading FFmpeg');
 
@@ -300,7 +310,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     const frameDuration = 1 / fps;
     const videoClips = composition.clips.filter(c => c.type === 'video' && c.element);
 
-    const jpegQuality = quality === 'low' ? 0.75 : quality === 'medium' ? 0.85 : 0.92;
+    const jpegQuality = quality === 'low' ? 0.68 : quality === 'medium' ? 0.78 : 0.88;
 
     for (let f = 0; f < totalFrames; f++) {
       checkAborted();
@@ -377,9 +387,13 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
     args.push('export.mp4');
 
-    const ret = await ffmpeg.exec(args);
-    ffmpeg.off('log', logCb);
     inputFiles.push('export.mp4');
+    let ret;
+    try {
+      ret = await ffmpeg.exec(args);
+    } finally {
+      ffmpeg.off('log', logCb);
+    }
 
     if (ret !== 0) {
       const errDetail = logMessages.slice(-15).join('\n');
@@ -395,7 +409,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     }
 
     if (onProgress) onProgress(100, 'Export complete');
-    return { blob: new Blob([mp4Data.buffer], { type: 'video/mp4' }), ext: 'mp4' };
+    return { blob: new Blob([mp4Data.slice().buffer], { type: 'video/mp4' }), ext: 'mp4' };
   } finally {
     await cleanupFiles(inputFiles);
     if (offscreenCanvas) {
