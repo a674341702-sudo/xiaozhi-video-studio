@@ -5,6 +5,30 @@
 import { validateFile, showToast } from './utils.js';
 import { generateProxy } from './proxy.js';
 
+// Mobile browsers can occasionally leave media metadata loading unresolved.
+// Bound the wait so the workflow can show a useful error instead of hanging forever.
+function waitForMediaReady(element, readyCheck, readyEvent, timeoutMs = 15000) {
+  if (readyCheck()) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let settled = false;
+    let timer;
+    const finish = (ready) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      element.removeEventListener(readyEvent, onReady);
+      element.removeEventListener('error', onError);
+      resolve(ready);
+    };
+    const onReady = () => finish(true);
+    const onError = () => finish(false);
+    element.addEventListener(readyEvent, onReady, { once: true });
+    element.addEventListener('error', onError, { once: true });
+    timer = setTimeout(() => finish(false), timeoutMs);
+    if (readyCheck()) finish(true);
+  });
+}
+
 export class MediaManager {
   constructor(composition, onCompositionChanged, onMediaUrlRegistered, store) {
     this.comp = composition;
@@ -121,13 +145,14 @@ export class MediaManager {
 
     const objectUrl = URL.createObjectURL(file);
     const video = document.createElement('video');
+    video.preload = 'metadata';
     video.src = objectUrl;
-    video.preload = 'auto';
-
-    await new Promise((resolve) => {
-      video.onloadedmetadata = () => resolve();
-      video.onerror = () => resolve();
-    });
+    const videoReady = await waitForMediaReady(video, () => video.readyState >= 1, 'loadedmetadata');
+    if (!videoReady) {
+      URL.revokeObjectURL(objectUrl);
+      showToast('手机读取视频失败或等待超时，请换成 MP4 文件或压缩后重试。', 'error');
+      return null;
+    }
 
     const dur = Math.round(video.duration || 10);
     const vW = video.videoWidth || 1920;
@@ -192,11 +217,12 @@ export class MediaManager {
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
     img.src = objectUrl;
-
-    await new Promise((resolve) => {
-      img.onload = () => resolve();
-      img.onerror = () => resolve();
-    });
+    const imageReady = await waitForMediaReady(img, () => img.complete && img.naturalWidth > 0, 'load');
+    if (!imageReady) {
+      URL.revokeObjectURL(objectUrl);
+      showToast('手机读取图片失败或等待超时，请换成 JPG、PNG 图片后重试。', 'error');
+      return null;
+    }
 
     let imgTrack = this.comp.tracks.find(t => t.type === 'image');
     if (trackIndex !== null) {
@@ -247,11 +273,13 @@ export class MediaManager {
 
     const objectUrl = URL.createObjectURL(file);
     const audio = new Audio(objectUrl);
-
-    await new Promise((resolve) => {
-      audio.onloadedmetadata = () => resolve();
-      audio.onerror = () => resolve();
-    });
+    audio.preload = 'metadata';
+    const audioReady = await waitForMediaReady(audio, () => audio.readyState >= 1, 'loadedmetadata');
+    if (!audioReady) {
+      URL.revokeObjectURL(objectUrl);
+      showToast('手机读取音频失败或等待超时，请换成 MP3 或 WAV 文件后重试。', 'error');
+      return null;
+    }
 
     const dur = Math.round(audio.duration || 10);
 
