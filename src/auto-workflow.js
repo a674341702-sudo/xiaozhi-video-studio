@@ -2,6 +2,8 @@
  * 小智一键视频工坊 - 本地自动成片工作流
  * 第一阶段使用浏览器本地处理，不冒充云端 AI 推理。
  */
+import { createWorkflowPlan, getWorkflowModeLabel } from './workflow-planner.js';
+
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
 
@@ -13,10 +15,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-card{width:min(720px,100%);max-height:92vh;overflow:auto;background:#171728;border:1px solid #383852;border-radius:18px;padding:20px;box-shadow:0 20px 70px #0009}
     .xzw-head{display:flex;justify-content:space-between;align-items:center;gap:12px}.xzw-head h2{font-size:21px;margin:0}
     .xzw-close{background:#292940;color:#fff;border:0;border-radius:9px;padding:8px 12px}
-    .xzw-modes{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:18px 0}
+    .xzw-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:18px 0}
     .xzw-mode{border:1px solid #454563;border-radius:12px;padding:13px;background:#202039;color:#eee;text-align:left;cursor:pointer}
     .xzw-mode.active{border-color:#a78bfa;background:#30264d}
     .xzw-mode strong{display:block;font-size:15px;margin-bottom:3px}
+    .xzw-mode small{font-size:11px;line-height:1.4;display:block}
     .xzw-field{display:block;margin:13px 0}.xzw-field span{display:block;color:#c5c5dc;margin-bottom:7px}
     .xzw-field textarea,.xzw-field select,.xzw-field input{box-sizing:border-box;width:100%;border:1px solid #454563;background:#10101d;color:#fff;border-radius:10px;padding:11px;font:inherit}
     .xzw-field textarea{min-height:90px;resize:vertical}
@@ -27,7 +30,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-note{color:#aaaac2;font-size:12px;margin-top:12px}
     .xzw-status{margin-top:14px;padding:11px;border-radius:10px;background:#111121;color:#c4b5fd;white-space:pre-wrap}
     .xzw-shot{padding:8px 10px;border-bottom:1px solid #34344a;color:#ddd}
-    @media(max-width:560px){#xiaozhi-workflow-launcher{right:10px;top:auto;bottom:18px}.xzw-card{padding:15px}.xzw-head h2{font-size:18px}}
+    @media(max-width:560px){#xiaozhi-workflow-launcher{right:10px;top:auto;bottom:18px}.xzw-card{padding:15px}.xzw-head h2{font-size:18px}.xzw-modes{grid-template-columns:1fr}.xzw-mode{padding:10px}}
   `;
   document.head.appendChild(style);
 
@@ -43,8 +46,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       <div class="xzw-head"><h2>✦ 小智一键视频工坊</h2><button class="xzw-close" type="button">关闭</button></div>
       <p style="color:#b9b9d0;margin:8px 0 0">选择用途，上传素材，写下想表达的内容，自动编排到时间线。</p>
       <div class="xzw-modes">
-        <button class="xzw-mode active" data-mode="product"><strong>🛍 产品宣传</strong><small>商品介绍、门店探店、短视频带货</small></button>
-        <button class="xzw-mode" data-mode="comic"><strong>🎬 AI 漫剧</strong><small>故事分镜、角色画面、对白字幕</small></button>
+        <button class="xzw-mode active" data-mode="product"><strong>🏪 商家宣传</strong><small>门店故事、产品介绍、探店短片</small></button>
+        <button class="xzw-mode" data-mode="story"><strong>🎥 故事电影</strong><small>文字故事、剧情镜头、电影短片</small></button>
+        <button class="xzw-mode" data-mode="comic"><strong>📚 AI 漫剧</strong><small>脚本、角色、分镜与对白</small></button>
       </div>
       <label class="xzw-field"><span>上传图片 / 视频素材（可多选）</span><div class="xzw-file"><input id="xzw-files" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mov" multiple><div class="xzw-note">建议先用 3–8 张图片或几段短视频。手机端请控制素材大小。</div></div></label>
       <label class="xzw-field"><span id="xzw-prompt-label">产品 / 门店介绍</span><textarea id="xzw-prompt" placeholder="例如：昆明一家环境舒适的咖啡店，主打手冲咖啡，突出环境、口味和到店体验。"></textarea></label>
@@ -69,10 +73,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   modal.querySelectorAll('.xzw-mode').forEach((button) => button.addEventListener('click', () => {
     mode = button.dataset.mode;
     modal.querySelectorAll('.xzw-mode').forEach((b) => b.classList.toggle('active', b === button));
-    $('xzw-prompt-label').textContent = mode === 'product' ? '产品 / 门店介绍' : '漫剧故事梗概 / 角色对白';
-    $('xzw-prompt').placeholder = mode === 'product'
-      ? '例如：介绍商品特点、使用场景和购买理由。'
-      : '例如：一个年轻人误入古代昆仑秘境，遇见守山少女，发现自己的身世秘密。';
+    const labels = { product: '商家 / 产品介绍', story: '电影故事 / 剧情梗概', comic: '漫剧脚本 / 角色对白' };
+    const placeholders = {
+      product: '例如：昆明一家咖啡店，老板坚持手冲咖啡十年，主打云南本地咖啡豆……',
+      story: '例如：一个年轻人从云南来到昆明创业，经历失败后重新振作，最终找到人生方向……',
+      comic: '例如：第一幕：少年意外获得神秘能力。第二幕：师门遭遇危机。请粘贴完整脚本或分集梗概……'
+    };
+    $('xzw-prompt-label').textContent = labels[mode];
+    $('xzw-prompt').placeholder = placeholders[mode];
   }));
 
   $('xzw-generate').addEventListener('click', async () => {
@@ -88,12 +96,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     const videoFiles = files.filter(f => f.type.startsWith('video/'));
     const textTrack = composition.tracks.find(t => t.type === 'text');
-    const sentences = prompt
-      ? prompt.split(/[。！？!?；;\n]+/).map(s => s.trim()).filter(Boolean)
-      : [];
-    const productCaptions = ['看见细节，发现不一样的品质','从真实体验出发，感受每一处用心','把喜欢的理由，分享给更多人','现在就来了解更多'];
-    const comicCaptions = ['故事，就从这一刻开始','命运的相遇，正在悄然发生','新的线索，指向未知的远方','下一幕，即将揭晓'];
-    const captions = sentences.length ? sentences : (mode === 'product' ? productCaptions : comicCaptions);
+    const directorPlan = createWorkflowPlan({ mode, prompt, assetNames: files.map(file => file.name) });
+    const captions = directorPlan.shots.map(shot => shot.caption);
     const shots = [];
     $('xzw-generate').disabled = true;
     setStatus('正在导入素材并安排镜头……请保持页面打开。');
@@ -129,7 +133,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
             bgColor: 'rgba(0,0,0,0.48)', textAlign: 'center'
           });
         }
-        shots.push({ name: file.name, caption, start: clip.startTime, duration: shotDuration });
+        const plannedShot = directorPlan.shots[i] || directorPlan.shots[directorPlan.shots.length - 1];
+        shots.push({ name: file.name, caption, title: plannedShot?.title || ('镜头 ' + (i + 1)), purpose: plannedShot?.purpose || '', start: clip.startTime, duration: shotDuration });
         cursor = clip.startTime + shotDuration + 0.08;
         onCompositionChanged();
       }
@@ -138,9 +143,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       if (audioFile) await mediaManager.importFile(audioFile, { startTime: 0 });
       onCompositionChanged();
       canvasPreview.setCurrentTime(0);
-      setStatus('已完成 ' + shots.length + ' 个镜头的本地自动编排。请点击预览播放；确认无误后可导出视频。');
-      $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">本次镜头安排</h3>' +
-        shots.map((s,i) => '<div class="xzw-shot">' + (i+1) + '. ' + escapeHtml(s.name) + ' · ' + s.duration.toFixed(1) + ' 秒<br><small>' + escapeHtml(s.caption) + '</small></div>').join('');
+      setStatus('导演策划完成：' + getWorkflowModeLabel(mode) + '，已将 ' + shots.length + ' 个素材镜头编排到时间线。当前为免费本地工作流，尚未调用文生图/文生视频模型。请预览并导出。');
+      $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">导演镜头计划（本地策划版）</h3>' +
+        shots.map((s,i) => '<div class="xzw-shot"><strong>' + (i+1) + '. ' + escapeHtml(s.title) + '</strong> · ' + s.duration.toFixed(1) + ' 秒<br><small>' + escapeHtml(s.purpose) + '</small><br><small>素材：' + escapeHtml(s.name) + '｜字幕：' + escapeHtml(s.caption) + '</small></div>').join('');
     } catch (error) {
       console.error('[小智自动成片]', error);
       setStatus('编排中断：' + (error?.message || '未知错误') + '。已加入时间线的素材会保留，可检查后重试。');
