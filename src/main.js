@@ -409,12 +409,12 @@ function stop() {
 
 function setInPoint() {
   inPoint = canvasPreview.currentTime;
-  showToast(`In point set: ${formatTime(inPoint)}`, 'info');
+  showToast(`已设置入点： ${formatTime(inPoint)}`, 'info');
 }
 
 function setOutPoint() {
   outPoint = canvasPreview.currentTime;
-  showToast(`Out point set: ${formatTime(outPoint)}`, 'info');
+  showToast(`已设置出点： ${formatTime(outPoint)}`, 'info');
 }
 
 // --- Event Controls Binding ---
@@ -543,12 +543,12 @@ function bindDropHandlers() {
 // --- Export Handling ---
 async function handleExport() {
   if (composition.clips.length === 0) {
-    showToast('Add at least one element before exporting', 'warning');
+    showToast('请至少添加一个素材后再导出', 'warning');
     return;
   }
 
   if (isExporting) {
-    showToast('Export already in progress', 'info');
+    showToast('视频正在导出，请稍候', 'info');
     return;
   }
 
@@ -562,13 +562,13 @@ async function handleExport() {
   showProgress('Exporting Composition', 'Rendering video and mixing audio in browser...', 0);
 
   if (progressCancelBtn) {
-    progressCancelBtn.textContent = 'Cancel Export';
+    progressCancelBtn.textContent = '取消导出';
     progressCancelBtn.disabled = false;
     progressCancelBtn.onclick = () => {
       if (exportAbortController) exportAbortController.abort();
       exportAbortController = null;
       hideProgress();
-      showToast('Export cancelled', 'info');
+      showToast('已取消导出', 'info');
     };
   }
 
@@ -592,21 +592,21 @@ async function handleExport() {
     hideProgress();
 
     if (!blob || blob.size === 0) {
-      showToast('Export failed: Rendered blob is empty', 'error', 6000);
+      showToast('导出失败：生成的视频文件为空', 'error', 6000);
       return;
     }
 
     const filename = `Viz_Export_${Date.now()}.${ext || 'mp4'}`;
     downloadBlob(blob, filename);
-    showToast(`Export Complete! Downloading ${filename}`, 'success', 5000);
+    showToast(`导出完成！正在下载 ${filename}`, 'success', 5000);
   } catch (err) {
     hideProgress();
     console.error('Export error:', err);
     if (err?.name === 'AbortError' || signal?.aborted) {
-      showToast('Export cancelled', 'info');
+      showToast('已取消导出', 'info');
       return;
     }
-    const rawMessage = err?.message || (typeof err === 'string' ? err : 'Export processing failed');
+    const rawMessage = err?.message || (typeof err === 'string' ? err : '导出处理失败');
     const isMemoryError = /out of memory|memory access out of bounds|allocation failed|array buffer allocation|cannot enlarge memory|not enough memory/i.test(rawMessage);
     const msg = isMemoryError
       ? '手机可用内存不足，视频没有导出。请关闭其他应用后重试；素材控制在4–6个以内，单段视频尽量短，并选择“手机稳定优先”。'
@@ -637,14 +637,14 @@ function hideProgress() {
 }
 
 async function loadFFmpegInBackground() {
-  if (headerStatusEl) headerStatusEl.textContent = 'Loading Engine...';
+  if (headerStatusEl) headerStatusEl.textContent = '正在加载导出引擎…';
   try {
     await loadFFmpeg();
-    if (headerStatusEl) headerStatusEl.textContent = 'FFmpeg Ready';
+    if (headerStatusEl) headerStatusEl.textContent = '导出引擎已就绪';
   } catch (e) {
     console.warn('FFmpeg load failed:', e);
-    if (headerStatusEl) headerStatusEl.textContent = 'Canvas Engine Only';
-    showToast('Offline encoder unavailable. Exports may fall back to WebM.', 'warning', 6000);
+    if (headerStatusEl) headerStatusEl.textContent = '当前使用画布引擎';
+    showToast('离线编码器不可用，导出可能会使用 WebM 格式。', 'warning', 6000);
   }
 }
 
@@ -663,7 +663,7 @@ window.newProject = function newProject() {
   outPoint = 0;
   onCompositionChanged();
   updateHeaderProjectName('Multi-Track Project');
-  showToast('New project created', 'info');
+  showToast('已新建项目', 'info');
 };
 
 window.saveProject = function saveProject() {
@@ -697,9 +697,9 @@ window.loadProject = async function loadProject(file) {
 
     onCompositionChanged();
     updateHeaderProjectName(data.name || file.name.replace(/\.json$/i, ''));
-    showToast('Project loaded', 'success');
+    showToast('项目已打开', 'success');
   } catch (err) {
-    showToast(`Project load failed: ${err.message}`, 'error', 6000);
+    showToast(`项目打开失败： ${err.message}`, 'error', 6000);
     console.error(err);
   }
 };
