@@ -1,4 +1,8 @@
 import { defineConfig } from 'vite';
+import { resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+const rootDir = fileURLToPath(new URL('.', import.meta.url));
 
 // Resolve base path from env; defaults to '/xiaozhi-video-studio/' for the canonical repo URL.
 // Set BASE_PATH env var to '/' for a custom-domain root deployment.
@@ -34,6 +38,10 @@ export default defineConfig({
   },
   build: {
     rollupOptions: {
+      input: {
+        main: resolve(rootDir, 'index.html'),
+        ttsLab: resolve(rootDir, 'tts-lab.html'),
+      },
       output: {
         manualChunks: {
           ffmpeg: ['@ffmpeg/ffmpeg', '@ffmpeg/util'],
