@@ -96,12 +96,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const imageFiles = files.filter(f => f.type.startsWith('image/'));
     const videoFiles = files.filter(f => f.type.startsWith('video/'));
     const textTrack = composition.tracks.find(t => t.type === 'text');
-    const sentences = prompt
-      ? prompt.split(/[。！？!?；;\n]+/).map(s => s.trim()).filter(Boolean)
-      : [];
-    const productCaptions = ['看见细节，发现不一样的品质','从真实体验出发，感受每一处用心','把喜欢的理由，分享给更多人','现在就来了解更多'];
-    const comicCaptions = ['故事，就从这一刻开始','命运的相遇，正在悄然发生','新的线索，指向未知的远方','下一幕，即将揭晓'];
-    const captions = sentences.length ? sentences : (mode === 'product' ? productCaptions : comicCaptions);
+    const directorPlan = createWorkflowPlan({ mode, prompt, assetNames: files.map(file => file.name) });
+    const captions = directorPlan.shots.map(shot => shot.caption);
     const shots = [];
     $('xzw-generate').disabled = true;
     setStatus('正在导入素材并安排镜头……请保持页面打开。');
