@@ -63,11 +63,15 @@ if (typeof window === 'undefined') {
             })
             : r;
         event.respondWith((async () => {
-            const isSameOriginGet = r.method === "GET" && new URL(r.url).origin === self.location.origin;
+            const requestUrl = new URL(r.url);
+            const requestPath = requestUrl.pathname;
+            const isSameOriginGet = r.method === "GET" && requestUrl.origin === self.location.origin;
             const isAppShellAsset = isSameOriginGet && (
                 r.mode === "navigate" ||
-                /\\/(assets|icons)\\//.test(new URL(r.url).pathname) ||
-                /\\/(index\\.html|manifest\\.webmanifest)$/.test(new URL(r.url).pathname)
+                requestPath.includes("/assets/") ||
+                requestPath.includes("/icons/") ||
+                requestPath.endsWith("/index.html") ||
+                requestPath.endsWith("/manifest.webmanifest")
             );
             try {
                 const response = await fetch(request);
