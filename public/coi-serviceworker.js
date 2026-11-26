@@ -71,7 +71,8 @@ if (typeof window === 'undefined') {
                 requestPath.includes("/assets/") ||
                 requestPath.includes("/icons/") ||
                 requestPath.endsWith("/index.html") ||
-                requestPath.endsWith("/manifest.webmanifest")
+                requestPath.endsWith("/manifest.webmanifest") ||
+                requestPath.endsWith("/pwa-install.js")
             );
             try {
                 const response = await fetch(request);
