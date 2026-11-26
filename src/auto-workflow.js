@@ -178,6 +178,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const shotDuration = Math.min(perShot, targetSeconds - cursor, clip.type === 'video' ? Math.max(1, clip.duration) : perShot);
         clip.duration = shotDuration;
         clip.trimEnd = (clip.trimStart || 0) + shotDuration;
+        // Fill the whole output frame while preserving the source aspect ratio via centered crop.
+        // This avoids small, floating photos and black side bars in vertical merchant videos.
+        clip.x = 0;
+        clip.y = 0;
+        clip.width = composition.width;
+        clip.height = composition.height;
+        clip.fit = 'cover';
         if (clip.type === 'image') {
           clip.keyframes = { scale: [
             { time: clip.startTime, value: 1, easing: 'easeInOut' },
