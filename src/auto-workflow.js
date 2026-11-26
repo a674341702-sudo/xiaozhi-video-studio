@@ -77,8 +77,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
       <div class="xzw-section">
         <h3>03 · 生成宣传文案与镜头安排</h3>
-        <label class="xzw-field"><span>配音稿（可修改；留空则按宣传重点生成字幕稿）</span><textarea id="xzw-narration" placeholder="可粘贴希望旁白说出来的完整内容。生成后可以修改，再用手机录音或上传AI配音。"></textarea></label>
-        <label class="xzw-field"><span>画面字幕（可选；默认自动生成）</span><textarea id="xzw-captions" placeholder="每行一句字幕。留空时根据商家信息生成分镜字幕。"></textarea></label>
+        <label class="xzw-field"><span>配音稿（可修改；生成后可复制去制作AI配音）</span><textarea id="xzw-narration" placeholder="先点击“生成宣传文案”，再按商家实际情况修改旁白。"></textarea></label>
+        <div class="xzw-actions"><button class="xzw-secondary" id="xzw-make-script" type="button">✦ 生成宣传文案</button><button class="xzw-secondary" id="xzw-copy-script" type="button">复制配音稿</button></div>
+        <label class="xzw-field"><span>画面字幕（每行一句；可单独修改）</span><textarea id="xzw-captions" placeholder="点击生成宣传文案后会自动填入，可按镜头逐句修改。"></textarea></label>
         <div class="xzw-grid">
           <label class="xzw-field"><span>视频画幅</span><select id="xzw-ratio"><option value="9:16">9:16 竖屏（抖音）</option><option value="4:5">4:5（小红书）</option><option value="1:1">1:1 方形</option><option value="16:9">16:9 横屏</option></select></label>
           <label class="xzw-field"><span>字幕样式</span><select id="xzw-subtitle"><option value="bold">醒目粗体</option><option value="clean">简洁高级</option></select></label>
@@ -113,6 +114,24 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (saved) profileKeys.forEach(key => { if (saved[key] !== undefined) $('xzw-' + key).value = saved[key]; });
   } catch (e) {}
   $('xzw-save-profile').addEventListener('click', saveProfile);
+  $('xzw-make-script').addEventListener('click', () => {
+    const lines = makeScript(readProfile());
+    $('xzw-narration').value = lines.join('。') + '。';
+    $('xzw-captions').value = lines.join('\n');
+    setStatus('宣传文案已生成。请核对店名、产品、优惠和地址是否准确，再复制配音稿或继续编排。');
+  });
+  $('xzw-copy-script').addEventListener('click', async () => {
+    const script = $('xzw-narration').value.trim();
+    if (!script) { setStatus('请先生成或填写配音稿。'); return; }
+    try {
+      await navigator.clipboard.writeText(script);
+      setStatus('配音稿已复制，可以粘贴到中文AI配音工具。');
+    } catch (e) {
+      $('xzw-narration').focus();
+      $('xzw-narration').select();
+      setStatus('浏览器未允许自动复制，已选中配音稿，请长按文字选择复制。');
+    }
+  });
   launcher.addEventListener('click', () => modal.classList.add('open'));
   modal.querySelector('.xzw-close').addEventListener('click', () => modal.classList.remove('open'));
   modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); });
@@ -155,7 +174,12 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const dims = { '9:16':[720,1280], '4:5':[720,900], '1:1':[720,720], '16:9':[1280,720] }[ratio];
     const targetSeconds = Number(profile.length) || 30;
     const perShot = Math.max(2.5, targetSeconds / files.length);
-    const script = $('xzw-narration').value.trim() ? $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean) : makeScript(profile);
+    if (!$('xzw-narration').value.trim()) {
+      const draft = makeScript(profile);
+      $('xzw-narration').value = draft.join('。') + '。';
+      if (!$('xzw-captions').value.trim()) $('xzw-captions').value = draft.join('\n');
+    }
+    const script = $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean);
     const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
     const captions = customCaptions.length ? customCaptions : script;
     const textTrack = composition.tracks.find(t => t.type === 'text');
