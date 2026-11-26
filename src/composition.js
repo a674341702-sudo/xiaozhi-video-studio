@@ -11,12 +11,12 @@ export class Composition {
     this.height = height;
 
     this.tracks = [
-      { id: 'v1', type: 'video', name: 'Video 1', locked: false, muted: false, visible: true },
-      { id: 'v2', type: 'video', name: 'Video 2', locked: false, muted: false, visible: true },
-      { id: 'img1', type: 'image', name: 'Image Overlay', locked: false, muted: false, visible: true },
-      { id: 'txt1', type: 'text', name: 'Text Overlay', locked: false, muted: false, visible: true },
-      { id: 'a1', type: 'audio', name: 'Audio 1', locked: false, muted: false, visible: true },
-      { id: 'a2', type: 'audio', name: 'Audio 2', locked: false, muted: false, visible: true },
+      { id: 'v1', type: 'video', name: '视频轨道 1', locked: false, muted: false, visible: true },
+      { id: 'v2', type: 'video', name: '视频轨道 2', locked: false, muted: false, visible: true },
+      { id: 'img1', type: 'image', name: '图片叠加轨道', locked: false, muted: false, visible: true },
+      { id: 'txt1', type: 'text', name: '文字字幕轨道', locked: false, muted: false, visible: true },
+      { id: 'a1', type: 'audio', name: '音频轨道 1', locked: false, muted: false, visible: true },
+      { id: 'a2', type: 'audio', name: '音频轨道 2', locked: false, muted: false, visible: true },
     ];
 
     this.clips = [];
@@ -48,7 +48,7 @@ export class Composition {
     const track = {
       id: trackId,
       type: 'audio',
-      name: `Audio ${audioTrackCount + 1}`,
+      name: `音频轨道 ${audioTrackCount + 1}`,
       locked: false,
       muted: false,
       visible: true
@@ -83,7 +83,7 @@ export class Composition {
       id: clipData.id || uid(),
       trackId: clipData.trackId,
       type: clipData.type,
-      name: clipData.name || 'Untitled Clip',
+      name: clipData.name || '未命名素材',
       startTime,
       duration,
       trimStart: clipData.trimStart || 0,
@@ -97,7 +97,7 @@ export class Composition {
       file: clipData.file || null,
       src: clipData.src || null,
       element: clipData.element || null,
-      text: clipData.text || 'Sample Text',
+      text: clipData.text || '示例文字',
       fontSize: clipData.fontSize || 64,
       fontFamily: clipData.fontFamily || 'Inter',
       customFontUrl: clipData.customFontUrl || null,
@@ -256,19 +256,19 @@ export class Composition {
     this.selectedClipId = null;
     this.history.clear();
     this.tracks = [
-      { id: 'v1', type: 'video', name: 'Video 1', locked: false, muted: false, visible: true },
-      { id: 'v2', type: 'video', name: 'Video 2', locked: false, muted: false, visible: true },
-      { id: 'img1', type: 'image', name: 'Image Overlay', locked: false, muted: false, visible: true },
-      { id: 'txt1', type: 'text', name: 'Text Overlay', locked: false, muted: false, visible: true },
-      { id: 'a1', type: 'audio', name: 'Audio 1', locked: false, muted: false, visible: true },
-      { id: 'a2', type: 'audio', name: 'Audio 2', locked: false, muted: false, visible: true },
+      { id: 'v1', type: 'video', name: '视频轨道 1', locked: false, muted: false, visible: true },
+      { id: 'v2', type: 'video', name: '视频轨道 2', locked: false, muted: false, visible: true },
+      { id: 'img1', type: 'image', name: '图片叠加轨道', locked: false, muted: false, visible: true },
+      { id: 'txt1', type: 'text', name: '文字字幕轨道', locked: false, muted: false, visible: true },
+      { id: 'a1', type: 'audio', name: '音频轨道 1', locked: false, muted: false, visible: true },
+      { id: 'a2', type: 'audio', name: '音频轨道 2', locked: false, muted: false, visible: true },
     ];
     this._pushSnapshot('new project');
   }
 
   toJSON() {
     return {
-      name: 'Viz Project',
+      name: '小智视频项目',
       version: 2,
       width: this.width,
       height: this.height,
