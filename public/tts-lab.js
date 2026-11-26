@@ -30,7 +30,7 @@ async function loadModel() {
         status('手机 GPU 模式不可用，正在切换兼容模式（WASM）……');
       }
     } else {
-      status('正在加载普通话模型（首次下载可能较久）……\\n运行方式：WASM 兼容模式');
+      status('正在加载普通话模型（首次下载可能较久）……\n运行方式：WASM 兼容模式');
     }
     const engine = await KokoroTTS.from_pretrained(MODEL_ID, { ...options, device: 'wasm' });
     tts = engine;
