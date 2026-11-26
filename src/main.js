@@ -15,7 +15,6 @@ import { createDefaultStore } from './state.js';
 import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js';
 import { formatTime, showToast } from './utils.js';
 import { initAutoWorkflow } from './auto-workflow.js';
-import { initWorkflowStudio } from './workflow-studio.js';
 
 // --- Global State ---
 let composition = null;
@@ -176,7 +175,6 @@ function initApp() {
   onCompositionChanged();
   updateHeaderProjectName();
   initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, onExport: handleExport });
-  initWorkflowStudio();
 }
 
 function onMediaUrlRegistered(clipId, objectUrl) {
