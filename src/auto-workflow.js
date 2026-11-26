@@ -212,6 +212,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const file = files[i];
         const clip = await mediaManager.importFile(file, { startTime: cursor });
         if (!clip) throw new Error('素材导入失败：' + file.name);
+        // Importer may move a clip forward to avoid overlapping its original full-length
+        // duration. The workflow has its own sequential shot schedule, so restore the
+        // requested cursor before applying the shorter shot duration.
+        clip.startTime = cursor;
         const shotDuration = Math.min(perShot, targetSeconds - cursor, clip.type === 'video' ? Math.max(1, clip.duration) : perShot);
         clip.duration = shotDuration;
         clip.trimEnd = (clip.trimStart || 0) + shotDuration;
