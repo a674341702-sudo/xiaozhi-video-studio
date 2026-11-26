@@ -54,7 +54,7 @@
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2" ry="2"/></svg>
         </div>
         <span class="app-logo-text">小智视频</span>
-        <span class="app-logo-badge">AI WORKFLOW · BROWSER EDITOR</span>
+        <span class="app-logo-badge">AI 工作流 · 手机视频编辑</span>
       </div>
       <div class="header-center">
         <span class="header-filename" id="header-filename">新建视频项目</span>
@@ -62,17 +62,17 @@
         <span class="header-status" id="header-status">就绪</span>
       </div>
       <div class="header-right">
-        <button class="tool-btn" id="btn-new-project" type="button" title="New Project">New</button>
-        <button class="tool-btn" id="btn-save-project" type="button" title="Save Project">Save</button>
-        <button class="tool-btn" id="btn-load-project" type="button" title="Load Project">Load</button>
+        <button class="tool-btn" id="btn-new-project" type="button" title="新建项目">新建</button>
+        <button class="tool-btn" id="btn-save-project" type="button" title="保存项目">保存</button>
+        <button class="tool-btn" id="btn-load-project" type="button" title="打开项目">打开</button>
         <input type="file" id="load-project-input" accept=".json,application/json" style="display:none" aria-hidden="true" tabindex="-1" />
-        <button class="tool-btn" id="btn-undo" type="button" title="Undo (Ctrl+Z)">
+        <button class="tool-btn" id="btn-undo" type="button" title="撤销（Ctrl+Z）">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
-          Undo
+          撤销
         </button>
-        <button class="tool-btn" id="btn-redo" title="Redo (Ctrl+Y)">
+        <button class="tool-btn" id="btn-redo" title="重做（Ctrl+Y）">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          Redo
+          重做
         </button>
       </div>
     </header>
@@ -86,7 +86,7 @@
 
           <!-- Add Media Bar -->
           <div class="media-add-bar">
-            <span class="media-bar-title">ADD MEDIA & LAYERS</span>
+            <span class="media-bar-title">添加素材与图层</span>
             <div class="media-bar-buttons">
               <button class="add-media-btn" id="add-video-btn" type="button">
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="23 7 16 12 23 17 23 7"/><rect x="1" y="5" width="15" height="14" rx="2"/></svg>
@@ -112,17 +112,17 @@
             <div class="panel-header">
               <div class="panel-header-left">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="2" width="20" height="20" rx="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/></svg>
-                <span>COMPOSITE PREVIEW (SELECTABLE OBJECTS & HANDLES)</span>
+                <span>画面预览（可选择与调整图层）</span>
               </div>
               <div class="panel-header-right">
-                <select class="aspect-ratio-select" id="preview-ratio-select" title="Aspect Ratio Preset">
-                  <option value="16:9">16:9 Landscape</option>
-                  <option value="9:16">9:16 Portrait</option>
-                  <option value="1:1">1:1 Square</option>
-                  <option value="4:5">4:5 Vertical</option>
-                  <option value="4:3">4:3 Classic</option>
-                  <option value="21:9">21:9 Ultrawide</option>
-                  <option value="custom">Custom</option>
+                <select class="aspect-ratio-select" id="preview-ratio-select" title="画面比例">
+                  <option value="16:9">16:9 横屏</option>
+                  <option value="9:16">9:16 竖屏</option>
+                  <option value="1:1">1:1 正方形</option>
+                  <option value="4:5">4:5 竖版</option>
+                  <option value="4:3">4:3 经典</option>
+                  <option value="21:9">21:9 超宽屏</option>
+                  <option value="custom">自定义</option>
                 </select>
                 <span class="preview-badge" id="preview-badge">1920×1080</span>
                 <span class="preview-time-display" id="preview-time">00:00.00 / 00:00.00</span>
@@ -136,10 +136,10 @@
             <!-- Transport Bar -->
             <div class="transport-bar">
               <div class="transport-left">
-                <button class="transport-btn play-btn" id="ctrl-play" type="button" title="Play/Pause (Space)" aria-label="Play or pause preview">
+                <button class="transport-btn play-btn" id="ctrl-play" type="button" title="播放/暂停（空格）" aria-label="播放或暂停预览">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" id="ctrl-play-icon" role="img" aria-label="Play icon"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 </button>
-                <button class="transport-btn" id="ctrl-stop" type="button" title="Stop & Reset" aria-label="Stop preview">
+                <button class="transport-btn" id="ctrl-stop" type="button" title="停止并重置" aria-label="停止预览">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="4" y="4" width="16" height="16" rx="2"/></svg>
                 </button>
               </div>
@@ -150,9 +150,9 @@
 
               <div class="transport-right">
                 <div class="zoom-controls">
-                  <button class="mini-btn" id="zoom-out" title="Zoom timeline out">-</button>
+                  <button class="mini-btn" id="zoom-out" title="缩小时间线">-</button>
                   <span class="zoom-level" id="zoom-level">100%</span>
-                  <button class="mini-btn" id="zoom-in" title="Zoom timeline in">+</button>
+                  <button class="mini-btn" id="zoom-in" title="放大时间线">+</button>
                 </div>
               </div>
             </div>
@@ -163,22 +163,22 @@
         </div>
 
         <!-- Right Sidebar: Properties & Export -->
-        <div class="editor-sidebar-resizer" id="sidebar-resizer" title="Drag to resize panel"></div>
+        <div class="editor-sidebar-resizer" id="sidebar-resizer" title="拖动调整面板宽度"></div>
         <aside class="editor-sidebar">
           <!-- Selection Actions Panel -->
           <section class="sidebar-panel">
             <div class="panel-header compact">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
-              <span>EDIT TOOLS</span>
+              <span>编辑工具</span>
             </div>
             <div class="tools-grid" style="padding: 8px;">
               <div class="tool-row">
-                <button class="tool-btn" id="btn-copy" type="button" title="Copy Selected (Ctrl+C)">Copy</button>
-                <button class="tool-btn" id="btn-paste" type="button" title="Paste (Ctrl+V)">Paste</button>
+                <button class="tool-btn" id="btn-copy" type="button" title="复制所选内容（Ctrl+C）">复制</button>
+                <button class="tool-btn" id="btn-paste" type="button" title="粘贴（Ctrl+V）">粘贴</button>
               </div>
               <div class="tool-row" style="margin-top: 4px;">
-                <button class="tool-btn" id="btn-duplicate" type="button" title="Duplicate (Ctrl+D)">Duplicate</button>
-                <button class="tool-btn danger" id="btn-delete" type="button" title="Delete Element (Del)">Delete</button>
+                <button class="tool-btn" id="btn-duplicate" type="button" title="创建副本（Ctrl+D）">创建副本</button>
+                <button class="tool-btn danger" id="btn-delete" type="button" title="删除所选元素（Del）">删除</button>
               </div>
             </div>
           </section>
@@ -190,19 +190,19 @@
           <section class="sidebar-panel export-panel">
             <div class="panel-header compact">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-              <span>EXPORT COMPOSITION</span>
+              <span>导出视频</span>
             </div>
             <div class="export-options">
               <div class="export-option-row">
-                <label for="export-width">Width</label>
+                <label for="export-width">宽度</label>
                 <input type="number" id="export-width" value="1920" min="100" max="7680">
               </div>
               <div class="export-option-row">
-                <label for="export-height">Height</label>
+                <label for="export-height">高度</label>
                 <input type="number" id="export-height" value="1080" min="100" max="7680">
               </div>
               <div class="export-option-row">
-                <label for="export-fps">FPS</label>
+                <label for="export-fps">帧率</label>
                 <select id="export-fps">
                   <option value="24">24</option>
                   <option value="30" selected>30</option>
@@ -210,16 +210,16 @@
                 </select>
               </div>
               <div class="export-option-row">
-                <label for="export-quality">Quality</label>
+                <label for="export-quality">画质</label>
                 <select id="export-quality">
-                  <option value="low">Low (fast)</option>
-                  <option value="medium">Medium</option>
-                  <option value="high" selected>High</option>
+                  <option value="low">低（速度优先）</option>
+                  <option value="medium">中</option>
+                  <option value="high" selected>高</option>
                 </select>
               </div>
               <button class="export-btn" id="btn-export" type="button">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-                Export Video File
+                导出视频文件
               </button>
             </div>
           </section>
@@ -228,19 +228,19 @@
           <section class="sidebar-panel">
             <div class="panel-header compact">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-              <span>EDITOR SETTINGS</span>
+              <span>编辑设置</span>
             </div>
             <div class="export-options">
               <div class="export-option-row">
-                <label for="setting-snap">Snap</label>
+                <label for="setting-snap">吸附</label>
                 <input type="checkbox" id="setting-snap" checked style="width: auto;">
               </div>
               <div class="export-option-row">
-                <label for="setting-proxy">Proxy</label>
+                <label for="setting-proxy">代理预览</label>
                 <input type="checkbox" id="setting-proxy" checked style="width: auto;">
               </div>
               <div class="export-option-row">
-                <button class="tool-btn wide" id="btn-shortcuts" type="button">Keyboard Shortcuts (?)</button>
+                <button class="tool-btn wide" id="btn-shortcuts" type="button">快捷键说明（？）</button>
               </div>
             </div>
           </section>
@@ -260,13 +260,13 @@
           <defs><linearGradient id="prog-grad" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="#8b5cf6"/><stop offset="100%" stop-color="#22d3ee"/></linearGradient></defs>
         </svg>
       </div>
-      <h2 class="progress-title" id="progress-title">Exporting Video...</h2>
-      <p class="progress-subtitle" id="progress-subtitle">Rendering multi-track composition</p>
+      <h2 class="progress-title" id="progress-title">正在导出视频…</h2>
+      <p class="progress-subtitle" id="progress-subtitle">正在渲染多轨道画面</p>
       <div class="progress-bar-track">
         <div class="progress-bar-fill" id="progress-bar" style="width: 0%"></div>
       </div>
       <span class="progress-percent" id="progress-percent">0%</span>
-      <button class="progress-cancel-btn" id="progress-cancel-btn" type="button">Cancel Export</button>
+      <button class="progress-cancel-btn" id="progress-cancel-btn" type="button">取消导出</button>
     </div>
   </div>
 
