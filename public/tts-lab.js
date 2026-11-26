@@ -103,7 +103,14 @@ $('generate').addEventListener('click', async () => {
       if (!(samples instanceof Float32Array) || !samples.length) {
         throw new Error('分段语音数据格式不正确，请反馈此提示。');
       }
-      sampleRate = Number(raw.sampling_rate || raw.samplingRate || sampleRate);
+      const partSampleRate = Number(raw.sampling_rate || raw.samplingRate || sampleRate);
+      if (!Number.isInteger(partSampleRate) || partSampleRate <= 0) {
+        throw new Error('语音采样率无效，请重新生成。');
+      }
+      if (chunkCount > 0 && partSampleRate !== sampleRate) {
+        throw new Error('语音分段的采样率不一致，已停止生成以避免音频播放速度异常。');
+      }
+      sampleRate = partSampleRate;
       // Convert immediately so the whole utterance's Float32 chunks are not retained.
       const pcm = new Int16Array(samples.length);
       for (let i = 0; i < samples.length; i++) {
