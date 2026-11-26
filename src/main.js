@@ -606,8 +606,12 @@ async function handleExport() {
       showToast('Export cancelled', 'info');
       return;
     }
-    const msg = err?.message || (typeof err === 'string' ? err : 'Export processing failed');
-    showToast(`Export failed: ${msg}`, 'error', 6000);
+    const rawMessage = err?.message || (typeof err === 'string' ? err : 'Export processing failed');
+    const isMemoryError = /out of memory|memory access out of bounds|allocation failed|array buffer allocation|cannot enlarge memory|not enough memory/i.test(rawMessage);
+    const msg = isMemoryError
+      ? '手机可用内存不足，视频没有导出。请关闭其他应用后重试；素材控制在4–6个以内，单段视频尽量短，并选择“手机稳定优先”。'
+      : rawMessage;
+    showToast(`导出失败：${msg}`, 'error', 9000);
   } finally {
     exportAbortController = null;
     isExporting = false;
