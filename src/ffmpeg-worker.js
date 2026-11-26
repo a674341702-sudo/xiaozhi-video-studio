@@ -110,6 +110,9 @@ async function renderMixedAudio(composition, onProgress) {
     if (c.type !== 'audio' && c.type !== 'video') return false;
     const track = composition.getTrack(c.trackId);
     if (track && (track.muted || !track.visible)) return false;
+    // Skip muted camera audio entirely. Decoding it still allocates AudioBuffers
+    // even when its gain is zero, wasting memory on mobile exports.
+    if ((c.volume ?? 1) <= 0) return false;
     return Boolean(c.file || c.src);
   });
 
@@ -376,11 +379,12 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
       '-vf', `pad=ceil(iw/2)*2:ceil(ih/2)*2`,
       '-c:v', 'libx264',
       '-preset', quality === 'low' ? 'superfast' : 'ultrafast',
+      '-crf', quality === 'high' ? '23' : quality === 'medium' ? '26' : '29',
       '-pix_fmt', 'yuv420p'
     );
 
     if (hasAudio) {
-      args.push('-c:a', 'aac', '-b:a', '192k', '-shortest');
+      args.push('-c:a', 'aac', '-b:a', quality === 'low' ? '96k' : '128k', '-shortest');
     } else {
       args.push('-an');
     }
