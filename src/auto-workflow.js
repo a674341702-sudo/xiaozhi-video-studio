@@ -25,6 +25,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-field textarea,.xzw-field select,.xzw-field input{box-sizing:border-box;width:100%;border:1px solid #454563;background:#10101d;color:#fff;border-radius:10px;padding:11px;font:inherit;min-height:42px}
     .xzw-field textarea{min-height:86px;resize:vertical}
     .xzw-file{border:1px dashed #66668a;border-radius:12px;padding:12px;background:#111121}
+    .xzw-check{display:flex;align-items:center;gap:9px;margin:10px 0;color:#d0d0e4}
+    .xzw-check input{width:18px;min-height:18px;accent-color:#8b5cf6}
     .xzw-note{color:#a5a5bf;font-size:12px;margin:7px 0 0}
     .xzw-actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
     .xzw-primary{border:0;border-radius:11px;padding:13px 17px;font-weight:800;background:linear-gradient(120deg,#7c3aed,#0891b2);color:#fff;cursor:pointer;flex:1;min-height:46px}
@@ -87,7 +89,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <h3>04 · 配乐与配音</h3>
         <label class="xzw-field"><span>背景音乐（上传已获授权的音乐文件）</span><input id="xzw-music" type="file" accept="audio/*"></label>
         <label class="xzw-field"><span>配音文件（手机录音或外部AI配音均可）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
-        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。当前版本先支持上传音频并混入成片；自动AI语音合成需要接入TTS服务，不能在未接服务时假称已生成。</p>
+        <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
+        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。当前版本先支持上传音频并混入成片；自动AI语音合成需要接入TTS服务，不能在未接服务时假称已生成。</p>
       </div>
 
       <div class="xzw-actions"><button class="xzw-primary" id="xzw-generate" type="button">✦ 自动编排30秒商家视频</button><button class="xzw-secondary" id="xzw-export" type="button">导出 MP4</button></div>
@@ -185,6 +188,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         clip.width = composition.width;
         clip.height = composition.height;
         clip.fit = 'cover';
+        if (clip.type === 'video') {
+          // Keep camera audio off by default so narration and licensed music remain clear.
+          clip.volume = $('xzw-original-audio').checked ? 1 : 0;
+        }
         if (clip.type === 'image') {
           clip.keyframes = { scale: [
             { time: clip.startTime, value: 1, easing: 'easeInOut' },
