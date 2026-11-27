@@ -26,51 +26,75 @@ function resolveCoreUrl(filename) {
 /**
  * Loads FFmpeg WASM instance, preferring self-hosted core files.
  */
-export async function loadFFmpeg(onProgress) {
+export async function loadFFmpeg(onProgress, abortSignal) {
+  if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
   if (ffmpegLoaded && ffmpeg) return ffmpeg;
 
-  ffmpeg = new FFmpeg();
+  const instance = new FFmpeg();
+  ffmpeg = instance;
+  ffmpegLoaded = false;
 
-  ffmpeg.on('log', ({ message }) => {
+  const terminateOnAbort = () => {
+    try { instance.terminate(); } catch (_) {}
+    if (ffmpeg === instance) {
+      ffmpeg = null;
+      ffmpegLoaded = false;
+    }
+  };
+  const checkAborted = () => {
+    if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
+  };
+  abortSignal?.addEventListener('abort', terminateOnAbort, { once: true });
+
+  instance.on('log', ({ message }) => {
     console.log('[ffmpeg]', message);
   });
 
   if (onProgress) onProgress(0);
 
   try {
-    const coreURL = new URL(resolveCoreUrl('ffmpeg-core.js'), window.location.href).href;
-    const wasmURL = await toBlobURL(resolveCoreUrl('ffmpeg-core.wasm'), 'application/wasm');
-
-    await ffmpeg.load({
-      coreURL,
-      wasmURL,
-    });
-
-    ffmpegLoaded = true;
-    if (onProgress) onProgress(100);
-    return ffmpeg;
-  } catch (err) {
-    console.warn('Self-hosted FFmpeg core failed, trying CDN fallback:', err);
     try {
+      const coreURL = new URL(resolveCoreUrl('ffmpeg-core.js'), window.location.href).href;
+      const wasmURL = await toBlobURL(resolveCoreUrl('ffmpeg-core.wasm'), 'application/wasm');
+      checkAborted();
+      await instance.load({ coreURL, wasmURL });
+      checkAborted();
+      ffmpegLoaded = true;
+      if (onProgress) onProgress(100);
+      return instance;
+    } catch (err) {
+      if (abortSignal?.aborted || err?.name === 'AbortError') {
+        terminateOnAbort();
+        throw new DOMException('Export aborted', 'AbortError');
+      }
+      console.warn('Self-hosted FFmpeg core failed, trying CDN fallback:', err);
+      checkAborted();
       const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js';
       const wasmURL = await toBlobURL(
         'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm',
         'application/wasm'
       );
-
-      await ffmpeg.load({
-        coreURL,
-        wasmURL,
-      });
+      checkAborted();
+      await instance.load({ coreURL, wasmURL });
+      checkAborted();
       ffmpegLoaded = true;
       if (onProgress) onProgress(100);
-      return ffmpeg;
-    } catch (fallbackErr) {
+      return instance;
+    }
+  } catch (err) {
+    if (abortSignal?.aborted || err?.name === 'AbortError') {
+      terminateOnAbort();
+      throw new DOMException('Export aborted', 'AbortError');
+    }
+    if (ffmpeg === instance) {
+      try { instance.terminate(); } catch (_) {}
       ffmpeg = null;
       ffmpegLoaded = false;
-      const msg = fallbackErr?.message || String(fallbackErr) || 'Unknown error';
-      throw new Error(`FFmpeg load failed: ${msg}`);
     }
+    const msg = err?.message || String(err) || 'Unknown error';
+    throw new Error(`FFmpeg load failed: ${msg}`);
+  } finally {
+    abortSignal?.removeEventListener('abort', terminateOnAbort);
   }
 }
 
@@ -408,7 +432,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   if (onProgress) onProgress(0, 'Loading FFmpeg');
 
   if (!ffmpegLoaded || !ffmpeg) {
-    await loadFFmpeg();
+    await loadFFmpeg(undefined, abortSignal);
   }
 
   checkAborted();
