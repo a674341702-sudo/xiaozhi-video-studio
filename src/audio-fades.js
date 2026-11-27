@@ -11,12 +11,14 @@ export function getAudioFadeKeyframes(duration, peakVolume = 1, fadeInSeconds = 
     : 1;
   const fadeIn = Math.min(Math.max(0, Number(fadeInSeconds) || 0), length / 3);
   const fadeOut = Math.min(Math.max(0, Number(fadeOutSeconds) || 0), length / 3);
-  const holdStart = fadeIn;
-  const holdEnd = Math.max(holdStart, length - fadeOut);
+  const cleanTime = value => Math.round(value * 1e6) / 1e6;
+  const holdStart = cleanTime(fadeIn);
+  const holdEnd = cleanTime(Math.max(holdStart, length - fadeOut));
+  const endTime = cleanTime(length);
   return [
     { time: 0, value: 0, easing: 'easeOut' },
     { time: holdStart, value: peak, easing: 'easeInOut' },
     { time: holdEnd, value: peak, easing: 'easeInOut' },
-    { time: length, value: 0, easing: 'easeIn' }
+    { time: endTime, value: 0, easing: 'easeIn' }
   ];
 }
