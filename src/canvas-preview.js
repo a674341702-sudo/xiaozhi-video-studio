@@ -480,12 +480,8 @@ export class CanvasPreview {
       this.comp.selectedClipId = hitClip.id;
       if (this.onSelectClip) this.onSelectClip(hitClip.id);
 
-      // On phones, first tap selects; the next press-and-drag moves the clip.
-      if (e.pointerType === 'touch' && !wasAlreadySelected) {
-        this.render();
-        return;
-      }
-
+      // Touch and mouse use the same direct-manipulation gesture:
+      // press on the visible clip and drag immediately.
       this.isDragging = true;
       this.dragMode = 'move';
       this.dragStartPos = pos;

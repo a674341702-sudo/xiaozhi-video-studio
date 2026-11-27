@@ -145,9 +145,14 @@ export class MediaManager {
 
     const objectUrl = URL.createObjectURL(file);
     const video = document.createElement('video');
-    video.preload = 'metadata';
+    // Load an actual decodable frame, not metadata only. Canvas drawImage() is
+    // blank/throws on many mobile browsers until readyState reaches HAVE_CURRENT_DATA.
+    video.preload = 'auto';
+    video.playsInline = true;
+    video.muted = true;
     video.src = objectUrl;
-    const videoReady = await waitForMediaReady(video, () => video.readyState >= 1, 'loadedmetadata');
+    video.load();
+    const videoReady = await waitForMediaReady(video, () => video.readyState >= 2, 'loadeddata', 30000);
     if (!videoReady) {
       URL.revokeObjectURL(objectUrl);
       showToast('手机读取视频失败或等待超时，请换成 MP4 文件或压缩后重试。', 'error');
@@ -184,6 +189,16 @@ export class MediaManager {
     });
 
     if (this.onMediaUrlRegistered) this.onMediaUrlRegistered(clip.id, objectUrl);
+
+    // Repaint the canvas when mobile decoders deliver or seek to a new frame.
+    const repaint = () => {
+      if (this.onCompositionChanged) this.onCompositionChanged();
+    };
+    video.addEventListener('loadeddata', repaint);
+    video.addEventListener('seeked', repaint);
+    video.addEventListener('error', () => {
+      showToast('视频解码失败，请尝试转换为 H.264 编码的 MP4 后重新上传。', 'error');
+    });
 
     // Generate proxy asynchronously for smooth editing
     const proxyEnabled = this.store ? this.store.get('proxyEnabled') !== false : true;
