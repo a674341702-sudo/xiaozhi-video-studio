@@ -823,67 +823,60 @@ async function restoreLastLocalProject() {
 }
 
 window.newProject = function newProject() {
-  for (const [clipId, url] of mediaUrlRegistry.entries()) {
-    URL.revokeObjectURL(url);
-  }
-  mediaUrlRegistry.clear();
+  if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+  releaseMediaUrls();
   composition.clear();
   inPoint = 0;
   outPoint = 0;
   onCompositionChanged();
   updateHeaderProjectName('Multi-Track Project');
-  showToast('已新建项目', 'info');
+  showToast('已新建项目；新项目会自动保存在本机', 'info');
 };
 
-window.saveProject = function saveProject() {
-  const data = composition.toJSON();
-  const mediaCount = composition.clips.filter(clip => clip.file || (clip.src && clip.src.startsWith('blob:'))).length;
+window.saveProject = async function saveProject() {
+  const localSaved = await saveCurrentProjectLocally();
+  const data = stripTemporaryMediaUrls(composition.toJSON());
+  const mediaCount = composition.clips.filter(clip => clip.file || clip.src?.startsWith('blob:')).length;
   data.mediaIncluded = false;
-  data.mediaNotice = '此项目文件仅保存时间线和编辑参数，不包含原始照片、视频和音频。重新打开后请重新上传原素材。';
+  data.mediaNotice = '此 JSON 文件只保存时间线和编辑参数，不包含原始媒体。当前浏览器会另行自动保存素材；如需换设备，请保留原始照片、视频和音频。';
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
   downloadBlob(blob, `小智视频项目_${Date.now()}.json`);
-  showToast(mediaCount > 0
-    ? `项目配置已保存。注意：${mediaCount} 个素材文件没有打包，请保留原素材，重新打开项目后再上传。`
-    : '项目配置已保存。此文件不包含原始素材文件。', 'warning', 9000);
+  showToast(localSaved
+    ? '已保存到本机浏览器，并下载项目配置 JSON。JSON 不含原始素材；本机自动备份包含已导入素材。'
+    : mediaCount > 0
+      ? '项目配置 JSON 已下载，但本机素材备份失败。请保留原始照片、视频和音频。'
+      : '项目配置 JSON 已下载。', localSaved ? 'success' : 'warning', 9000);
 };
 
 window.loadProject = async function loadProject(file) {
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-
-    for (const [clipId, url] of mediaUrlRegistry.entries()) {
-      URL.revokeObjectURL(url);
+    if (!data || !Array.isArray(data.clips) || !data.width || !data.height) {
+      throw new Error('项目文件格式不正确');
     }
-    mediaUrlRegistry.clear();
-
+    if (!window.confirm('打开项目会替换当前时间线。确定继续吗？')) return;
+    releaseMediaUrls();
     const missingMediaCount = (data.clips || []).filter(clip =>
       clip.file || (clip.src && clip.src.startsWith('blob:'))
     ).length;
-
-    await composition.fromJSON(data, async (srcUrl, type) => {
-      if (srcUrl && srcUrl.startsWith('blob:')) {
-        return null;
-      }
+    await composition.fromJSON(data, async (srcUrl) => {
+      if (srcUrl && srcUrl.startsWith('blob:')) return null;
       return srcUrl;
     });
-
     for (const clip of composition.clips) {
-      if (clip.src && !clip.src.startsWith('blob:')) {
-        onMediaUrlRegistered(clip.id, clip.src);
-      }
+      if (clip.src && !clip.src.startsWith('blob:')) onMediaUrlRegistered(clip.id, clip.src);
     }
-
     onCompositionChanged();
     updateHeaderProjectName(data.name || file.name.replace(/\.json$/i, ''));
     showToast(missingMediaCount > 0
-      ? `项目时间线已恢复，但有 ${missingMediaCount} 个原始素材未包含在项目文件中，请重新上传这些照片、视频或音频。`
-      : '项目已打开。若原素材来自其他设备，请确认文件路径仍可访问。', missingMediaCount > 0 ? 'warning' : 'success', 9000);
+      ? '项目时间线已恢复，但 JSON 不包含 ' + missingMediaCount + ' 个原始素材，请重新上传。'
+      : '项目已打开；本机自动保存会记录本次项目。', missingMediaCount > 0 ? 'warning' : 'success', 9000);
   } catch (err) {
-    showToast(`项目打开失败： ${err.message}`, 'error', 6000);
+    showToast('项目打开失败：' + err.message, 'error', 6000);
     console.error(err);
   }
 };
 
 // Start app
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => { initApp().catch(error => { console.error(error); showToast('工作台初始化失败：' + (error?.message || '未知错误'), 'error', 9000); }); });
