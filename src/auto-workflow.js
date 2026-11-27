@@ -11,7 +11,7 @@ import { getPhotoMotionKeyframes } from './photo-motion.js';
 import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
-import { getVoiceCoverageNote } from './voice-coverage.js';
+import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
@@ -782,7 +782,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         if (!voice) throw new Error('中文配音导入失败：' + voiceFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
         voice.volume = 1;
         voiceSourceDuration = voice.duration;
-        voice.duration = Math.min(narrationDuration, voice.duration);
+        voice.duration = getVoiceClipDuration(voice.duration, narrationDuration);
         voice.trimEnd = (voice.trimStart || 0) + voice.duration;
         voice.keyframes = { volume: getAudioFadeKeyframes(voice.duration, 1, 0.18, 0.18) };
       }
