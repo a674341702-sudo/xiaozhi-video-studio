@@ -215,6 +215,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const files = Array.from($('xzw-files').files || []);
     const size = files.reduce((n, f) => n + f.size, 0);
     $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
+    if ($('xzw-requirements').children.length && $('xzw-brief').value.trim()) {
+      $('xzw-extract-requirements').click();
+    }
   });
   $('xzw-extract-requirements').addEventListener('click', () => {
     const source = $('xzw-brief').value.trim();
@@ -226,7 +229,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       setStatus('请先上传文档或粘贴商家要求，再提取制作清单。');
       return;
     }
-    const shotOptions = getMerchantShotPlan($('xzw-industry').value, 8);
+    const selectedCount = Math.max(1, Math.min(8, $('xzw-files').files?.length || 6));
+    const shotOptions = getMerchantShotPlan($('xzw-industry').value, selectedCount);
     const classify = text => {
       if (/地址|位置|导航|电话|联系|营业时间|结尾|到店/.test(text)) return shotOptions.length - 1;
       if (/优惠|折扣|开业|活动|套餐|价格|限时/.test(text)) return Math.max(0, shotOptions.length - 2);
