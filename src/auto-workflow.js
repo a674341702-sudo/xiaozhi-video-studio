@@ -676,7 +676,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         clip.y = 0;
         clip.width = composition.width;
         clip.height = composition.height;
-        clip.fit = 'cover';
+        clip.fit = 'contain';
         if (clip.type === 'video') {
           // Keep camera audio off by default so narration and licensed music remain clear.
           clip.volume = audioMix.video;
