@@ -6,6 +6,7 @@
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
 import { getSubtitleSafeLayout } from './text-layout.js';
+import { getPhotoMotionKeyframes } from './photo-motion.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
@@ -683,31 +684,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           clip.volume = audioMix.video;
         }
         if (clip.type === 'image') {
-          // Ken Burns motion: alternate gentle push-ins / pull-backs and horizontal
-          // or vertical pans so a photo sequence feels like a filmed shop tour.
-          const width = composition.width;
-          const height = composition.height;
-          const direction = i % 2 === 0 ? 1 : -1;
-          const verticalDirection = i % 3 === 0 ? 1 : -1;
-          const panX = width * 0.018 * direction;
-          const panY = height * 0.012 * verticalDirection;
-          const zoomIn = i % 2 === 0;
-          const startScale = zoomIn ? 1.10 : 1.18;
-          const endScale = zoomIn ? 1.18 : 1.10;
-          clip.keyframes = {
-            scale: [
-              { time: clip.startTime, value: startScale, easing: 'easeInOut' },
-              { time: clip.startTime + shotDuration, value: endScale, easing: 'easeInOut' }
-            ],
-            x: [
-              { time: clip.startTime, value: -panX, easing: 'easeInOut' },
-              { time: clip.startTime + shotDuration, value: panX, easing: 'easeInOut' }
-            ],
-            y: [
-              { time: clip.startTime, value: -panY, easing: 'easeInOut' },
-              { time: clip.startTime + shotDuration, value: panY, easing: 'easeInOut' }
-            ]
-          };
+          // Subtle Ken Burns motion: alternate horizontal/vertical pans and
+          // gentle push-ins/pull-backs without aggressively cropping shop details.
+          clip.keyframes = getPhotoMotionKeyframes(
+            i, composition.width, composition.height, clip.startTime, shotDuration
+          );
         }
         // Apply a short fade at both ends of every shot. The offline renderer
         // also evaluates opacity keyframes, so preview and MP4 share the same motion.
