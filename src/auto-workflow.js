@@ -305,10 +305,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   renderTemplateGuide();
   $('xzw-save-profile').addEventListener('click', saveProfile);
   $('xzw-make-script').addEventListener('click', () => {
-    const lines = makeScript(readProfile());
-    $('xzw-narration').value = lines.join('。') + '。';
-    $('xzw-captions').value = getMerchantShotPlan($('xzw-industry').value, 6).map(item => item.caption).join('\n');
-    setStatus('宣传文案和行业镜头字幕已生成。请核对店名、产品、优惠和地址，再根据实际素材修改每句字幕。');
+    const profile = readProfile();
+    const shotCount = Math.max(1, orderedMediaFiles.length || 6);
+    $('xzw-narration').value = makeScript(profile).join('\n');
+    $('xzw-captions').value = makeCaptions(profile, shotCount).join('\n');
+    setStatus('已根据商家资料和文档要求生成配音稿、逐镜字幕。请核对每一条信息，尤其价格、优惠和地址；限制类要求不会被写进字幕。');
   });
     $('xzw-send-tts').addEventListener('click', () => {
     const script = $('xzw-narration').value.trim();
@@ -420,66 +421,45 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     }
   });
 
+  function getMerchantContentPoints(profile) {
+    const fromCards = Array.from($('xzw-requirements').querySelectorAll('.xzw-requirement'))
+      .map(card => card.querySelector('.xzw-requirement-text')?.value.trim() || '').filter(Boolean);
+    const fromBrief = splitMerchantRequirements(profile.brief || '', 16);
+    const fromCopy = String(profile.copy || '').split(/[\n。！？!?；;]+/).map(item => item.trim()).filter(Boolean);
+    return [...new Set([...fromCards, ...fromBrief, ...fromCopy])]
+      .filter(item => !isRestrictionRequirement(item)).slice(0, 16);
+  }
+
   function makeScript(profile) {
-    const shop = profile.shop.trim() || '这家门店';
-    const product = profile.product.trim() || '特色产品与服务';
-    const offer = profile.offer.trim();
-    const detail = [profile.copy, profile.brief].filter(Boolean).join('\n').trim();
-    const address = profile.address.trim();
-    const industry = profile.industry;
-    const style = profile.style;
+    const shop = String(profile.shop || '').trim();
+    const product = String(profile.product || '').trim();
+    const offer = String(profile.offer || '').trim();
+    const address = String(profile.address || '').trim();
+    const lines = [];
+    if (profile.style === '高级质感') lines.push(shop ? '镜头慢慢展开，带你认识' + shop + '。' : '镜头慢慢展开，带你看看本次商家实拍。');
+    else if (profile.style === '活泼种草') lines.push(shop ? '今天来看看' + shop + '。' : '今天来看看这组商家实拍。');
+    else if (profile.style === '促销转化' && offer) lines.push('商家提供的活动信息：' + offer + '。');
+    else lines.push(shop ? '今天带你了解' + shop + '。' : '跟着镜头，了解商家现场。');
+    if (product) lines.push((shop ? shop + '主打' : '本次重点介绍') + product + '。');
+    for (const point of getMerchantContentPoints(profile)) lines.push(point.endsWith('。') ? point : point + '。');
+    if (offer && profile.style !== '促销转化') lines.push('商家提供的活动信息：' + offer + '。');
+    if (address) lines.push('门店地址：' + address + '。');
+    lines.push('具体产品信息、价格及活动规则，请以商家实际说明为准。');
+    return lines;
+  }
 
-    const industryCopy = {
-      '餐饮探店': {
-        hook: '今天带你看看一家值得收藏的餐饮小店。',
-        intro: '来到' + shop + '，这里主打' + product + '。',
-        detail: '镜头带你看看菜品细节、用餐环境和实际体验。'
-      },
-      '商品宣传': {
-        hook: '一件产品值不值得了解，先看看细节。',
-        intro: shop + '带来' + product + '。',
-        detail: '从外观、细节到使用场景，带你近距离了解这款产品。'
-      },
-      '服装穿搭': {
-        hook: '今天看看怎样找到适合自己的穿搭灵感。',
-        intro: shop + '主打' + product + '。',
-        detail: '通过上身展示、面料细节和搭配方式，看看不同风格的呈现。'
-      },
-      '美容美发': {
-        hook: '想换个造型或护理方式？先了解一下门店服务。',
-        intro: shop + '提供' + product + '相关服务。',
-        detail: '带你看看服务环境、项目细节和造型展示，具体方案可到店沟通。'
-      },
-      '酒店民宿': {
-        hook: '计划出行住宿？先跟着镜头看看这处空间。',
-        intro: shop + '，主打' + product + '。',
-        detail: '从房间布局、设施细节到周边环境，提前了解入住空间。'
-      },
-      '休闲娱乐': {
-        hook: '周末想找点新体验？来看看这里有什么。',
-        intro: shop + '提供' + product + '。',
-        detail: '跟着镜头看看现场环境、体验项目和适合的游玩方式。'
-      },
-      '其他门店': {
-        hook: '今天带你认识一家有自己特色的门店。',
-        intro: shop + '，主要提供' + product + '。',
-        detail: '通过现场画面，了解产品、服务和门店特色。'
-      }
-    };
-    const template = industryCopy[industry] || industryCopy['其他门店'];
-    let hook = template.hook;
-    if (style === '高级质感') hook = '把镜头放慢，一起看看' + shop + '的细节与质感。';
-    if (style === '真实探店') hook = '今天实地来到' + shop + '，带你看看现场。';
-    if (style === '活泼种草') hook = '发现一家值得加入收藏夹的店！今天来看看' + shop + '。';
-    if (style === '促销转化' && offer) hook = '到店福利看这里：' + offer + '。';
-
-    const detailLine = detail ? '商家要求与特色：' + detail.slice(0, 180) : template.detail;
-    const closing = offer
-      ? '当前活动：' + offer + '。具体规则和有效期请以商家现场说明为准。'
-      : '想了解更多产品或服务，可以先联系门店咨询。';
-    const lines = [hook, template.intro, detailLine, closing,
-      address ? '门店地址：' + address + '。' : '喜欢这类内容，记得先收藏，方便需要时查找。'];
-    return lines.filter(Boolean);
+  function makeCaptions(profile, shotCount) {
+    const plans = getMerchantShotPlan(profile.industry, shotCount);
+    const byShot = new Map();
+    Array.from($('xzw-requirements').querySelectorAll('.xzw-requirement')).forEach(card => {
+      const text = card.querySelector('.xzw-requirement-text')?.value.trim();
+      const shot = Number(card.querySelector('.xzw-requirement-shot')?.value);
+      if (!text || isRestrictionRequirement(text) || !Number.isInteger(shot)) return;
+      const current = byShot.get(shot) || [];
+      current.push(text);
+      byShot.set(shot, current);
+    });
+    return plans.map((plan, index) => (byShot.get(index) || []).join(' · ') || plan.caption);
   }
 
   $('xzw-build-preview').addEventListener('click', () => {
@@ -527,7 +507,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (issues.length) box.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
   });
   $('xzw-generate').addEventListener('click', async () => {
-    const files = Array.from($('xzw-files').files || []);
+    const files = orderedMediaFiles;
     const profile = readProfile();
     if (!productionPreviewReady) {
       setStatus('请先点击“先生成制作预览 / 检查遗漏”，处理所有待核对项目后再编排。');
@@ -549,7 +529,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const draft = makeScript(profile);
       $('xzw-narration').value = draft.join('。') + '。';
       if (!$('xzw-captions').value.trim()) {
-        $('xzw-captions').value = getMerchantShotPlan(profile.industry, files.length).map(item => item.caption).join('\n');
+        $('xzw-captions').value = makeCaptions(profile, files.length).join('\n');
       }
     }
     const script = $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean);
