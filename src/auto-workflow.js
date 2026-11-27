@@ -57,6 +57,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           <label class="xzw-field"><span>门店 / 品牌名称</span><input id="xzw-shop" placeholder="例如：XX咖啡"></label>
           <label class="xzw-field"><span>行业类型</span><select id="xzw-industry"><option value="餐饮探店">餐饮探店</option><option value="商品宣传">商品 / 产品</option><option value="服装穿搭">服装穿搭</option><option value="美容美发">美容美发</option><option value="酒店民宿">酒店 / 民宿</option><option value="休闲娱乐">休闲娱乐</option><option value="其他门店">其他门店</option></select></label>
         </div>
+        <div class="xzw-template-guide" id="xzw-template-guide" aria-live="polite"></div>
         <label class="xzw-field"><span>主打产品 / 服务</span><input id="xzw-product" placeholder="例如：手冲咖啡、招牌牛肉面"></label>
         <label class="xzw-field"><span>门店地址 / 到店方式</span><input id="xzw-address" placeholder="例如：昆明市五华区……"></label>
         <label class="xzw-field"><span>优惠活动（没有可不填）</span><input id="xzw-offer" placeholder="例如：新客到店立减、双人套餐"></label>
@@ -147,6 +148,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   }
   const profileKeys = ['shop','industry','product','address','offer','copy','style','length'];
   const readProfile = () => Object.fromEntries(profileKeys.map(key => [key, $('xzw-' + key).value]));
+  const renderTemplateGuide = () => {
+    const plan = getMerchantShotPlan($('xzw-industry').value, 6);
+    $('xzw-template-guide').innerHTML = '<strong>行业镜头模板 · 拍摄参考</strong>' +
+      '<p class="xzw-note">按顺序拍摄更容易形成完整故事；素材不足时可先拍前几项。内容只是拍摄建议，不代表门店已经具备相关项目。</p>' +
+      plan.map((item, index) => '<div class="xzw-shot"><span class="xzw-badge">0' + (index + 1) + '</span> <b>' + escapeHtml(item.role) + '</b><br>' +
+        '<span>' + escapeHtml(item.caption) + '</span><br><small>拍摄建议：' + escapeHtml(item.tip) + '</small></div>').join('');
+  };
+  $('xzw-industry').addEventListener('change', renderTemplateGuide);
   const saveProfile = () => {
     try { localStorage.setItem('xiaozhi-merchant-profile-v1', JSON.stringify(readProfile())); setStatus('商家资料已保存在这台手机的当前浏览器中。'); }
     catch (e) { setStatus('浏览器暂时无法保存资料，请检查存储空间。'); }
@@ -155,14 +164,15 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const saved = JSON.parse(localStorage.getItem('xiaozhi-merchant-profile-v1') || 'null');
     if (saved) profileKeys.forEach(key => { if (saved[key] !== undefined) $('xzw-' + key).value = saved[key]; });
   } catch (e) {}
+  renderTemplateGuide();
   $('xzw-save-profile').addEventListener('click', saveProfile);
   $('xzw-make-script').addEventListener('click', () => {
     const lines = makeScript(readProfile());
     $('xzw-narration').value = lines.join('。') + '。';
-    $('xzw-captions').value = lines.join('\n');
-    setStatus('宣传文案已生成。请核对店名、产品、优惠和地址是否准确，再复制配音稿或继续编排。');
+    $('xzw-captions').value = getMerchantShotPlan($('xzw-industry').value, 6).map(item => item.caption).join('\n');
+    setStatus('宣传文案和行业镜头字幕已生成。请核对店名、产品、优惠和地址，再根据实际素材修改每句字幕。');
   });
-  $('xzw-send-tts').addEventListener('click', () => {
+    $('xzw-send-tts').addEventListener('click', () => {
     const script = $('xzw-narration').value.trim();
     if (!script) { setStatus('请先生成或填写配音稿，再发送到中文配音实验室。'); return; }
     if (script.length > 500) { setStatus('当前配音实验室手机测试版最多支持500字，请先缩短文案或分段生成。'); return; }
@@ -273,7 +283,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (!$('xzw-narration').value.trim()) {
       const draft = makeScript(profile);
       $('xzw-narration').value = draft.join('。') + '。';
-      if (!$('xzw-captions').value.trim()) $('xzw-captions').value = draft.join('\n');
+      if (!$('xzw-captions').value.trim()) {
+        $('xzw-captions').value = getMerchantShotPlan(profile.industry, files.length).map(item => item.caption).join('\n');
+      }
     }
     const script = $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean);
     const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
