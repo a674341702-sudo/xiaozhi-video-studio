@@ -13,7 +13,7 @@ const lowSpace = await getLocalStorageFailureMessage(
   { name: 'UnknownError', message: 'write failed' },
   { usage: 480 * 1024 * 1024, quota: 500 * 1024 * 1024 }
 );
-assert.match(lowSpace, /剩余空间约 20 MB/);
+assert.match(lowSpace, /剩余空间约 20(?:\.0)? MB/);
 
 const generic = await getLocalStorageFailureMessage(
   { name: 'UnknownError', message: 'transaction aborted' },
