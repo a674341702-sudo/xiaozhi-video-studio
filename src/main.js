@@ -16,6 +16,7 @@ import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js'
 import { formatTime, showToast } from './utils.js';
 import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
+import { saveLocalProject, loadLocalProject, stripTemporaryMediaUrls } from './local-project-store.js';
 
 // --- Global State ---
 let composition = null;
@@ -77,11 +78,17 @@ const exportQualityEl = document.getElementById('export-quality');
 
 let exportAbortController = null;
 let isExporting = false;
+let localRestoreComplete = false;
+let localAutosaveTimer = null;
+let localAutosaveInProgress = false;
+let localAutosaveErrorShown = false;
+let isRestoringLocalProject = false;
+const localSaveStatusEl = document.getElementById('local-save-status');
 
 const mediaUrlRegistry = new Map(); // clipId -> objectUrl for cleanup
 
 // --- Initialization ---
-function initApp() {
+async function initApp() {
   store = createDefaultStore();
   composition = new Composition(1920, 1080);
 
