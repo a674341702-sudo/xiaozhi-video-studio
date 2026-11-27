@@ -5,6 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
+import { getSubtitleSafeLayout } from './text-layout.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
@@ -731,8 +732,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           const subtitleClip = composition.addClip({
             trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
             text: caption, startTime: cursor, duration: shotDuration,
-            x: Math.round(composition.width * 0.07), y: Math.round(composition.height * 0.64),
-            width: Math.round(composition.width * 0.86), height: Math.round(composition.height * 0.18),
+            ...getSubtitleSafeLayout(composition.width, composition.height),
             fontSize: Math.max(28, Math.round(composition.width * 0.045)),
             fontFamily: 'Noto Sans CJK SC', fontWeight: 'bold', color: '#ffffff',
             bgColor: $('xzw-subtitle').value === 'clean' ? 'rgba(0,0,0,0.24)' : 'rgba(0,0,0,0.58)',
