@@ -273,9 +273,19 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     });
     invalidateProductionPreview();
   };
+  const syncMediaRolesFromDOM = () => {
+    const selects = Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role'));
+    selects.forEach((select, index) => {
+      const file = orderedMediaFiles[index];
+      if (file) mediaRoleByFile.set(file, Number(select.value));
+    });
+  };
   const moveMedia = (index, delta) => {
     const next = index + delta;
     if (next < 0 || next >= orderedMediaFiles.length) return;
+    // Save every manually selected shot role before rebuilding the rows.
+    // Otherwise a simple up/down tap would silently reset the other selections.
+    syncMediaRolesFromDOM();
     [orderedMediaFiles[index], orderedMediaFiles[next]] = [orderedMediaFiles[next], orderedMediaFiles[index]];
     renderMediaMapping();
     invalidateProductionPreview();
