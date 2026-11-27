@@ -154,7 +154,7 @@ export class MultiTimeline {
         <span class="mt-sidebar-icon">${icon}</span>
         <span class="mt-sidebar-name">${escapeHtml(track.name)}</span>
         <div class="mt-sidebar-actions">
-          <button class="mt-track-btn ${!track.visible ? 'active-off' : ''}" data-action="toggle-visible" data-track="${track.id}" title="切换显示">👁️</button>
+          <button class="mt-track-btn ${!track.visible ? 'active-off' : ''}" data-action="toggle-visible" data-track="${escapeHtml(String(track.id ?? ''))}" title="切换显示">👁️</button>
           <button class="mt-track-btn ${track.muted ? 'active-off' : ''}" data-action="toggle-mute" data-track="${track.id}" title="切换静音">🔇</button>
         </div>
       `;
@@ -185,11 +185,19 @@ export class MultiTimeline {
       }
     }
 
+    // Index existing clip elements by data ID instead of interpolating
+    // untrusted project IDs into CSS selectors.
+    const existingById = new Map(
+      Array.from(this.tracksContent.querySelectorAll('.mt-clip'))
+        .map(element => [element.dataset.clipId, element])
+    );
+
     // Render only visible clips (virtualization)
     const pps = this.pxPerSec * this.zoomLevel;
 
     for (const clip of this.comp.clips) {
-      let el = document.querySelector(`.mt-clip[data-clip-id="${clip.id}"]`);
+      const clipId = String(clip.id ?? '');
+      let el = existingById.get(clipId) || null;
       const trackIndex = this.comp.tracks.findIndex(t => t.id === clip.trackId);
 
       const clipStart = clip.startTime;
@@ -216,7 +224,7 @@ export class MultiTimeline {
     }
 
     // Remove stale clip elements
-    const validIds = new Set(this.comp.clips.map(c => c.id));
+    const validIds = new Set(this.comp.clips.map(c => String(c.id ?? '')));
     for (const el of this.tracksContent.querySelectorAll('.mt-clip')) {
       if (!validIds.has(el.dataset.clipId)) el.remove();
     }
