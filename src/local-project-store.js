@@ -93,9 +93,16 @@ export async function loadLastActiveLocalProject() {
 
     if (!active?.value || active.value === LAST_PROJECT_ID) return fallback || null;
 
-    const activeTx = db.transaction(STORE_NAME, 'readonly');
-    const activeRecord = await requestResult(activeTx.objectStore(STORE_NAME).get(active.value));
-    return activeRecord || fallback || null;
+    try {
+      const activeTx = db.transaction(STORE_NAME, 'readonly');
+      const activeRecord = await requestResult(activeTx.objectStore(STORE_NAME).get(active.value));
+      return activeRecord || fallback || null;
+    } catch (error) {
+      // A stale or unreadable active-project pointer must not hide a usable
+      // fallback autosave record.
+      console.warn('[本机项目恢复] 当前项目记录读取失败，尝试恢复默认记录', error);
+      return fallback || null;
+    }
   } finally {
     db.close();
   }
