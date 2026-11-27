@@ -5,6 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
+import { splitMerchantRequirements, isRestrictionRequirement } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -288,8 +289,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   });
   $('xzw-extract-requirements').addEventListener('click', () => {
     const source = $('xzw-brief').value.trim();
-    const lines = source.split(/\r?\n|[。；;]+/).map(line => line.replace(/^\s*(?:[-*•]|\d+[.、）)])\s*/, '').trim()).filter(line => line.length >= 3);
-    const unique = [...new Set(lines)].slice(0, 16);
+    invalidateProductionPreview();
+    const unique = splitMerchantRequirements(source, 16);
     const container = $('xzw-requirements');
     container.innerHTML = '';
     if (!unique.length) {
@@ -506,6 +507,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const text = card.querySelector('.xzw-requirement-text')?.value.trim();
       const shotIndex = Number(card.querySelector('.xzw-requirement-shot')?.value);
       if (!text || !Number.isInteger(shotIndex) || shotIndex < 0) return;
+      // Negative instructions are production constraints, never on-screen captions.
+      if (isRestrictionRequirement(text)) return;
       const list = requirementsByShot.get(shotIndex) || [];
       list.push(text);
       requirementsByShot.set(shotIndex, list);
@@ -672,9 +675,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         : '';
       setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (missingAudio.length ? '\\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
 
+      const restrictions = requirementCards.map(card => card.querySelector('.xzw-requirement-text')?.value.trim() || '').filter(isRestrictionRequirement);
       $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">镜头清单 · 已落实商家要求</h3>' +
         shots.map((s,i) => '<div class="xzw-shot"><span class="xzw-badge">镜头 '+(i+1)+'</span> '+escapeHtml(s.name)+' · '+s.duration.toFixed(1)+'秒<br><small>'+escapeHtml(s.caption)+'</small></div>').join('') +
-        (requirementCards.length ? '<p class="xzw-note">本次安排了 '+requirementCards.length+' 条商家要求。请预览视频，检查字幕是否完整清晰。</p>' : '');
+        (restrictions.length ? '<div class="xzw-section"><strong>拍摄注意事项（不会作为字幕显示）</strong>' + restrictions.map(item => '<p class="xzw-note">• '+escapeHtml(item)+'</p>').join('') + '</div>' : '') +
+        (requirementCards.length ? '<p class="xzw-note">本次检查了 '+requirementCards.length+' 条商家要求。请预览视频，检查字幕是否完整清晰。</p>' : '');
     } catch (error) {
       console.error('[小智商家短视频]', error);
       // Treat automatic arrangement as one operation: do not leave a partial
