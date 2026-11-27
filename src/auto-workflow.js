@@ -172,6 +172,18 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       row.append(name, select);
       container.appendChild(row);
     });
+    const requirementPlans = plans;
+    $('xzw-requirements').querySelectorAll('.xzw-requirement-shot').forEach(select => {
+      const previous = Number(select.value);
+      select.innerHTML = '';
+      requirementPlans.forEach((plan, index) => {
+        const option = document.createElement('option');
+        option.value = String(index);
+        option.textContent = '安排到镜头 ' + (index + 1) + ' · ' + plan.role;
+        select.appendChild(option);
+      });
+      select.value = String(Math.min(previous, requirementPlans.length - 1));
+    });
     invalidateProductionPreview();
   };
   const getMediaAssignments = () => Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role')).map((select, index) => ({
@@ -273,9 +285,6 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const size = files.reduce((n, f) => n + f.size, 0);
     $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
     renderMediaMapping();
-    if ($('xzw-requirements').children.length && $('xzw-brief').value.trim()) {
-      $('xzw-extract-requirements').click();
-    }
   });
   $('xzw-extract-requirements').addEventListener('click', () => {
     const source = $('xzw-brief').value.trim();
@@ -332,7 +341,12 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   });
   $('xzw-industry').addEventListener('change', () => {
     renderTemplateGuide();
-    if ($('xzw-requirements').children.length) $('xzw-extract-requirements').click();
+    renderMediaMapping();
+    invalidateProductionPreview();
+  });
+  ['xzw-shop','xzw-product','xzw-address','xzw-offer','xzw-copy','xzw-brief','xzw-style','xzw-length','xzw-ratio'].forEach(id => {
+    $(id).addEventListener('input', invalidateProductionPreview);
+    $(id).addEventListener('change', invalidateProductionPreview);
   });
   $('xzw-brief-file').addEventListener('change', async () => {
     const file = $('xzw-brief-file').files?.[0];
@@ -587,9 +601,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           ]
         };
 
-        const baseCaption = captions[i % captions.length] || profile.shop || '到店体验，发现更多精彩';
-        const assignedRequirements = requirementsByShot.get(i) || [];
-        const caption = [assignedShot?.caption || baseCaption, ...assignedRequirements.filter((_, requirementIndex) => true)].join(' · ');
+        const baseCaption = captions[assignedShotIndex % captions.length] || profile.shop || '到店体验，发现更多精彩';
+        const assignedRequirements = requirementsByShot.get(assignedShotIndex) || [];
+        const caption = [baseCaption, ...assignedRequirements].join(' · ');
         if (textTrack) {
           const subtitleClip = composition.addClip({
             trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
