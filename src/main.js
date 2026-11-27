@@ -632,7 +632,7 @@ async function handleExport() {
   const signal = exportAbortController.signal;
 
   pause();
-  showProgress('Exporting Composition', 'Rendering video and mixing audio in browser...', 0);
+  showProgress('正在导出商家视频', '正在逐帧渲染画面并混合配音和背景音乐，请保持页面打开。', 0);
 
   if (progressCancelBtn) {
     progressCancelBtn.textContent = '取消导出';
@@ -669,7 +669,9 @@ async function handleExport() {
       return;
     }
 
-    const filename = `Viz_Export_${Date.now()}.${ext || 'mp4'}`;
+    const safeProjectName = String(activeProjectName || '商家视频').trim().replace(/[\\\\/:*?\"<>|\\x00-\\x1f]/g, '_').replace(/\\s+/g, '_').slice(0, 48) || '商家视频';
+    const timestamp = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[\\s/:]/g, '-');
+    const filename = `${safeProjectName}_宣传视频_${timestamp}.${ext || 'mp4'}`;
     downloadBlob(blob, filename);
     showToast(`导出完成！正在下载 ${filename}`, 'success', 5000);
   } catch (err) {
@@ -717,7 +719,7 @@ async function loadFFmpegInBackground() {
   } catch (e) {
     console.warn('FFmpeg load failed:', e);
     if (headerStatusEl) headerStatusEl.textContent = '当前使用画布引擎';
-    showToast('离线编码器不可用，导出可能会使用 WebM 格式。', 'warning', 6000);
+    showToast('MP4 编码器暂时不可用。正式导出时会再次尝试加载；如果仍失败，请检查网络后重试。', 'warning', 6000);
   }
 }
 
