@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/test-export-abort.mjs && node scripts/test-project-bundle.mjs && node scripts/test-export-validation.mjs && node scripts/test-audio-playback.mjs && node scripts/test-preview-audio-sync.mjs && node scripts/test-text-layout.mjs && node scripts/test-photo-motion.mjs && node scripts/test-sequence-opacity.mjs && node scripts/test-media-fit.mjs && node scripts/test-merchant-workflow.mjs && node scripts/test-export-error-message.mjs && vite build",
+    "build": "node scripts/test-export-abort.mjs && node scripts/test-project-bundle.mjs && node scripts/test-export-validation.mjs && node scripts/test-audio-playback.mjs && node scripts/test-preview-audio-sync.mjs && node scripts/test-text-layout.mjs && node scripts/test-photo-motion.mjs && node scripts/test-sequence-opacity.mjs && node scripts/test-media-fit.mjs && node scripts/test-merchant-outro.mjs && node scripts/test-merchant-workflow.mjs && node scripts/test-export-error-message.mjs && vite build",
     "preview": "vite preview",
     "prebuild": "node scripts/copy-ffmpeg-core.js"
   },
