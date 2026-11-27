@@ -15,6 +15,7 @@ import { createDefaultStore } from './state.js';
 import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js';
 import { formatTime, showToast } from './utils.js';
 import { initAutoWorkflow } from './auto-workflow.js';
+import { initSubtitleStudio } from './subtitle-studio.js';
 
 // --- Global State ---
 let composition = null;
@@ -175,6 +176,7 @@ function initApp() {
   onCompositionChanged();
   updateHeaderProjectName();
   initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport: handleExport });
+  initSubtitleStudio({ composition, onCompositionChanged });
 }
 
 function onMediaUrlRegistered(clipId, objectUrl) {
