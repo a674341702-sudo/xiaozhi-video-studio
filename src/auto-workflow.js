@@ -36,6 +36,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-primary:disabled{opacity:.55}
     .xzw-status{margin-top:13px;padding:12px;border-radius:10px;background:#10101d;color:#c4b5fd;white-space:pre-wrap}
     .xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}\n    .xzw-template-guide{margin-top:10px;padding:11px;border:1px solid #41415e;border-radius:11px;background:#141426}.xzw-template-guide>strong{color:#ddd;font-size:13px}.xzw-template-guide small{color:#a5a5bf}
+    .xzw-requirements{display:grid;gap:9px;margin-top:10px}.xzw-requirement{border:1px solid #41415e;border-radius:10px;padding:10px;background:#121222}.xzw-requirement textarea{width:100%;box-sizing:border-box;min-height:54px;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:9px;font:inherit}.xzw-requirement select{width:100%;margin-top:7px;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:8px;font:inherit}.xzw-requirement label{font-size:12px;color:#c4b5fd}
     .xzw-badge{display:inline-block;padding:3px 7px;border-radius:6px;background:#30264d;color:#c4b5fd;font-size:11px}
     @media(max-width:560px){#xiaozhi-workflow{padding:0;align-items:stretch}.xzw-card{height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.xzw-head{top:-14px}.xzw-head h2{font-size:18px}.xzw-grid{grid-template-columns:1fr}.xzw-steps{grid-template-columns:repeat(4,1fr)}}
   `;
@@ -80,6 +81,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <label class="xzw-field"><span>商家需求文档（可选上传 Word / TXT / PDF以外的文字文件）</span><div class="xzw-file"><input id="xzw-brief-file" type="file" accept=".docx,.txt,.md,.csv,.rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/rtf"><p class="xzw-note">支持 Word（.docx）、TXT、Markdown、CSV、RTF，单个文档不超过10MB。PDF暂不支持直接解析，可复制其中的文字粘贴到下方。</p></div></label>
         <label class="xzw-field"><span>文档要求 / 商家特别说明（读取后可继续修改）</span><textarea id="xzw-brief" placeholder="例如：重点突出招牌菜；必须出现新店开业优惠；视频结尾显示门店地址；不要出现其他品牌。也可以直接粘贴商家发来的文字。"></textarea></label>
         <div id="xzw-brief-status" class="xzw-note">尚未添加需求文档</div>
+        <div class="xzw-actions"><button class="xzw-secondary" id="xzw-extract-requirements" type="button">把商家要求拆成制作清单</button></div>
+        <p class="xzw-note">自动识别“必须出现、重点突出、优惠、地址、不要出现”等要求；你可以逐条修改并指定放在哪个镜头。识别结果需要人工核对。</p>
+        <div id="xzw-requirements" class="xzw-requirements"></div>
       </div>
 
       <div class="xzw-section">
@@ -212,6 +216,51 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const size = files.reduce((n, f) => n + f.size, 0);
     $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
   });
+  $('xzw-extract-requirements').addEventListener('click', () => {
+    const source = $('xzw-brief').value.trim();
+    const lines = source.split(/\\r?\\n|[。；;]+/).map(line => line.replace(/^\\s*(?:[-*•]|\\d+[.、）)])\\s*/, '').trim()).filter(line => line.length >= 3);
+    const unique = [...new Set(lines)].slice(0, 16);
+    const container = $('xzw-requirements');
+    container.innerHTML = '';
+    if (!unique.length) {
+      setStatus('请先上传文档或粘贴商家要求，再提取制作清单。');
+      return;
+    }
+    const shotOptions = getMerchantShotPlan($('xzw-industry').value, 8);
+    const classify = text => {
+      if (/地址|位置|导航|电话|联系|营业时间|结尾|到店/.test(text)) return shotOptions.length - 1;
+      if (/优惠|折扣|开业|活动|套餐|价格|限时/.test(text)) return Math.max(0, shotOptions.length - 2);
+      if (/招牌|主打|产品|菜品|商品|服务|特色/.test(text)) return Math.min(2, shotOptions.length - 1);
+      if (/门头|门店|环境|装修|入口/.test(text)) return 0;
+      return Math.min(container.children.length, shotOptions.length - 1);
+    };
+    unique.forEach((text, index) => {
+      const card = document.createElement('div');
+      card.className = 'xzw-requirement';
+      const label = document.createElement('label');
+      label.textContent = '商家要求 ' + (index + 1) + (/(必须|务必|一定|重点|突出|不要|禁止)/.test(text) ? ' · 重点核对' : '');
+      const textarea = document.createElement('textarea');
+      textarea.className = 'xzw-requirement-text';
+      textarea.value = text;
+      textarea.maxLength = 300;
+      const select = document.createElement('select');
+      select.className = 'xzw-requirement-shot';
+      shotOptions.forEach((shot, shotIndex) => {
+        const option = document.createElement('option');
+        option.value = String(shotIndex);
+        option.textContent = '安排到镜头 ' + (shotIndex + 1) + ' · ' + shot.role;
+        select.appendChild(option);
+      });
+      select.value = String(Math.min(classify(text), shotOptions.length - 1));
+      card.append(label, textarea, select);
+      container.appendChild(card);
+    });
+    setStatus('已拆出 ' + unique.length + ' 条商家要求。请检查每条要求并确认对应镜头，再点击自动编排。');
+  });
+  $('xzw-industry').addEventListener('change', () => {
+    renderTemplateGuide();
+    if ($('xzw-requirements').children.length) $('xzw-extract-requirements').click();
+  });
   $('xzw-brief-file').addEventListener('change', async () => {
     const file = $('xzw-brief-file').files?.[0];
     if (!file) return;
@@ -315,6 +364,16 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
     const shotPlan = getMerchantShotPlan(profile.industry, files.length);
     const captions = customCaptions.length ? customCaptions : shotPlan.map(item => item.caption);
+    const requirementCards = Array.from($('xzw-requirements').querySelectorAll('.xzw-requirement'));
+    const requirementsByShot = new Map();
+    requirementCards.forEach(card => {
+      const text = card.querySelector('.xzw-requirement-text')?.value.trim();
+      const shotIndex = Number(card.querySelector('.xzw-requirement-shot')?.value);
+      if (!text || !Number.isInteger(shotIndex) || shotIndex < 0) return;
+      const list = requirementsByShot.get(shotIndex) || [];
+      list.push(text);
+      requirementsByShot.set(shotIndex, list);
+    });
     const textTrack = composition.tracks.find(t => t.type === 'text');
     const musicFile = $('xzw-music').files?.[0];
     const voiceFile = $('xzw-voice').files?.[0] || pendingVoiceFile;
@@ -404,7 +463,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           ]
         };
 
-        const caption = captions[i % captions.length] || profile.shop || '到店体验，发现更多精彩';
+        const baseCaption = captions[i % captions.length] || profile.shop || '到店体验，发现更多精彩';
+        const assignedRequirements = requirementsByShot.get(i) || [];
+        const caption = [baseCaption, ...assignedRequirements].join(' · ');
         if (textTrack) {
           const subtitleClip = composition.addClip({
             trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
@@ -473,8 +534,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         : '';
       setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (missingAudio.length ? '\\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
 
-      $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">镜头清单</h3>' +
-        shots.map((s,i) => '<div class="xzw-shot"><span class="xzw-badge">镜头 '+(i+1)+'</span> '+escapeHtml(s.name)+' · '+s.duration.toFixed(1)+'秒<br><small>'+escapeHtml(s.caption)+'</small></div>').join('');
+      $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">镜头清单 · 已落实商家要求</h3>' +
+        shots.map((s,i) => '<div class="xzw-shot"><span class="xzw-badge">镜头 '+(i+1)+'</span> '+escapeHtml(s.name)+' · '+s.duration.toFixed(1)+'秒<br><small>'+escapeHtml(s.caption)+'</small></div>').join('') +
+        (requirementCards.length ? '<p class="xzw-note">本次安排了 '+requirementCards.length+' 条商家要求。请预览视频，检查字幕是否完整清晰。</p>' : '');
     } catch (error) {
       console.error('[小智商家短视频]', error);
       // Treat automatic arrangement as one operation: do not leave a partial
