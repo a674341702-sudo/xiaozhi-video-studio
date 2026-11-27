@@ -5,6 +5,7 @@
  */
 import { clamp } from './utils.js';
 import { applyClipTransformsAtTime } from './keyframes.js';
+import { wrapTextLines } from './text-layout.js';
 
 export class CanvasPreview {
   constructor({ canvas, composition, onSelectClip, onChangeClipTransform, onContextMenu }) {
@@ -103,7 +104,7 @@ export class CanvasPreview {
 
     for (const clip of activeClips) {
       ctx.save();
-      this._applyClipTransform(ctx, clip, time, false);
+      this._applyClipTransform(ctx, clip, time, true);
 
       if (clip.type === 'video') {
         this._renderVideoClipAtTime(ctx, clip, time);
@@ -122,15 +123,45 @@ export class CanvasPreview {
 
     if (applyOpacity) ctx.globalAlpha = t.opacity;
 
+    // Position keyframes are offsets from the clip's base coordinates.
+    // Apply them before rotating/scaling so Ken Burns pans remain centered and smooth.
+    const animatedX = Number.isFinite(t.x) ? t.x : clip.x;
+    const animatedY = Number.isFinite(t.y) ? t.y : clip.y;
     const cx = clip.x + clip.width / 2;
     const cy = clip.y + clip.height / 2;
 
+    ctx.translate(animatedX - clip.x, animatedY - clip.y);
     ctx.translate(cx, cy);
     if (t.rotation) ctx.rotate((t.rotation * Math.PI) / 180);
     if (t.scale !== 1) ctx.scale(t.scale, t.scale);
     ctx.translate(-cx, -cy);
 
     return t;
+  }
+
+  _drawMediaClip(ctx, element, clip) {
+    if (clip.fit !== 'cover') {
+      ctx.drawImage(element, clip.x, clip.y, clip.width, clip.height);
+      return;
+    }
+
+    const sourceWidth = element.videoWidth || element.naturalWidth || element.width;
+    const sourceHeight = element.videoHeight || element.naturalHeight || element.height;
+    if (!sourceWidth || !sourceHeight) return;
+
+    const sourceRatio = sourceWidth / sourceHeight;
+    const targetRatio = clip.width / clip.height;
+    let sx = 0, sy = 0, sw = sourceWidth, sh = sourceHeight;
+
+    if (sourceRatio > targetRatio) {
+      sw = sourceHeight * targetRatio;
+      sx = (sourceWidth - sw) / 2;
+    } else {
+      sh = sourceWidth / targetRatio;
+      sy = (sourceHeight - sh) / 2;
+    }
+
+    ctx.drawImage(element, sx, sy, sw, sh, clip.x, clip.y, clip.width, clip.height);
   }
 
   _renderVideoClipAtTime(ctx, clip, time) {
@@ -143,7 +174,7 @@ export class CanvasPreview {
     }
 
     try {
-      ctx.drawImage(video, clip.x, clip.y, clip.width, clip.height);
+      this._drawMediaClip(ctx, video, clip);
     } catch (e) {}
   }
 
@@ -185,7 +216,18 @@ export class CanvasPreview {
 
     const selectedClip = this.comp.getSelectedClip();
     if (selectedClip && activeClips.some(c => c.id === selectedClip.id)) {
-      this._renderSelectionOverlay(ctx, selectedClip);
+      const transform = applyClipTransformsAtTime(selectedClip, this.currentTime);
+      const scale = Number.isFinite(transform.scale) ? transform.scale : 1;
+      const animatedX = Number.isFinite(transform.x) ? transform.x : selectedClip.x;
+      const animatedY = Number.isFinite(transform.y) ? transform.y : selectedClip.y;
+      const overlayClip = {
+        ...selectedClip,
+        x: animatedX + selectedClip.width * (1 - scale) / 2,
+        y: animatedY + selectedClip.height * (1 - scale) / 2,
+        width: selectedClip.width * scale,
+        height: selectedClip.height * scale
+      };
+      this._renderSelectionOverlay(ctx, overlayClip);
     }
 
     ctx.restore();
@@ -194,14 +236,14 @@ export class CanvasPreview {
   _renderVideoClip(ctx, clip) {
     if (!clip.element) return;
     try {
-      ctx.drawImage(clip.element, clip.x, clip.y, clip.width, clip.height);
+      this._drawMediaClip(ctx, clip.element, clip);
     } catch (e) {}
   }
 
   _renderImageClip(ctx, clip) {
     if (!clip.element) return;
     try {
-      ctx.drawImage(clip.element, clip.x, clip.y, clip.width, clip.height);
+      this._drawMediaClip(ctx, clip.element, clip);
     } catch (e) {}
   }
 
@@ -223,41 +265,52 @@ export class CanvasPreview {
     this._loadCustomFont(clip);
 
     const align = clip.textAlign || 'center';
+    const fontSize = Math.max(12, Number(clip.fontSize) || 36);
     const weight = clip.fontWeight === 'bold' ? 'bold ' : '';
-    const fontFamily = clip.customFontUrl ? `"${clip.fontFamily || 'Inter'}"` : (clip.fontFamily || 'Inter');
-    ctx.font = `${weight}${clip.fontSize}px ${fontFamily}, sans-serif`;
+    const fontFamily = clip.customFontUrl
+      ? `"${clip.fontFamily || 'Inter'}"`
+      : (clip.fontFamily || '"Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", Arial');
+    ctx.font = `${weight}${fontSize}px ${fontFamily}, sans-serif`;
     ctx.textAlign = align;
     ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
 
-    const lines = clip.text.split('\n');
-    const lineHeight = clip.fontSize * 1.2;
+    const horizontalPadding = Math.max(8, Math.round(fontSize * 0.24));
+    const maxTextWidth = Math.max(1, clip.width - horizontalPadding * 2);
+    const lineHeight = fontSize * 1.2;
+    const verticalPadding = Math.max(4, Math.round(fontSize * 0.18));
+    const maxLines = Math.max(1, Math.floor((clip.height - verticalPadding * 2) / lineHeight));
+    const lines = wrapTextLines(ctx, clip.text, maxTextWidth, maxLines);
     const totalHeight = lines.length * lineHeight;
     const startY = clip.y + clip.height / 2 - totalHeight / 2 + lineHeight / 2;
 
     let maxWidth = 0;
     for (const line of lines) {
-      const m = ctx.measureText(line);
-      if (m.width > maxWidth) maxWidth = m.width;
+      const measured = ctx.measureText(line).width;
+      if (measured > maxWidth) maxWidth = measured;
     }
 
     if (clip.bgColor && clip.bgColor !== 'transparent') {
-      const padding = 12;
+      const padding = horizontalPadding;
+      const bgWidth = Math.min(clip.width, maxWidth + padding * 2);
       const bgX = align === 'left' ? clip.x :
-                  align === 'right' ? clip.x + clip.width - maxWidth - padding * 2 :
-                  clip.x + clip.width / 2 - maxWidth / 2 - padding;
-      const bgY = clip.y + clip.height / 2 - totalHeight / 2 - padding;
+                  align === 'right' ? clip.x + clip.width - bgWidth : clip.x + clip.width / 2 - bgWidth / 2;
+      const bgY = Math.max(clip.y, clip.y + clip.height / 2 - totalHeight / 2 - verticalPadding);
+      const bgHeight = Math.min(clip.height, totalHeight + verticalPadding * 2);
       ctx.fillStyle = clip.bgColor;
-      ctx.fillRect(bgX, bgY, maxWidth + padding * 2, totalHeight + padding * 2);
+      ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
     }
 
+    const textX = align === 'left' ? clip.x + horizontalPadding :
+                  align === 'right' ? clip.x + clip.width - horizontalPadding :
+                  clip.x + clip.width / 2;
     ctx.fillStyle = clip.color || '#ffffff';
+    ctx.strokeStyle = clip.strokeColor || 'rgba(0,0,0,0.88)';
+    ctx.lineWidth = Math.max(2, fontSize * 0.075);
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const x = align === 'left' ? clip.x + 10 :
-                align === 'right' ? clip.x + clip.width - 10 :
-                clip.x + clip.width / 2;
       const y = startY + i * lineHeight;
-      ctx.fillText(line, x, y);
+      if (typeof ctx.strokeText === 'function') ctx.strokeText(lines[i], textX, y, maxTextWidth);
+      ctx.fillText(lines[i], textX, y, maxTextWidth);
     }
   }
 

@@ -5,9 +5,15 @@
  */
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { evaluateKeyframes } from './keyframes.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
+
+/** Preserve cancellation semantics across nested audio/export error handlers. */
+export function rethrowExportAbort(error) {
+  if (error?.name === 'AbortError') throw error;
+}
 
 const CORE_FILES = ['ffmpeg-core.js', 'ffmpeg-core.wasm'];
 
@@ -20,51 +26,75 @@ function resolveCoreUrl(filename) {
 /**
  * Loads FFmpeg WASM instance, preferring self-hosted core files.
  */
-export async function loadFFmpeg(onProgress) {
+export async function loadFFmpeg(onProgress, abortSignal) {
+  if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
   if (ffmpegLoaded && ffmpeg) return ffmpeg;
 
-  ffmpeg = new FFmpeg();
+  const instance = new FFmpeg();
+  ffmpeg = instance;
+  ffmpegLoaded = false;
 
-  ffmpeg.on('log', ({ message }) => {
+  const terminateOnAbort = () => {
+    try { instance.terminate(); } catch (_) {}
+    if (ffmpeg === instance) {
+      ffmpeg = null;
+      ffmpegLoaded = false;
+    }
+  };
+  const checkAborted = () => {
+    if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
+  };
+  abortSignal?.addEventListener('abort', terminateOnAbort, { once: true });
+
+  instance.on('log', ({ message }) => {
     console.log('[ffmpeg]', message);
   });
 
   if (onProgress) onProgress(0);
 
   try {
-    const coreURL = new URL(resolveCoreUrl('ffmpeg-core.js'), window.location.href).href;
-    const wasmURL = await toBlobURL(resolveCoreUrl('ffmpeg-core.wasm'), 'application/wasm');
-
-    await ffmpeg.load({
-      coreURL,
-      wasmURL,
-    });
-
-    ffmpegLoaded = true;
-    if (onProgress) onProgress(100);
-    return ffmpeg;
-  } catch (err) {
-    console.warn('Self-hosted FFmpeg core failed, trying CDN fallback:', err);
     try {
+      const coreURL = new URL(resolveCoreUrl('ffmpeg-core.js'), window.location.href).href;
+      const wasmURL = await toBlobURL(resolveCoreUrl('ffmpeg-core.wasm'), 'application/wasm');
+      checkAborted();
+      await instance.load({ coreURL, wasmURL });
+      checkAborted();
+      ffmpegLoaded = true;
+      if (onProgress) onProgress(100);
+      return instance;
+    } catch (err) {
+      if (abortSignal?.aborted || err?.name === 'AbortError') {
+        terminateOnAbort();
+        throw new DOMException('Export aborted', 'AbortError');
+      }
+      console.warn('Self-hosted FFmpeg core failed, trying CDN fallback:', err);
+      checkAborted();
       const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js';
       const wasmURL = await toBlobURL(
         'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm',
         'application/wasm'
       );
-
-      await ffmpeg.load({
-        coreURL,
-        wasmURL,
-      });
+      checkAborted();
+      await instance.load({ coreURL, wasmURL });
+      checkAborted();
       ffmpegLoaded = true;
       if (onProgress) onProgress(100);
-      return ffmpeg;
-    } catch (fallbackErr) {
+      return instance;
+    }
+  } catch (err) {
+    if (abortSignal?.aborted || err?.name === 'AbortError') {
+      terminateOnAbort();
+      throw new DOMException('Export aborted', 'AbortError');
+    }
+    if (ffmpeg === instance) {
+      try { instance.terminate(); } catch (_) {}
       ffmpeg = null;
       ffmpegLoaded = false;
-      const msg = fallbackErr?.message || String(fallbackErr) || 'Unknown error';
-      throw new Error(`FFmpeg load failed: ${msg}`);
     }
+    const msg = err?.message || String(err) || 'Unknown error';
+    throw new Error(`FFmpeg load failed: ${msg}`);
+  } finally {
+    abortSignal?.removeEventListener('abort', terminateOnAbort);
   }
 }
 
@@ -79,11 +109,23 @@ async function cleanupFiles(fileList) {
   }
 }
 
-function readFileAsArrayBuffer(file) {
+function readFileAsArrayBuffer(file, abortSignal) {
   return new Promise((resolve, reject) => {
+    if (abortSignal?.aborted) {
+      reject(new DOMException('Export aborted', 'AbortError'));
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error);
+    const cleanup = () => abortSignal?.removeEventListener('abort', onAbort);
+    const onAbort = () => {
+      try { reader.abort(); } catch (_) {}
+      cleanup();
+      reject(new DOMException('Export aborted', 'AbortError'));
+    };
+    reader.onload = () => { cleanup(); resolve(reader.result); };
+    reader.onerror = () => { cleanup(); reject(reader.error); };
+    reader.onabort = () => { cleanup(); reject(new DOMException('Export aborted', 'AbortError')); };
+    abortSignal?.addEventListener('abort', onAbort, { once: true });
     reader.readAsArrayBuffer(file);
   });
 }
@@ -96,9 +138,38 @@ function decodeAudioData(arrayBuffer) {
 }
 
 /**
+ * Resolve how an audio clip should play inside the composition.
+ * Looping is opt-in (used for background music); narration never loops by default.
+ */
+export function getAudioClipPlaybackRange(clip, decodedDuration, compositionDuration) {
+  const start = Math.max(0, Number(clip?.startTime) || 0);
+  const offset = Math.max(0, Number(clip?.trimStart) || 0);
+  const clipDuration = Math.max(0, Number(clip?.duration) || 0);
+  const timelineRemaining = Math.max(0, Number(compositionDuration) - start);
+  if (!Number.isFinite(decodedDuration) || decodedDuration <= offset ||
+      clipDuration <= 0 || timelineRemaining <= 0) return null;
+
+  const requestedDuration = Math.min(clipDuration, timelineRemaining);
+  const requestedTrimEnd = Number(clip?.trimEnd);
+  const sourceEnd = Number.isFinite(requestedTrimEnd) && requestedTrimEnd > offset
+    ? Math.min(decodedDuration, requestedTrimEnd)
+    : decodedDuration;
+  if (sourceEnd <= offset) return null;
+
+  if (clip.loop === true) {
+    return { start, offset, duration: requestedDuration, loop: true, loopStart: offset, loopEnd: sourceEnd };
+  }
+
+  const availableDuration = Math.max(0, sourceEnd - offset);
+  const duration = Math.min(requestedDuration, availableDuration);
+  if (duration <= 0.01) return null;
+  return { start, offset, duration, loop: false, loopStart: 0, loopEnd: 0 };
+}
+
+/**
  * Renders a mixed AudioBuffer for all audio/video clips in the composition.
  */
-async function renderMixedAudio(composition, onProgress) {
+async function renderMixedAudio(composition, onProgress, abortSignal) {
   const sampleRate = 48000;
   const duration = composition.duration;
   const channels = 2;
@@ -110,6 +181,10 @@ async function renderMixedAudio(composition, onProgress) {
     if (c.type !== 'audio' && c.type !== 'video') return false;
     const track = composition.getTrack(c.trackId);
     if (track && (track.muted || !track.visible)) return false;
+    // Skip muted camera audio entirely. Decoding it still allocates AudioBuffers
+    // even when its gain is zero, wasting memory on mobile exports.
+    const hasAudibleEnvelope = (c.keyframes?.volume || []).some(point => Number(point.value) > 0);
+    if ((c.volume ?? 1) <= 0 && !hasAudibleEnvelope) return false;
     return Boolean(c.file || c.src);
   });
 
@@ -119,46 +194,71 @@ async function renderMixedAudio(composition, onProgress) {
 
   let decodedCount = 0;
   for (let i = 0; i < audioClips.length; i++) {
+    if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
     const clip = audioClips[i];
     try {
       let arrayBuffer = null;
       if (clip.file) {
-        arrayBuffer = await readFileAsArrayBuffer(clip.file);
+        arrayBuffer = await readFileAsArrayBuffer(clip.file, abortSignal);
       } else if (clip.src) {
-        const res = await fetch(clip.src);
+        const res = await fetch(clip.src, { signal: abortSignal });
         arrayBuffer = await res.arrayBuffer();
       }
 
       if (!arrayBuffer) continue;
       const decoded = await decodeAudioData(arrayBuffer);
+      arrayBuffer = null;
+      if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
       if (!decoded) continue;
+
+      const playback = getAudioClipPlaybackRange(clip, decoded.duration, duration);
+      if (!playback) continue;
 
       const source = offlineCtx.createBufferSource();
       source.buffer = decoded;
+      if (playback.loop) {
+        source.loop = true;
+        source.loopStart = playback.loopStart;
+        source.loopEnd = playback.loopEnd;
+      }
 
       const gain = offlineCtx.createGain();
-      gain.gain.value = clip.volume ?? 1;
+      const baseVolume = clip.volume ?? 1;
+      const clipStart = playback.start;
+      const clipEnd = clipStart + playback.duration;
+      const envelope = clip.keyframes?.volume || [];
+      const initialVolume = evaluateKeyframes(clip.keyframes, 'volume', clipStart);
+      gain.gain.setValueAtTime(initialVolume ?? baseVolume, clipStart);
+      for (const point of [...envelope].sort((a, b) => a.time - b.time)) {
+        if (point.time > clipStart && point.time < clipEnd) {
+          gain.gain.linearRampToValueAtTime(Math.max(0, Number(point.value) || 0), point.time);
+        }
+      }
+      if (envelope.length) {
+        const endingVolume = evaluateKeyframes(clip.keyframes, 'volume', clipEnd);
+        gain.gain.linearRampToValueAtTime(endingVolume ?? baseVolume, clipEnd);
+      }
 
       source.connect(gain);
       gain.connect(offlineCtx.destination);
 
-      const offset = clip.trimStart || 0;
-      const start = Math.max(0, clip.startTime);
-      const maxDur = Math.min(clip.duration, Math.max(0, decoded.duration - offset));
-      if (maxDur > 0.01) {
-        source.start(start, offset, maxDur);
-      }
+      source.start(playback.start, playback.offset, playback.duration);
 
       decodedCount++;
       if (onProgress) onProgress(Math.round(((i + 1) / audioClips.length) * 100));
     } catch (err) {
-      console.warn(`Could not decode audio for clip "${clip.name}":`, err);
+      rethrowExportAbort(err);
+      const label = clip.name || '未命名音频';
+      throw new Error(`音频“${label}”读取或解码失败：${err?.message || '格式不受支持'}。请尝试转换为 MP3 或 WAV 后重新导入。`);
     }
   }
 
   if (decodedCount === 0) return null;
+  if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
 
-  return await offlineCtx.startRendering();
+  const mixed = await offlineCtx.startRendering();
+  if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
+  return mixed;
 }
 
 /**
@@ -215,28 +315,81 @@ function audioBufferToWav(buffer) {
   return new Blob([arrayBuffer], { type: 'audio/wav' });
 }
 
-function seekVideoToOffset(video, offset) {
-  return new Promise((resolve) => {
-    if (Math.abs(video.currentTime - offset) < 0.01 && video.readyState >= 2) {
+function seekVideoToOffset(video, offset, abortSignal) {
+  return new Promise((resolve, reject) => {
+    if (abortSignal?.aborted) {
+      reject(new DOMException('Export aborted', 'AbortError'));
+      return;
+    }
+    const safeOffset = Number.isFinite(video.duration)
+      ? Math.max(0, Math.min(offset, Math.max(0, video.duration - 0.04)))
+      : Math.max(0, offset);
+    if (Math.abs(video.currentTime - safeOffset) < 0.01 && video.readyState >= 2) {
       resolve();
       return;
     }
     let handled = false;
-    const cleanup = () => {
+    let timer = null;
+    const cleanup = (error = null) => {
       if (handled) return;
       handled = true;
-      video.removeEventListener('seeked', cleanup);
-      resolve();
+      clearTimeout(timer);
+      video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('error', onError);
+      abortSignal?.removeEventListener('abort', onAbort);
+      if (error) reject(error);
+      else resolve();
     };
-    video.addEventListener('seeked', cleanup);
+    const onError = () => cleanup(new Error('视频定位失败，请检查视频文件是否损坏或格式是否受支持。'));
+    const onAbort = () => cleanup(new DOMException('Export aborted', 'AbortError'));
+    const onSeeked = () => {
+      // Wait for a decoded frame where supported, otherwise wait one paint.
+      if (typeof video.requestVideoFrameCallback === 'function') {
+        video.requestVideoFrameCallback(() => cleanup());
+      } else {
+        requestAnimationFrame(() => cleanup());
+      }
+    };
+    video.addEventListener('seeked', onSeeked, { once: true });
+    video.addEventListener('error', onError, { once: true });
+    abortSignal?.addEventListener('abort', onAbort, { once: true });
+    timer = setTimeout(() => cleanup(new Error('等待视频画面定位超时，请尝试更短或更兼容的 MP4 素材。')), 3000);
     try {
-      video.currentTime = offset;
-    } catch (e) {
-      cleanup();
-      return;
+      video.currentTime = safeOffset;
+    } catch (error) {
+      cleanup(error);
     }
-    setTimeout(cleanup, 250);
   });
+}
+
+/**
+ * Validate timeline media references before expensive browser/WASM allocations.
+ * Export must fail clearly rather than silently render missing assets as blanks.
+ */
+export function validateCompositionMedia(composition) {
+  if (!composition || !Array.isArray(composition.clips)) {
+    throw new Error('项目时间线数据无效，请重新打开项目后重试。');
+  }
+  const mediaClips = composition.clips.filter(clip => ['video', 'image', 'audio'].includes(clip.type));
+  for (const clip of mediaClips) {
+    const label = clip.name || '未命名素材';
+    if (!Number.isFinite(clip.startTime) || clip.startTime < 0 ||
+        !Number.isFinite(clip.duration) || clip.duration <= 0) {
+      throw new Error(`素材“${label}”的时间或时长无效，请删除后重新导入。`);
+    }
+    if (clip.type === 'video') {
+      if (!clip.element || !clip.element.videoWidth || !clip.element.videoHeight) {
+        throw new Error(`视频“${label}”尚未准备好或原始文件已丢失，请重新导入该视频后再导出。`);
+      }
+    } else if (clip.type === 'image') {
+      if (!clip.element || !clip.element.naturalWidth || !clip.element.naturalHeight) {
+        throw new Error(`图片“${label}”尚未加载或原始文件已丢失，请重新导入该图片后再导出。`);
+      }
+    } else if (!clip.file && !clip.src) {
+      throw new Error(`音频“${label}”缺少原始文件，请重新导入后再导出。`);
+    }
+  }
+  return true;
 }
 
 /**
@@ -245,7 +398,7 @@ function seekVideoToOffset(video, offset) {
 export async function exportComposition(composition, canvasPreview, onProgress, abortSignal, options = {}) {
   const duration = composition.duration;
   if (duration <= 0) {
-    throw new Error('Composition is empty');
+    throw new Error('时间线上没有可导出的内容。');
   }
 
   if (abortSignal?.aborted) {
@@ -262,11 +415,24 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   const height = options.height || composition.height || 1080;
   const fps = options.fps || 30;
   const quality = options.quality || 'high';
+  const totalFramesEstimate = Math.ceil(duration * fps);
+
+  validateCompositionMedia(composition);
+
+  // FFmpeg.wasm keeps imported frames in its virtual filesystem until encoding.
+  // Bound the workload on phones before allocating hundreds of large JPEG frames.
+  const maxFrames = options.mobileSafe === false ? 1800 : 900;
+  if (totalFramesEstimate > maxFrames) {
+    throw new Error(`手机安全导出最多支持约 ${Math.floor(maxFrames / fps)} 秒（当前设置会生成 ${totalFramesEstimate} 帧）。请缩短视频，或选择较低帧率后重试。`);
+  }
+  if (width * height > 1920 * 1080) {
+    throw new Error('当前导出分辨率过高，手机端建议使用720p左右画幅后重试。');
+  }
 
   if (onProgress) onProgress(0, 'Loading FFmpeg');
 
   if (!ffmpegLoaded || !ffmpeg) {
-    await loadFFmpeg();
+    await loadFFmpeg(undefined, abortSignal);
   }
 
   checkAborted();
@@ -281,13 +447,29 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     try {
       audioBuffer = await renderMixedAudio(composition, (pct) => {
         if (onProgress) onProgress(5 + Math.round(pct * 0.15), 'Rendering mixed audio');
-      });
+      }, abortSignal);
     } catch (audioErr) {
-      console.warn('Audio mixing failed, continuing with video only:', audioErr);
+      // Cancellation is a control-flow outcome, not an audio failure.
+      rethrowExportAbort(audioErr);
+      // Never silently export a silent video when the user added narration or music.
+      // Make the audio problem visible so the user can fix it and retry.
+      throw new Error(`配乐或配音处理失败，已停止导出，避免生成无声视频。原因：${audioErr?.message || '音频处理异常'}`);
     }
 
     checkAborted();
     const hasAudio = Boolean(audioBuffer && audioBuffer.length > 0 && audioBuffer.duration > 0.05);
+
+    // Encode mixed audio now, then release its large AudioBuffer before the
+    // JPEG frame sequence accumulates in FFmpeg's virtual filesystem.
+    if (hasAudio) {
+      let wavBlob = audioBufferToWav(audioBuffer);
+      let wavData = await fetchFile(wavBlob);
+      await ffmpeg.writeFile('audio.wav', wavData);
+      inputFiles.push('audio.wav');
+      wavData = null;
+      wavBlob = null;
+      audioBuffer = null;
+    }
 
     if (onProgress) onProgress(20, 'Rendering video frames');
 
@@ -300,7 +482,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     const frameDuration = 1 / fps;
     const videoClips = composition.clips.filter(c => c.type === 'video' && c.element);
 
-    const jpegQuality = quality === 'low' ? 0.75 : quality === 'medium' ? 0.85 : 0.92;
+    const jpegQuality = quality === 'low' ? 0.68 : quality === 'medium' ? 0.78 : 0.88;
 
     for (let f = 0; f < totalFrames; f++) {
       checkAborted();
@@ -310,7 +492,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
       for (const vClip of videoClips) {
         if (time >= vClip.startTime && time <= vClip.startTime + vClip.duration) {
           const offset = time - vClip.startTime + vClip.trimStart;
-          seekPromises.push(seekVideoToOffset(vClip.element, offset));
+          seekPromises.push(seekVideoToOffset(vClip.element, offset, abortSignal));
         }
       }
       if (seekPromises.length > 0) {
@@ -338,13 +520,6 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
     if (onProgress) onProgress(82, 'Encoding video');
 
-    if (hasAudio) {
-      const wavBlob = audioBufferToWav(audioBuffer);
-      const wavData = await fetchFile(wavBlob);
-      await ffmpeg.writeFile('audio.wav', wavData);
-      inputFiles.push('audio.wav');
-    }
-
     const logMessages = [];
     const logCb = ({ message }) => {
       logMessages.push(message);
@@ -366,20 +541,42 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
       '-vf', `pad=ceil(iw/2)*2:ceil(ih/2)*2`,
       '-c:v', 'libx264',
       '-preset', quality === 'low' ? 'superfast' : 'ultrafast',
+      '-crf', quality === 'high' ? '23' : quality === 'medium' ? '26' : '29',
       '-pix_fmt', 'yuv420p'
     );
 
     if (hasAudio) {
-      args.push('-c:a', 'aac', '-b:a', '192k', '-shortest');
+      args.push('-c:a', 'aac', '-b:a', quality === 'low' ? '96k' : '128k');
     } else {
       args.push('-an');
     }
 
+    // Preserve the complete composition even when a source audio file is shorter.
+    args.push('-t', duration.toFixed(3));
     args.push('export.mp4');
 
-    const ret = await ffmpeg.exec(args);
-    ffmpeg.off('log', logCb);
     inputFiles.push('export.mp4');
+    let ret;
+    const encoder = ffmpeg;
+    const terminateEncoder = () => {
+      // FFmpeg.wasm cannot interrupt an active exec command through AbortSignal.
+      // Terminating its worker is the supported hard-cancel path; a later export
+      // will lazily create and load a fresh instance.
+      try { encoder.terminate(); } catch (_) {}
+      if (ffmpeg === encoder) {
+        ffmpeg = null;
+        ffmpegLoaded = false;
+      }
+    };
+    if (abortSignal) abortSignal.addEventListener('abort', terminateEncoder, { once: true });
+    try {
+      checkAborted();
+      ret = await encoder.exec(args);
+      checkAborted();
+    } finally {
+      if (abortSignal) abortSignal.removeEventListener('abort', terminateEncoder);
+      try { encoder.off('log', logCb); } catch (_) {}
+    }
 
     if (ret !== 0) {
       const errDetail = logMessages.slice(-15).join('\n');
@@ -395,7 +592,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     }
 
     if (onProgress) onProgress(100, 'Export complete');
-    return { blob: new Blob([mp4Data.buffer], { type: 'video/mp4' }), ext: 'mp4' };
+    return { blob: new Blob([mp4Data.slice().buffer], { type: 'video/mp4' }), ext: 'mp4' };
   } finally {
     await cleanupFiles(inputFiles);
     if (offscreenCanvas) {
@@ -411,10 +608,22 @@ export function downloadBlob(blob, filename) {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.style.display = 'none';
   document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
+
+  try {
+    // Mobile browsers may take longer than desktop browsers to hand the
+    // object URL to the download manager. Keep the URL alive long enough
+    // for Android Chrome/WebView to begin reading the MP4.
+    a.click();
+  } catch (error) {
     URL.revokeObjectURL(url);
     a.remove();
-  }, 1000);
+    throw error;
+  }
+
+  // The click has been dispatched; remove the temporary anchor, but do not
+  // revoke the Blob URL immediately or after an overly short 1-second delay.
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }

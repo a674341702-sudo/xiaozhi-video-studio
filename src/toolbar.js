@@ -3,25 +3,25 @@
  */
 
 const SHORTCUTS = [
-  { key: 'Space', label: 'Play / Pause' },
-  { key: 'J', label: 'Reverse Playback' },
-  { key: 'K', label: 'Pause' },
-  { key: 'L', label: 'Forward Playback' },
-  { key: 'Ctrl+S', label: 'Split at playhead' },
-  { key: 'Ctrl+Z', label: 'Undo' },
-  { key: 'Ctrl+Shift+Z', label: 'Redo' },
-  { key: 'Ctrl+Y', label: 'Redo' },
-  { key: 'Del', label: 'Delete selected clip' },
-  { key: 'I', label: 'Set in point' },
-  { key: 'O', label: 'Set out point' },
-  { key: 'Esc', label: 'Cancel operation' },
-  { key: '← / →', label: 'Move playhead' },
-  { key: 'Shift+← / →', label: 'Frame step' },
-  { key: 'Home', label: 'Timeline start' },
-  { key: 'End', label: 'Timeline end' },
-  { key: 'Ctrl+C / Ctrl+V', label: 'Copy / Paste' },
-  { key: 'Ctrl+D', label: 'Duplicate' },
-  { key: 'Ctrl+E', label: 'Export' },
+  { key: 'Space', label: '播放 / 暂停' },
+  { key: 'J', label: '倒放' },
+  { key: 'K', label: '暂停' },
+  { key: 'L', label: '正放' },
+  { key: 'Ctrl+S', label: '在播放头处分割' },
+  { key: 'Ctrl+Z', label: '撤销' },
+  { key: 'Ctrl+Shift+Z', label: '重做' },
+  { key: 'Ctrl+Y', label: '重做' },
+  { key: 'Del', label: '删除选中的素材' },
+  { key: 'I', label: '设置入点' },
+  { key: 'O', label: '设置出点' },
+  { key: 'Esc', label: '取消操作' },
+  { key: '← / →', label: '移动播放头' },
+  { key: 'Shift+← / →', label: '逐帧移动' },
+  { key: 'Home', label: '时间线起点' },
+  { key: 'End', label: '时间线终点' },
+  { key: 'Ctrl+C / Ctrl+V', label: '复制 / 粘贴' },
+  { key: 'Ctrl+D', label: '创建副本' },
+  { key: 'Ctrl+E', label: '导出' },
 ];
 
 export class Toolbar {
@@ -50,9 +50,9 @@ export class Toolbar {
     const btnMap = {
       'btn-split': 'onSplit',
       'btn-delete': 'onDelete',
-      'btn-export': 'onExport',
-      'btn-undo': 'onUndo',
-      'btn-redo': 'onRedo',
+      'btn-export': 'on导出',
+      'btn-undo': 'on撤销',
+      'btn-redo': 'on重做',
     };
 
     Object.entries(btnMap).forEach(([id, cb]) => {
@@ -97,15 +97,15 @@ export class Toolbar {
         return;
       }
 
-      // Ctrl/Cmd+Z → Undo, Ctrl/Cmd+Y / Ctrl+Shift+Z → Redo
+      // Ctrl/Cmd+Z → 撤销, Ctrl/Cmd+Y / Ctrl+Shift+Z → 重做
       if ((e.ctrlKey || e.metaKey) && e.code === 'KeyZ' && !e.shiftKey) {
         e.preventDefault();
-        this.callbacks.onUndo?.();
+        this.callbacks.on撤销?.();
         return;
       }
       if ((e.ctrlKey || e.metaKey) && (e.code === 'KeyY' || (e.code === 'KeyZ' && e.shiftKey))) {
         e.preventDefault();
-        this.callbacks.onRedo?.();
+        this.callbacks.on重做?.();
         return;
       }
 
@@ -130,7 +130,7 @@ export class Toolbar {
         e.preventDefault();
         this._reversePlayback = false;
         this._forwardPlayback = false;
-        this.callbacks.onPause?.();
+        this.callbacks.on暂停?.();
         return;
       }
       if (e.code === 'KeyL') {
@@ -186,7 +186,7 @@ export class Toolbar {
             return;
           case 'KeyE':
             e.preventDefault();
-            this.callbacks.onExport?.();
+            this.callbacks.on导出?.();
             return;
           case 'KeyC':
             e.preventDefault();
@@ -198,7 +198,7 @@ export class Toolbar {
             return;
           case 'KeyD':
             e.preventDefault();
-            this.callbacks.onDuplicate?.();
+            this.callbacks.on创建副本?.();
             return;
         }
       }
@@ -225,7 +225,7 @@ export class Toolbar {
     panel.innerHTML = `
       <div class="shortcuts-help-content">
         <div class="shortcuts-help-header">
-          <h3>Keyboard Shortcuts</h3>
+          <h3>快捷键说明</h3>
           <button class="shortcuts-help-close" id="shortcuts-help-close" type="button">✕</button>
         </div>
         <div class="shortcuts-help-body">
@@ -281,8 +281,8 @@ export class Toolbar {
     }
   }
 
-  setUndoRedo(canUndo, canRedo) {
-    if (this.buttons['btn-undo']) this.buttons['btn-undo'].disabled = !canUndo;
-    if (this.buttons['btn-redo']) this.buttons['btn-redo'].disabled = !canRedo;
+  set撤销重做(can撤销, can重做) {
+    if (this.buttons['btn-undo']) this.buttons['btn-undo'].disabled = !can撤销;
+    if (this.buttons['btn-redo']) this.buttons['btn-redo'].disabled = !can重做;
   }
 }

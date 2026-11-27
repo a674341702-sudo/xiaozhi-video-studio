@@ -26,8 +26,13 @@
  */
 let coepCredentialless = false;
 if (typeof window === 'undefined') {
+    const APP_CACHE = "xiaozhi-video-shell-v2";
     self.addEventListener("install", () => self.skipWaiting());
-    self.addEventListener("activate", (event) => event.waitUntil(self.clients.claim()));
+    self.addEventListener("activate", (event) => event.waitUntil((async () => {
+        const keys = await caches.keys();
+        await Promise.all(keys.filter((key) => key.startsWith("xiaozhi-video-shell-") && key !== APP_CACHE).map((key) => caches.delete(key)));
+        await self.clients.claim();
+    })()));
 
     self.addEventListener("message", (ev) => {
         if (!ev.data) {
@@ -57,30 +62,62 @@ if (typeof window === 'undefined') {
                 credentials: "omit",
             })
             : r;
-        event.respondWith(
-            fetch(request)
-                .then((response) => {
-                    if (response.status === 0) {
-                        return response;
-                    }
+        event.respondWith((async () => {
+            const requestUrl = new URL(r.url);
+            const requestPath = requestUrl.pathname;
+            const isSameOriginGet = r.method === "GET" && requestUrl.origin === self.location.origin;
+            const isAppShellAsset = isSameOriginGet && (
+                r.mode === "navigate" ||
+                requestPath.includes("/assets/") ||
+                requestPath.includes("/icons/") ||
+                requestPath.endsWith("/index.html") ||
+                requestPath.endsWith("/manifest.webmanifest") ||
+                requestPath.endsWith("/pwa-install.js") ||
+                requestPath.endsWith("/coi-serviceworker.js") ||
+                requestPath.endsWith("/tts-lab.html") ||
+                requestPath.endsWith("/tts-lab.js")
+            );
+            try {
+                const response = await fetch(request);
+                if (response.status === 0) return response;
 
-                    const newHeaders = new Headers(response.headers);
-                    newHeaders.set("Cross-Origin-Embedder-Policy",
-                        coepCredentialless ? "credentialless" : "require-corp"
-                    );
-                    if (!coepCredentialless) {
-                        newHeaders.set("Cross-Origin-Resource-Policy", "cross-origin");
-                    }
-                    newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
+                const newHeaders = new Headers(response.headers);
+                newHeaders.set("Cross-Origin-Embedder-Policy", coepCredentialless ? "credentialless" : "require-corp");
+                if (!coepCredentialless) newHeaders.set("Cross-Origin-Resource-Policy", "cross-origin");
+                newHeaders.set("Cross-Origin-Opener-Policy", "same-origin");
+                const isolatedResponse = new Response(response.clone().body, {
+                    status: response.status,
+                    statusText: response.statusText,
+                    headers: newHeaders,
+                });
 
-                    return new Response(response.body, {
-                        status: response.status,
-                        statusText: response.statusText,
-                        headers: newHeaders,
-                    });
-                })
-                .catch((e) => console.error(e))
-        );
+                if (isAppShellAsset && response.ok) {
+                    const cache = await caches.open(APP_CACHE);
+                    await cache.put(r, isolatedResponse.clone());
+                }
+                return isolatedResponse;
+            } catch (error) {
+                if (isAppShellAsset) {
+                    const cache = await caches.open(APP_CACHE);
+                    const cached = await cache.match(r);
+                    if (cached) return cached;
+                    if (r.mode === "navigate") {
+                        // A first visit often caches the root URL ("/") rather than
+                        // "index.html". Try both forms so offline home navigation works.
+                        const appRoot = new URL("./", self.registration.scope).toString();
+                        const rootFallback = await cache.match(appRoot);
+                        if (rootFallback) return rootFallback;
+                        const appEntry = new URL("index.html", self.registration.scope).toString();
+                        const fallback = await cache.match(appEntry);
+                        if (fallback) return fallback;
+                    }
+                }
+                return new Response("当前网络不可用，请联网后重试。", {
+                    status: 503,
+                    headers: { "Content-Type": "text/plain; charset=utf-8" },
+                });
+            }
+        })());
     });
 
 } else {

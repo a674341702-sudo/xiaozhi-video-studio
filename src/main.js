@@ -14,7 +14,11 @@ import { Toolbar } from './toolbar.js';
 import { createDefaultStore } from './state.js';
 import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js';
 import { formatTime, showToast } from './utils.js';
+import { getClipPlaybackState } from './keyframes.js';
 import { initAutoWorkflow } from './auto-workflow.js';
+import { initSubtitleStudio } from './subtitle-studio.js';
+import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
+import { createProjectBundle, readProjectBundle } from './project-bundle.js';
 
 // --- Global State ---
 let composition = null;
@@ -76,11 +80,20 @@ const exportQualityEl = document.getElementById('export-quality');
 
 let exportAbortController = null;
 let isExporting = false;
+let localRestoreComplete = false;
+let localAutosaveTimer = null;
+let localAutosaveInProgress = false;
+let localAutosaveDirty = false;
+let localAutosaveErrorShown = false;
+let isRestoringLocalProject = false;
+let activeProjectId = 'last-open-project';
+let activeProjectName = '小智视频项目';
+const localSaveStatusEl = document.getElementById('local-save-status');
 
 const mediaUrlRegistry = new Map(); // clipId -> objectUrl for cleanup
 
 // --- Initialization ---
-function initApp() {
+async function initApp() {
   store = createDefaultStore();
   composition = new Composition(1920, 1080);
 
@@ -171,15 +184,52 @@ function initApp() {
 
   bindControls();
   bindDropHandlers();
-  loadFFmpegInBackground();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && localRestoreComplete) {
+      if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+      localAutosaveTimer = null;
+      saveCurrentProjectLocally();
+    }
+  });
+  // Load the large FFmpeg WASM engine only when the user exports, preserving phone memory during editing.
   onCompositionChanged();
   updateHeaderProjectName();
-  initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, onExport: handleExport });
+  initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport: handleExport });
+  initSubtitleStudio({ composition, onCompositionChanged });
+
+  await restoreLastLocalProject();
+  applyDeviceExportDefaults();
+  localRestoreComplete = true;
+  onCompositionChanged();
+}
+
+function applyDeviceExportDefaults() {
+  const isMobile = (typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 1) ||
+    (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').matches);
+  if (!isMobile) return;
+
+  const sourceWidth = Math.max(2, Number(composition.width) || 720);
+  const sourceHeight = Math.max(2, Number(composition.height) || 1280);
+  const scale = Math.min(1, 1280 / Math.max(sourceWidth, sourceHeight));
+  const evenDimension = value => Math.max(2, Math.floor(value / 2) * 2);
+
+  if (exportWidthEl) exportWidthEl.value = String(evenDimension(sourceWidth * scale));
+  if (exportHeightEl) exportHeightEl.value = String(evenDimension(sourceHeight * scale));
+  if (exportFpsEl) exportFpsEl.value = '24';
+  if (exportQualityEl) exportQualityEl.value = 'medium';
 }
 
 function onMediaUrlRegistered(clipId, objectUrl) {
   if (objectUrl) mediaUrlRegistry.set(clipId, objectUrl);
   else mediaUrlRegistry.delete(clipId);
+}
+
+// Release all temporary media URLs before replacing or rolling back a composition.
+function releaseMediaUrls() {
+  for (const url of mediaUrlRegistry.values()) {
+    try { URL.revokeObjectURL(url); } catch (_) {}
+  }
+  mediaUrlRegistry.clear();
 }
 
 function onCompositionChanged() {
@@ -201,6 +251,12 @@ function onCompositionChanged() {
   updateTimeDisplay();
   updateUndoRedoButtons();
   toolbar?.setPlaying(isPlaying);
+  scheduleLocalAutosave();
+}
+
+function updateHeaderProjectName(name = '新建视频项目') {
+  activeProjectName = name;
+  if (headerFilenameEl) headerFilenameEl.textContent = name;
 }
 
 function updatePreviewResolutionBadge() {
@@ -276,50 +332,49 @@ function updateUndoRedoButtons() {
 }
 
 function syncActiveMedia(time, playing) {
-  const clips = composition.getClipsAtTime(time);
-
-  for (const clip of clips) {
-    if (!clip.element) continue;
-    const trimStart = clip.trimStart || 0;
-    const trimEnd = clip.trimEnd || (trimStart + clip.duration) || (clip.element.duration || Infinity);
-    const clipEndTime = clip.startTime + clip.duration;
-    const offset = time - clip.startTime + trimStart;
-
-    if (clip.type === 'video' || clip.type === 'audio') {
-      const track = composition.getTrack(clip.trackId);
-      const isMuted = track ? track.muted : false;
-
-      const reachedTrimEnd = time >= clipEndTime - 1e-9 || offset >= trimEnd - 1e-9;
-      if (reachedTrimEnd) {
-        if (!clip.element.paused) clip.element.pause();
-        clip.element.currentTime = clamp(offset, 0, trimEnd);
-        clip.element.muted = isMuted;
-        continue;
-      }
-
-      const threshold = playing ? 0.5 : 0.05;
-      if (Math.abs(clip.element.currentTime - offset) > threshold) {
-        clip.element.currentTime = clamp(offset, 0, trimEnd);
-      }
-
-      if (playing && clip.element.paused) {
-        clip.element.volume = clip.volume ?? 1;
-        clip.element.muted = isMuted;
-        clip.element.playbackRate = Math.abs(playbackRate);
-        clip.element.play().catch(() => {});
-      } else if (!playing && !clip.element.paused) {
-        clip.element.pause();
-      } else {
-        clip.element.muted = isMuted;
-      }
-    }
-  }
-
   for (const clip of composition.clips) {
     if (!clip.element || (clip.type !== 'video' && clip.type !== 'audio')) continue;
-    const active = time >= clip.startTime - 1e-9 && time <= clip.startTime + clip.duration + 1e-9;
-    if (!active && !clip.element.paused) {
-      clip.element.pause();
+
+    const element = clip.element;
+    const track = composition.getTrack(clip.trackId);
+    const state = getClipPlaybackState(
+      clip,
+      time,
+      Number.isFinite(element.duration) && element.duration > 0 ? element.duration : Infinity
+    );
+
+    element.volume = state.volume;
+    element.muted = Boolean(track?.muted);
+    // Native looping is safe only when the selected source range is the
+    // complete media file. Trimmed loops are wrapped against sourceTime above.
+    const mediaDuration = Number.isFinite(element.duration) ? element.duration : 0;
+    const trimStart = Math.max(0, Number(clip.trimStart) || 0);
+    const trimEnd = Number.isFinite(Number(clip.trimEnd)) ? Number(clip.trimEnd) : mediaDuration;
+    element.loop = state.loop && trimStart <= 0.001 && trimEnd >= mediaDuration - 0.05 && mediaDuration > 0;
+
+    if (!state.active || state.sourceEnded) {
+      if (!element.paused) element.pause();
+      if (state.sourceEnded && !state.loop) {
+        const safeEnd = Number.isFinite(element.duration) && element.duration > 0
+          ? Math.min(element.duration, Math.max(0, Number(clip.trimEnd) || element.duration))
+          : state.sourceTime;
+        if (Math.abs(element.currentTime - safeEnd) > 0.05) element.currentTime = safeEnd;
+      }
+      continue;
+    }
+
+    const threshold = playing
+      ? (clip.type === 'audio' ? 0.12 : 0.3)
+      : 0.04;
+    if (Number.isFinite(state.sourceTime) && Math.abs(element.currentTime - state.sourceTime) > threshold) {
+      try { element.currentTime = state.sourceTime; } catch { /* metadata may still be loading */ }
+    }
+
+    if (playing) {
+      element.playbackRate = Math.abs(playbackRate);
+      if (element.paused) element.play().catch(() => {});
+    } else if (!element.paused) {
+      element.pause();
     }
   }
 }
@@ -409,12 +464,12 @@ function stop() {
 
 function setInPoint() {
   inPoint = canvasPreview.currentTime;
-  showToast(`In point set: ${formatTime(inPoint)}`, 'info');
+  showToast(`已设置入点： ${formatTime(inPoint)}`, 'info');
 }
 
 function setOutPoint() {
   outPoint = canvasPreview.currentTime;
-  showToast(`Out point set: ${formatTime(outPoint)}`, 'info');
+  showToast(`已设置出点： ${formatTime(outPoint)}`, 'info');
 }
 
 // --- Event Controls Binding ---
@@ -433,6 +488,24 @@ function bindControls() {
   const btnNewProject = document.getElementById('btn-new-project');
   const btnSaveProject = document.getElementById('btn-save-project');
   const btnLoadProject = document.getElementById('btn-load-project');
+  const projectLibrary = document.getElementById('project-library');
+  document.getElementById('btn-project-library')?.addEventListener('click', () => {
+    projectLibrary?.removeAttribute('hidden');
+    renderProjectLibrary();
+  });
+  document.getElementById('project-library-close')?.addEventListener('click', () => projectLibrary?.setAttribute('hidden', ''));
+  projectLibrary?.addEventListener('click', event => {
+    if (event.target === projectLibrary) projectLibrary.setAttribute('hidden', '');
+  });
+  document.getElementById('project-save-copy')?.addEventListener('click', saveAsNewLocalProject);
+  document.getElementById('project-export-bundle')?.addEventListener('click', exportCurrentProjectBundle);
+  const projectBundleInput = document.getElementById('project-bundle-input');
+  document.getElementById('project-import-bundle')?.addEventListener('click', () => projectBundleInput?.click());
+  projectBundleInput?.addEventListener('change', () => {
+    const file = projectBundleInput.files?.[0];
+    if (file) importProjectBundleFile(file);
+    projectBundleInput.value = '';
+  });
   const loadProjectInput = document.getElementById('load-project-input');
 
   if (btnNewProject) btnNewProject.addEventListener('click', () => window.newProject?.());
@@ -543,12 +616,12 @@ function bindDropHandlers() {
 // --- Export Handling ---
 async function handleExport() {
   if (composition.clips.length === 0) {
-    showToast('Add at least one element before exporting', 'warning');
+    showToast('请至少添加一个素材后再导出', 'warning');
     return;
   }
 
   if (isExporting) {
-    showToast('Export already in progress', 'info');
+    showToast('视频正在导出，请稍候', 'info');
     return;
   }
 
@@ -559,16 +632,19 @@ async function handleExport() {
   const signal = exportAbortController.signal;
 
   pause();
-  showProgress('Exporting Composition', 'Rendering video and mixing audio in browser...', 0);
+  showProgress('正在导出商家视频', '正在逐帧渲染画面并混合配音和背景音乐，请保持页面打开。', 0);
 
   if (progressCancelBtn) {
-    progressCancelBtn.textContent = 'Cancel Export';
+    progressCancelBtn.textContent = '取消导出';
     progressCancelBtn.disabled = false;
     progressCancelBtn.onclick = () => {
-      if (exportAbortController) exportAbortController.abort();
-      exportAbortController = null;
-      hideProgress();
-      showToast('Export cancelled', 'info');
+      if (!exportAbortController || exportAbortController.signal.aborted) return;
+      // Keep the progress dialog visible until the exporter has actually
+      // stopped and released its resources; do not report cancellation early.
+      progressCancelBtn.disabled = true;
+      progressCancelBtn.textContent = '正在停止…';
+      if (progressSubtitle) progressSubtitle.textContent = '正在停止渲染并释放手机内存，请稍候。';
+      exportAbortController.abort();
     };
   }
 
@@ -592,27 +668,37 @@ async function handleExport() {
     hideProgress();
 
     if (!blob || blob.size === 0) {
-      showToast('Export failed: Rendered blob is empty', 'error', 6000);
+      showToast('导出失败：生成的视频文件为空', 'error', 6000);
       return;
     }
 
-    const filename = `Viz_Export_${Date.now()}.${ext || 'mp4'}`;
+    const safeProjectName = String(activeProjectName || '商家视频').trim().replace(/[\/:*?"<>|\\]/g, '_').replace(/[\u0000-\u001f]/g, '_').replace(/\s+/g, '_').slice(0, 48) || '商家视频';
+    const timestamp = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[/: ]/g, '-');
+    const filename = `${safeProjectName}_宣传视频_${timestamp}.${ext || 'mp4'}`;
     downloadBlob(blob, filename);
-    showToast(`Export Complete! Downloading ${filename}`, 'success', 5000);
+    showToast(`导出完成！正在下载 ${filename}`, 'success', 5000);
   } catch (err) {
     hideProgress();
     console.error('Export error:', err);
     if (err?.name === 'AbortError' || signal?.aborted) {
-      showToast('Export cancelled', 'info');
+      showToast('已取消导出', 'info');
       return;
     }
-    const msg = err?.message || (typeof err === 'string' ? err : 'Export processing failed');
-    showToast(`Export failed: ${msg}`, 'error', 6000);
+    const rawMessage = err?.message || (typeof err === 'string' ? err : '导出处理失败');
+    const isMemoryError = /out of memory|memory access out of bounds|allocation failed|array buffer allocation|cannot enlarge memory|not enough memory/i.test(rawMessage);
+    const msg = isMemoryError
+      ? '手机可用内存不足，视频没有导出。请关闭其他应用后重试；素材控制在4–6个以内，单段视频尽量短，并选择“手机稳定优先”。'
+      : rawMessage;
+    showToast(`导出失败：${msg}`, 'error', 9000);
   } finally {
     exportAbortController = null;
     isExporting = false;
+    hideProgress();
     if (btnExport) btnExport.disabled = false;
-    if (progressCancelBtn) progressCancelBtn.disabled = true;
+    if (progressCancelBtn) {
+      progressCancelBtn.disabled = true;
+      progressCancelBtn.textContent = '取消导出';
+    }
   }
 }
 
@@ -633,14 +719,14 @@ function hideProgress() {
 }
 
 async function loadFFmpegInBackground() {
-  if (headerStatusEl) headerStatusEl.textContent = 'Loading Engine...';
+  if (headerStatusEl) headerStatusEl.textContent = '正在加载导出引擎…';
   try {
     await loadFFmpeg();
-    if (headerStatusEl) headerStatusEl.textContent = 'FFmpeg Ready';
+    if (headerStatusEl) headerStatusEl.textContent = '导出引擎已就绪';
   } catch (e) {
     console.warn('FFmpeg load failed:', e);
-    if (headerStatusEl) headerStatusEl.textContent = 'Canvas Engine Only';
-    showToast('Offline encoder unavailable. Exports may fall back to WebM.', 'warning', 6000);
+    if (headerStatusEl) headerStatusEl.textContent = '当前使用画布引擎';
+    showToast('MP4 编码器暂时不可用。正式导出时会再次尝试加载；如果仍失败，请检查网络后重试。', 'warning', 6000);
   }
 }
 
@@ -649,56 +735,345 @@ function clamp(val, min, max) {
 }
 
 // --- New Project / Cleanup ---
-window.newProject = function newProject() {
-  for (const [clipId, url] of mediaUrlRegistry.entries()) {
-    URL.revokeObjectURL(url);
+
+async function buildLocalProjectSnapshot() {
+  const project = stripTemporaryMediaUrls(composition.toJSON());
+  project.name = activeProjectName;
+  const previousRecord = await loadLocalProject(activeProjectId).catch(() => null);
+  const previousMedia = new Map((previousRecord?.media || []).map(item => [item.clipId, item]));
+  const media = [];
+  for (const clip of composition.clips) {
+    if (!['video', 'image', 'audio'].includes(clip.type)) continue;
+    let blob = clip.file instanceof Blob ? clip.file : null;
+    let previous = null;
+    if (!blob && typeof clip.src === 'string' && clip.src.startsWith('blob:')) {
+      try {
+        const response = await fetch(clip.src);
+        if (response.ok) blob = await response.blob();
+      } catch (_) {}
+    }
+    if (!blob) {
+      previous = previousMedia.get(clip.id);
+      if (previous?.blob instanceof Blob) blob = previous.blob;
+    }
+    if (blob) media.push({
+      clipId: clip.id,
+      name: clip.file?.name || previous?.name || clip.name || '素材文件',
+      type: blob.type || clip.file?.type || previous?.type || 'application/octet-stream',
+      blob
+    });
   }
-  mediaUrlRegistry.clear();
+  return { project, media };
+}
+
+function setLocalSaveStatus(message, state = 'normal') {
+  if (!localSaveStatusEl) return;
+  localSaveStatusEl.textContent = message;
+  localSaveStatusEl.dataset.state = state;
+}
+
+async function saveCurrentProjectLocally() {
+  if (localAutosaveInProgress) { localAutosaveDirty = true; return false; }
+  localAutosaveInProgress = true;
+  localAutosaveDirty = false;
+  setLocalSaveStatus('正在保存到本机…');
+  try {
+    const snapshot = await buildLocalProjectSnapshot();
+    snapshot.project.name = activeProjectName;
+    const result = await saveLocalProject(snapshot.project, snapshot.media, activeProjectId);
+    const time = new Date(result.savedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    setLocalSaveStatus('本机已保存 ' + time, 'saved');
+    localAutosaveErrorShown = false;
+    return true;
+  } catch (error) {
+    console.warn('[小智本机自动保存]', error);
+    setLocalSaveStatus('本机保存失败', 'error');
+    if (!localAutosaveErrorShown) {
+      showToast('本机自动保存失败：' + (error?.message || '存储空间不足或浏览器限制').slice(0, 100) + '。请及时下载项目配置，并保留原素材。', 'warning', 9000);
+      localAutosaveErrorShown = true;
+    }
+    return false;
+  } finally {
+    localAutosaveInProgress = false;
+    if (localAutosaveDirty && localRestoreComplete) scheduleLocalAutosave();
+  }
+}
+
+function scheduleLocalAutosave() {
+  if (!localRestoreComplete || isRestoringLocalProject) return;
+  localAutosaveDirty = true;
+  if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+  setLocalSaveStatus('有未保存的更改…');
+  localAutosaveTimer = setTimeout(() => {
+    localAutosaveTimer = null;
+    saveCurrentProjectLocally();
+  }, 1400);
+}
+
+function waitForRestoredMedia(element, readyCheck, readyEvent) {
+  if (readyCheck()) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let done = false;
+    const finish = value => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      element.removeEventListener(readyEvent, onReady);
+      element.removeEventListener('error', onError);
+      resolve(value);
+    };
+    const onReady = () => finish(true);
+    const onError = () => finish(false);
+    const timer = setTimeout(() => finish(false), 15000);
+    element.addEventListener(readyEvent, onReady, { once: true });
+    element.addEventListener('error', onError, { once: true });
+    if (readyCheck()) finish(true);
+  });
+}
+
+async function applyLocalProjectRecord(record, notify = true) {
+  if (!record?.project || !Array.isArray(record.project.clips)) throw new Error('项目记录不完整，无法恢复');
+  isRestoringLocalProject = true;
+  releaseMediaUrls();
+  try {
+    await composition.fromJSON(record.project, async (srcUrl) => srcUrl || null);
+    let restored = 0;
+    let missing = 0;
+    const mediaByClip = new Map((record.media || []).map(item => [item.clipId, item]));
+    for (const clip of composition.clips) {
+      const item = mediaByClip.get(clip.id);
+      if (!item?.blob || !['video', 'image', 'audio'].includes(clip.type)) continue;
+      const objectUrl = URL.createObjectURL(item.blob);
+      try {
+        let element;
+        if (clip.type === 'video') {
+          element = document.createElement('video');
+          element.preload = 'metadata';
+          element.src = objectUrl;
+          if (!await waitForRestoredMedia(element, () => element.readyState >= 1, 'loadedmetadata')) throw new Error('视频元数据读取超时');
+        } else if (clip.type === 'image') {
+          element = new Image();
+          element.src = objectUrl;
+          if (!await waitForRestoredMedia(element, () => element.complete && element.naturalWidth > 0, 'load')) throw new Error('图片读取超时');
+        } else {
+          element = new Audio();
+          element.preload = 'metadata';
+          element.src = objectUrl;
+          if (!await waitForRestoredMedia(element, () => element.readyState >= 1, 'loadedmetadata')) throw new Error('音频元数据读取超时');
+        }
+        clip.src = objectUrl;
+        clip.file = typeof File !== 'undefined'
+          ? new File([item.blob], item.name || clip.name || '素材文件', { type: item.type || item.blob.type })
+          : item.blob;
+        clip.element = element;
+        onMediaUrlRegistered(clip.id, objectUrl);
+        restored++;
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        clip.src = null;
+        clip.file = null;
+        clip.element = null;
+        missing++;
+        console.warn('[小智恢复素材]', clip.name, error);
+      }
+    }
+    activeProjectId = record.id || 'last-open-project';
+    updateHeaderProjectName(record.name || record.project.name || '已恢复项目');
+    onCompositionChanged();
+    setLocalSaveStatus('已恢复：' + activeProjectName, 'saved');
+    if (notify) {
+      const savedAt = new Date(record.savedAt || Date.now()).toLocaleString('zh-CN');
+      showToast('项目已打开（' + savedAt + '）。素材恢复 ' + restored + ' 个' + (missing ? '，另有 ' + missing + ' 个素材未能读取' : '') + '。', missing ? 'warning' : 'success', 8000);
+    }
+    return { restored, missing };
+  } finally {
+    isRestoringLocalProject = false;
+  }
+}
+
+async function restoreLastLocalProject() {
+  setLocalSaveStatus('正在检查本机项目…');
+  try {
+    const record = await loadLastActiveLocalProject();
+    if (!record?.project) {
+      setLocalSaveStatus('本机自动保存已开启');
+      return;
+    }
+    await applyLocalProjectRecord(record, true);
+  } catch (error) {
+    console.warn('[小智读取本机项目]', error);
+    setLocalSaveStatus('本机项目读取失败', 'error');
+    showToast('无法读取上次本机项目：' + (error?.message || '浏览器存储不可用') + '。你仍可手动打开项目文件。', 'warning', 8000);
+  }
+}
+
+async function renderProjectLibrary() {
+  const listEl = document.getElementById('project-library-list');
+  if (!listEl) return;
+  listEl.replaceChildren();
+  try {
+    const projects = await listLocalProjects();
+    if (!projects.length) {
+      const empty = document.createElement('p');
+      empty.className = 'project-library-empty';
+      empty.textContent = '还没有另存的商家项目。点击上方“保存为新项目”即可建立第一个项目。';
+      listEl.append(empty);
+      return;
+    }
+    for (const item of projects) {
+      const row = document.createElement('div');
+      row.className = 'project-library-row';
+      const info = document.createElement('div');
+      info.className = 'project-library-info';
+      const name = document.createElement('strong');
+      name.textContent = item.name;
+      const meta = document.createElement('span');
+      meta.textContent = new Date(item.savedAt).toLocaleString('zh-CN') + ' · ' + item.clipCount + ' 个片段 · ' + item.mediaCount + ' 个素材';
+      info.append(name, meta);
+      const actions = document.createElement('div');
+      actions.className = 'project-library-actions';
+      const open = document.createElement('button');
+      open.type = 'button'; open.textContent = '打开';
+      open.addEventListener('click', async () => {
+        try {
+          await saveCurrentProjectLocally();
+          const record = await loadLocalProject(item.id);
+          await applyLocalProjectRecord(record, true);
+          document.getElementById('project-library')?.setAttribute('hidden', '');
+          renderProjectLibrary();
+        } catch (error) {
+          showToast('打开项目失败：' + (error?.message || '未知错误'), 'error', 7000);
+        }
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = '删除'; remove.className = 'danger';
+      remove.addEventListener('click', async () => {
+        if (!window.confirm('确定删除“' + item.name + '”及其本机素材备份吗？此操作不可撤销。')) return;
+        try {
+          await deleteLocalProject(item.id);
+          if (activeProjectId === item.id) {
+            activeProjectId = 'last-open-project';
+            await saveCurrentProjectLocally();
+          }
+          renderProjectLibrary();
+          showToast('项目已从本机项目库删除', 'success');
+        } catch (error) {
+          showToast('删除失败：' + (error?.message || '未知错误'), 'error');
+        }
+      });
+      actions.append(open, remove);
+      row.append(info, actions);
+      listEl.append(row);
+    }
+  } catch (error) {
+    const failed = document.createElement('p');
+    failed.className = 'project-library-empty';
+    failed.textContent = '无法读取本机项目库：' + (error?.message || '浏览器存储不可用');
+    listEl.append(failed);
+  }
+}
+
+async function exportCurrentProjectBundle() {
+  try {
+    const snapshot = await buildLocalProjectSnapshot();
+    snapshot.project.name = activeProjectName;
+    const bundle = await createProjectBundle(snapshot.project, snapshot.media);
+    const unsafeNameChars = ['/', ':', '*', '?', '"', '<', '>', '|', String.fromCharCode(92)];
+    const safeName = Array.from(activeProjectName).map(char => unsafeNameChars.includes(char) ? '_' : char).join('').slice(0, 48) || '小智视频项目';
+    downloadBlob(bundle, safeName + '.xzproj');
+    showToast('完整项目包已导出，包含时间线和 ' + snapshot.media.length + ' 个原始素材', 'success', 8000);
+  } catch (error) {
+    showToast('项目包导出失败：' + (error?.message || '未知错误'), 'error', 9000);
+  }
+}
+
+async function importProjectBundleFile(file) {
+  try {
+    const result = await readProjectBundle(file);
+    const projectName = result.project.name || file.name.replace(/\.(xzproj|zip)$/i, '') || '导入的商家项目';
+    result.project.name = projectName;
+    const id = createLocalProjectId();
+    const savedAt = Date.now();
+    await saveLocalProject(result.project, result.media, id);
+    await applyLocalProjectRecord({ id, name: projectName, savedAt, project: result.project, media: result.media }, false);
+    document.getElementById('project-library')?.setAttribute('hidden', '');
+    showToast('项目包导入成功：' + projectName + '，恢复素材 ' + result.media.length + ' 个', 'success', 9000);
+  } catch (error) {
+    showToast('项目包导入失败：' + (error?.message || '文件格式不正确'), 'error', 9000);
+  }
+}
+
+async function saveAsNewLocalProject() {
+  const suggested = activeProjectName && activeProjectName !== '新建视频项目' ? activeProjectName + ' - 副本' : '新商家项目';
+  const name = window.prompt('给这个商家项目起个名字：', suggested);
+  if (!name || !name.trim()) return;
+  activeProjectId = createLocalProjectId();
+  updateHeaderProjectName(name.trim());
+  const saved = await saveCurrentProjectLocally();
+  if (saved) {
+    showToast('已另存为“' + activeProjectName + '”，项目和素材已保存到本机', 'success', 7000);
+    renderProjectLibrary();
+  }
+}
+
+window.newProject = function newProject() {
+  if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+  activeProjectId = createLocalProjectId();
+  releaseMediaUrls();
   composition.clear();
   inPoint = 0;
   outPoint = 0;
   onCompositionChanged();
-  updateHeaderProjectName('Multi-Track Project');
-  showToast('New project created', 'info');
+  updateHeaderProjectName('新建视频项目');
+  showToast('已新建项目；新项目会自动保存在本机', 'info');
 };
 
-window.saveProject = function saveProject() {
-  const data = composition.toJSON();
+window.saveProject = async function saveProject() {
+  const localSaved = await saveCurrentProjectLocally();
+  const data = stripTemporaryMediaUrls(composition.toJSON());
+  data.name = activeProjectName;
+  const mediaCount = composition.clips.filter(clip => clip.file || clip.src?.startsWith('blob:')).length;
+  data.mediaIncluded = false;
+  data.mediaNotice = '此 JSON 文件只保存时间线和编辑参数，不包含原始媒体。当前浏览器会另行自动保存素材；如需换设备，请保留原始照片、视频和音频。';
   const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-  downloadBlob(blob, `Viz_Project_${Date.now()}.json`);
+  downloadBlob(blob, `小智视频项目_${Date.now()}.json`);
+  showToast(localSaved
+    ? '已保存到本机浏览器，并下载项目配置 JSON。JSON 不含原始素材；本机自动备份包含已导入素材。'
+    : mediaCount > 0
+      ? '项目配置 JSON 已下载，但本机素材备份失败。请保留原始照片、视频和音频。'
+      : '项目配置 JSON 已下载。', localSaved ? 'success' : 'warning', 9000);
 };
 
 window.loadProject = async function loadProject(file) {
   try {
     const text = await file.text();
     const data = JSON.parse(text);
-
-    for (const [clipId, url] of mediaUrlRegistry.entries()) {
-      URL.revokeObjectURL(url);
+    if (!data || !Array.isArray(data.clips) || !data.width || !data.height) {
+      throw new Error('项目文件格式不正确');
     }
-    mediaUrlRegistry.clear();
-
-    await composition.fromJSON(data, async (srcUrl, type) => {
-      if (srcUrl && srcUrl.startsWith('blob:')) {
-        return null;
-      }
+    if (!window.confirm('打开项目会替换当前时间线。确定继续吗？')) return;
+    activeProjectId = createLocalProjectId();
+    releaseMediaUrls();
+    const missingMediaCount = (data.clips || []).filter(clip =>
+      clip.file || (clip.src && clip.src.startsWith('blob:'))
+    ).length;
+    await composition.fromJSON(data, async (srcUrl) => {
+      if (srcUrl && srcUrl.startsWith('blob:')) return null;
       return srcUrl;
     });
-
     for (const clip of composition.clips) {
-      if (clip.src && !clip.src.startsWith('blob:')) {
-        onMediaUrlRegistered(clip.id, clip.src);
-      }
+      if (clip.src && !clip.src.startsWith('blob:')) onMediaUrlRegistered(clip.id, clip.src);
     }
-
     onCompositionChanged();
     updateHeaderProjectName(data.name || file.name.replace(/\.json$/i, ''));
-    showToast('Project loaded', 'success');
+    showToast(missingMediaCount > 0
+      ? '项目时间线已恢复，但 JSON 不包含 ' + missingMediaCount + ' 个原始素材，请重新上传。'
+      : '项目已打开；本机自动保存会记录本次项目。', missingMediaCount > 0 ? 'warning' : 'success', 9000);
   } catch (err) {
-    showToast(`Project load failed: ${err.message}`, 'error', 6000);
+    showToast('项目打开失败：' + err.message, 'error', 6000);
     console.error(err);
   }
 };
 
 // Start app
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => { initApp().catch(error => { console.error(error); showToast('工作台初始化失败：' + (error?.message || '未知错误'), 'error', 9000); }); });

@@ -7,7 +7,7 @@ const base = process.env.BASE_PATH || '/xiaozhi-video-studio/';
 // During `vite build` we still want absolute base paths so asset URLs are
 // emitted correctly. During dev the relative ./src/main.js in index.html is
 // resolved by the dev server. We rewrite index.html paths here only when
-// building so the final dist/ uses absolute asset URLs.
+// building so the final dist/ uses absolute /xiaozhi-video-studio/ URLs.
 const isBuild = process.env.NODE_ENV === 'production' || process.argv.includes('build');
 
 export default defineConfig({
