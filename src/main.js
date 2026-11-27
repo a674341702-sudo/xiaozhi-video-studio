@@ -17,6 +17,7 @@ import { formatTime, showToast } from './utils.js';
 import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
 import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
+import { createProjectBundle, readProjectBundle } from './project-bundle.js';
 
 // --- Global State ---
 let composition = null;
@@ -927,6 +928,35 @@ async function renderProjectLibrary() {
     failed.className = 'project-library-empty';
     failed.textContent = '无法读取本机项目库：' + (error?.message || '浏览器存储不可用');
     listEl.append(failed);
+  }
+}
+
+async function exportCurrentProjectBundle() {
+  try {
+    const snapshot = await buildLocalProjectSnapshot();
+    snapshot.project.name = activeProjectName;
+    const bundle = await createProjectBundle(snapshot.project, snapshot.media);
+    const safeName = activeProjectName.replace(/[\\\\/:*?"<>|]/g, '_').slice(0, 48) || '小智视频项目';
+    downloadBlob(bundle, safeName + '.xzproj');
+    showToast('完整项目包已导出，包含时间线和 ' + snapshot.media.length + ' 个原始素材', 'success', 8000);
+  } catch (error) {
+    showToast('项目包导出失败：' + (error?.message || '未知错误'), 'error', 9000);
+  }
+}
+
+async function importProjectBundleFile(file) {
+  try {
+    const result = await readProjectBundle(file);
+    const projectName = result.project.name || file.name.replace(/\\.(xzproj|zip)$/i, '') || '导入的商家项目';
+    result.project.name = projectName;
+    const id = createLocalProjectId();
+    const savedAt = Date.now();
+    await saveLocalProject(result.project, result.media, id);
+    await applyLocalProjectRecord({ id, name: projectName, savedAt, project: result.project, media: result.media }, false);
+    document.getElementById('project-library')?.setAttribute('hidden', '');
+    showToast('项目包导入成功：' + projectName + '，恢复素材 ' + result.media.length + ' 个', 'success', 9000);
+  } catch (error) {
+    showToast('项目包导入失败：' + (error?.message || '文件格式不正确'), 'error', 9000);
   }
 }
 
