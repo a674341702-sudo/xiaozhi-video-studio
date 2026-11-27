@@ -97,7 +97,8 @@ await assert.rejects(() => readProjectBundle(new Blob([duplicateCentralName])), 
 const invalidPath = await bytesOf(bundle);
 const pathEndOffset = findEndOffset(invalidPath);
 const pathCentralOffset = readU32(invalidPath, pathEndOffset + 16);
-const traversal = new TextEncoder().encode('../' + 'x'.repeat(firstNameLength - 3));
+const pathNameLength = readU16(invalidPath, pathCentralOffset + 28);
+const traversal = new TextEncoder().encode('../' + 'x'.repeat(pathNameLength - 3));
 invalidPath.set(traversal, pathCentralOffset + 46);
 await assert.rejects(() => readProjectBundle(new Blob([invalidPath])), /不安全的文件路径/);
 
