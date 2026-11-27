@@ -476,8 +476,15 @@ export class CanvasPreview {
     });
 
     if (hitClip) {
+      const wasAlreadySelected = this.comp.selectedClipId === hitClip.id;
       this.comp.selectedClipId = hitClip.id;
       if (this.onSelectClip) this.onSelectClip(hitClip.id);
+
+      // On phones, first tap selects; the next press-and-drag moves the clip.
+      if (e.pointerType === 'touch' && !wasAlreadySelected) {
+        this.render();
+        return;
+      }
 
       this.isDragging = true;
       this.dragMode = 'move';
