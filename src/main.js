@@ -944,7 +944,8 @@ async function exportCurrentProjectBundle() {
     const snapshot = await buildLocalProjectSnapshot();
     snapshot.project.name = activeProjectName;
     const bundle = await createProjectBundle(snapshot.project, snapshot.media);
-    const safeName = activeProjectName.replace(/[\\\\/:*?"<>|]/g, '_').slice(0, 48) || '小智视频项目';
+    const unsafeNameChars = ['/', '\\\\', ':', '*', '?', '"', '<', '>', '|'];
+    const safeName = Array.from(activeProjectName).map(char => unsafeNameChars.includes(char) ? '_' : char).join('').slice(0, 48) || '小智视频项目';
     downloadBlob(bundle, safeName + '.xzproj');
     showToast('完整项目包已导出，包含时间线和 ' + snapshot.media.length + ' 个原始素材', 'success', 8000);
   } catch (error) {
