@@ -48,7 +48,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   modal.innerHTML = `
     <section class="xzw-card" role="dialog" aria-modal="true" aria-label="商家短视频生产线">
       <div class="xzw-head"><h2>✦ 小智·商家短视频生产线</h2><button class="xzw-close" type="button">关闭</button></div>
-      <p class="xzw-intro">把商家素材和介绍放进来，自动整理成镜头、字幕和时间线。目标：一条约30秒的竖屏宣传视频。</p>
+      <p class="xzw-intro">把商家素材和介绍放进来，自动整理成镜头、字幕和时间线；照片会自动加入缓慢推拉与平移运镜。目标：一条约30秒的竖屏宣传视频。</p>
       <div class="xzw-steps"><div class="xzw-step"><b>01</b>商家资料</div><div class="xzw-step"><b>02</b>素材上传</div><div class="xzw-step"><b>03</b>文案镜头</div><div class="xzw-step"><b>04</b>配音导出</div></div>
 
       <div class="xzw-section">
@@ -283,10 +283,31 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           clip.volume = $('xzw-original-audio').checked ? 1 : 0;
         }
         if (clip.type === 'image') {
-          clip.keyframes = { scale: [
-            { time: clip.startTime, value: 1, easing: 'easeInOut' },
-            { time: clip.startTime + shotDuration, value: 1.12, easing: 'easeInOut' }
-          ]};
+          // Ken Burns motion: alternate gentle push-ins / pull-backs and horizontal
+          // or vertical pans so a photo sequence feels like a filmed shop tour.
+          const width = composition.width;
+          const height = composition.height;
+          const direction = i % 2 === 0 ? 1 : -1;
+          const verticalDirection = i % 3 === 0 ? 1 : -1;
+          const panX = width * 0.018 * direction;
+          const panY = height * 0.012 * verticalDirection;
+          const zoomIn = i % 2 === 0;
+          const startScale = zoomIn ? 1.10 : 1.18;
+          const endScale = zoomIn ? 1.18 : 1.10;
+          clip.keyframes = {
+            scale: [
+              { time: clip.startTime, value: startScale, easing: 'easeInOut' },
+              { time: clip.startTime + shotDuration, value: endScale, easing: 'easeInOut' }
+            ],
+            x: [
+              { time: clip.startTime, value: -panX, easing: 'easeInOut' },
+              { time: clip.startTime + shotDuration, value: panX, easing: 'easeInOut' }
+            ],
+            y: [
+              { time: clip.startTime, value: -panY, easing: 'easeInOut' },
+              { time: clip.startTime + shotDuration, value: panY, easing: 'easeInOut' }
+            ]
+          };
         }
         const caption = captions[i % captions.length] || profile.shop || '到店体验，发现更多精彩';
         if (textTrack) composition.addClip({
