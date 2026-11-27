@@ -5,7 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -406,12 +406,21 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   modal.querySelector('.xzw-close').addEventListener('click', () => modal.classList.remove('open'));
   modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); });
   $('xzw-files').addEventListener('change', () => {
-    orderedMediaFiles = Array.from($('xzw-files').files || []);
+    const selected = Array.from($('xzw-files').files || []);
+    const validation = validateMerchantMediaFiles(selected);
+    if (!validation.valid) {
+      $('xzw-files').value = '';
+      setStatus(validation.message);
+      $('xzw-file-summary').textContent = '素材未添加：' + validation.message;
+      return;
+    }
+    orderedMediaFiles = selected;
     mediaRoleByFile.clear();
-    const files = orderedMediaFiles;
-    const size = files.reduce((n, f) => n + f.size, 0);
-    $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
+    const size = orderedMediaFiles.reduce((n, f) => n + f.size, 0);
+    $('xzw-file-summary').textContent = orderedMediaFiles.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
+    invalidateProductionPreview();
     renderMediaMapping();
+    setStatus('素材已添加。请检查每个素材的预览和镜头用途。');
   });
   $('xzw-extract-requirements').addEventListener('click', () => {
     const source = $('xzw-brief').value.trim();
