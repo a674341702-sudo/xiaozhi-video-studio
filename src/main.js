@@ -670,6 +670,153 @@ function clamp(val, min, max) {
 }
 
 // --- New Project / Cleanup ---
+
+async function buildLocalProjectSnapshot() {
+  const project = stripTemporaryMediaUrls(composition.toJSON());
+  const media = [];
+  for (const clip of composition.clips) {
+    if (!['video', 'image', 'audio'].includes(clip.type)) continue;
+    let blob = clip.file instanceof Blob ? clip.file : null;
+    if (!blob && typeof clip.src === 'string' && clip.src.startsWith('blob:')) {
+      try {
+        const response = await fetch(clip.src);
+        if (response.ok) blob = await response.blob();
+      } catch (_) {}
+    }
+    if (blob) media.push({
+      clipId: clip.id,
+      name: clip.file?.name || clip.name || '素材文件',
+      type: blob.type || clip.file?.type || 'application/octet-stream',
+      blob
+    });
+  }
+  return { project, media };
+}
+
+function setLocalSaveStatus(message, state = 'normal') {
+  if (!localSaveStatusEl) return;
+  localSaveStatusEl.textContent = message;
+  localSaveStatusEl.dataset.state = state;
+}
+
+async function saveCurrentProjectLocally() {
+  if (localAutosaveInProgress) return false;
+  localAutosaveInProgress = true;
+  setLocalSaveStatus('正在保存到本机…');
+  try {
+    const snapshot = await buildLocalProjectSnapshot();
+    const result = await saveLocalProject(snapshot.project, snapshot.media);
+    const time = new Date(result.savedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+    setLocalSaveStatus('本机已保存 ' + time, 'saved');
+    localAutosaveErrorShown = false;
+    return true;
+  } catch (error) {
+    console.warn('[小智本机自动保存]', error);
+    setLocalSaveStatus('本机保存失败', 'error');
+    if (!localAutosaveErrorShown) {
+      showToast('本机自动保存失败：' + (error?.message || '存储空间不足或浏览器限制').slice(0, 100) + '。请及时下载项目配置，并保留原素材。', 'warning', 9000);
+      localAutosaveErrorShown = true;
+    }
+    return false;
+  } finally {
+    localAutosaveInProgress = false;
+  }
+}
+
+function scheduleLocalAutosave() {
+  if (!localRestoreComplete || isRestoringLocalProject) return;
+  if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+  setLocalSaveStatus('有未保存的更改…');
+  localAutosaveTimer = setTimeout(() => {
+    localAutosaveTimer = null;
+    saveCurrentProjectLocally();
+  }, 1400);
+}
+
+function waitForRestoredMedia(element, readyCheck, readyEvent) {
+  if (readyCheck()) return Promise.resolve(true);
+  return new Promise(resolve => {
+    let done = false;
+    const finish = value => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      element.removeEventListener(readyEvent, onReady);
+      element.removeEventListener('error', onError);
+      resolve(value);
+    };
+    const onReady = () => finish(true);
+    const onError = () => finish(false);
+    const timer = setTimeout(() => finish(false), 15000);
+    element.addEventListener(readyEvent, onReady, { once: true });
+    element.addEventListener('error', onError, { once: true });
+    if (readyCheck()) finish(true);
+  });
+}
+
+async function restoreLastLocalProject() {
+  setLocalSaveStatus('正在检查本机项目…');
+  try {
+    const record = await loadLocalProject();
+    if (!record?.project) {
+      setLocalSaveStatus('本机自动保存已开启');
+      return;
+    }
+    isRestoringLocalProject = true;
+    await composition.fromJSON(record.project, async () => null);
+    let restored = 0;
+    let missing = 0;
+    const mediaByClip = new Map((record.media || []).map(item => [item.clipId, item]));
+    for (const clip of composition.clips) {
+      const item = mediaByClip.get(clip.id);
+      if (!item?.blob || !['video', 'image', 'audio'].includes(clip.type)) continue;
+      const objectUrl = URL.createObjectURL(item.blob);
+      try {
+        let element;
+        if (clip.type === 'video') {
+          element = document.createElement('video');
+          element.preload = 'metadata';
+          element.src = objectUrl;
+          if (!await waitForRestoredMedia(element, () => element.readyState >= 1, 'loadedmetadata')) throw new Error('视频元数据读取超时');
+        } else if (clip.type === 'image') {
+          element = new Image();
+          element.src = objectUrl;
+          if (!await waitForRestoredMedia(element, () => element.complete && element.naturalWidth > 0, 'load')) throw new Error('图片读取超时');
+        } else {
+          element = new Audio();
+          element.preload = 'metadata';
+          element.src = objectUrl;
+          if (!await waitForRestoredMedia(element, () => element.readyState >= 1, 'loadedmetadata')) throw new Error('音频元数据读取超时');
+        }
+        clip.src = objectUrl;
+        clip.file = typeof File !== 'undefined'
+          ? new File([item.blob], item.name || clip.name || '素材文件', { type: item.type || item.blob.type })
+          : item.blob;
+        clip.element = element;
+        onMediaUrlRegistered(clip.id, objectUrl);
+        restored++;
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+        clip.src = null;
+        clip.file = null;
+        clip.element = null;
+        missing++;
+        console.warn('[小智恢复素材]', clip.name, error);
+      }
+    }
+    updateHeaderProjectName(record.project.name || '已恢复项目');
+    const savedAt = new Date(record.savedAt || Date.now()).toLocaleString('zh-CN');
+    setLocalSaveStatus('已恢复本机项目', 'saved');
+    showToast('已恢复上次本机项目（' + savedAt + '）。素材恢复 ' + restored + ' 个' + (missing ? '，另有 ' + missing + ' 个素材未能读取' : '') + '。', missing ? 'warning' : 'success', 8000);
+  } catch (error) {
+    console.warn('[小智读取本机项目]', error);
+    setLocalSaveStatus('本机项目读取失败', 'error');
+    showToast('无法读取上次本机项目：' + (error?.message || '浏览器存储不可用') + '。你仍可手动打开项目文件。', 'warning', 8000);
+  } finally {
+    isRestoringLocalProject = false;
+  }
+}
+
 window.newProject = function newProject() {
   for (const [clipId, url] of mediaUrlRegistry.entries()) {
     URL.revokeObjectURL(url);
