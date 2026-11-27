@@ -81,6 +81,7 @@ let isExporting = false;
 let localRestoreComplete = false;
 let localAutosaveTimer = null;
 let localAutosaveInProgress = false;
+let localAutosaveDirty = false;
 let localAutosaveErrorShown = false;
 let isRestoringLocalProject = false;
 const localSaveStatusEl = document.getElementById('local-save-status');
@@ -705,8 +706,9 @@ function setLocalSaveStatus(message, state = 'normal') {
 }
 
 async function saveCurrentProjectLocally() {
-  if (localAutosaveInProgress) return false;
+  if (localAutosaveInProgress) { localAutosaveDirty = true; return false; }
   localAutosaveInProgress = true;
+  localAutosaveDirty = false;
   setLocalSaveStatus('正在保存到本机…');
   try {
     const snapshot = await buildLocalProjectSnapshot();
@@ -725,11 +727,13 @@ async function saveCurrentProjectLocally() {
     return false;
   } finally {
     localAutosaveInProgress = false;
+    if (localAutosaveDirty && localRestoreComplete) scheduleLocalAutosave();
   }
 }
 
 function scheduleLocalAutosave() {
   if (!localRestoreComplete || isRestoringLocalProject) return;
+  localAutosaveDirty = true;
   if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
   setLocalSaveStatus('有未保存的更改…');
   localAutosaveTimer = setTimeout(() => {
@@ -768,7 +772,7 @@ async function restoreLastLocalProject() {
       return;
     }
     isRestoringLocalProject = true;
-    await composition.fromJSON(record.project, async () => null);
+    await composition.fromJSON(record.project, async (srcUrl) => srcUrl || null);
     let restored = 0;
     let missing = 0;
     const mediaByClip = new Map((record.media || []).map(item => [item.clipId, item]));
