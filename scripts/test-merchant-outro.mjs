@@ -6,5 +6,5 @@ assert.equal(buildMerchantOutroText({ shop: '云林咖啡' }), '云林咖啡\n�
 assert.equal(buildMerchantOutroText({ shop: '云林咖啡', product: '手冲咖啡', address: '昆明市五华区' }), '云林咖啡\n主打：手冲咖啡\n地址：昆明市五华区\n欢迎咨询了解');
 assert.equal(buildMerchantOutroText({ shop: '云林\n咖啡', product: ' 手冲\n咖啡 ' }), '云林 咖啡\n主打：手冲 咖啡\n欢迎咨询了解');
 assert.equal(buildMerchantOutroText({ shop: '云林咖啡', cta: '预约请私信' }), '云林咖啡\n预约请私信');
-assert.equal(buildMerchantOutroText({ shop: '云林咖啡', cta: '  到店体验\\n立即咨询  ' }), '云林咖啡\n到店体验 立即咨询');
+assert.equal(buildMerchantOutroText({ shop: '云林咖啡', cta: '  到店体验\n立即咨询  ' }), '云林咖啡\n到店体验 立即咨询');
 console.log('商家品牌片尾文案测试通过');
