@@ -160,7 +160,7 @@ export class MediaManager {
       return null;
     }
 
-    const dur = Math.round(video.duration || 10);
+    const dur = getPreciseMediaDuration(video.duration, 10);
     const vW = video.videoWidth || 1920;
     const vH = video.videoHeight || 1080;
 
