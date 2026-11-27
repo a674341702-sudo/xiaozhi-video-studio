@@ -14,6 +14,7 @@ import { Toolbar } from './toolbar.js';
 import { createDefaultStore } from './state.js';
 import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js';
 import { formatTime, showToast } from './utils.js';
+import { getClipPlaybackState } from './keyframes.js';
 import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
 import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
@@ -331,50 +332,49 @@ function updateUndoRedoButtons() {
 }
 
 function syncActiveMedia(time, playing) {
-  const clips = composition.getClipsAtTime(time);
-
-  for (const clip of clips) {
-    if (!clip.element) continue;
-    const trimStart = clip.trimStart || 0;
-    const trimEnd = clip.trimEnd || (trimStart + clip.duration) || (clip.element.duration || Infinity);
-    const clipEndTime = clip.startTime + clip.duration;
-    const offset = time - clip.startTime + trimStart;
-
-    if (clip.type === 'video' || clip.type === 'audio') {
-      const track = composition.getTrack(clip.trackId);
-      const isMuted = track ? track.muted : false;
-
-      const reachedTrimEnd = time >= clipEndTime - 1e-9 || offset >= trimEnd - 1e-9;
-      if (reachedTrimEnd) {
-        if (!clip.element.paused) clip.element.pause();
-        clip.element.currentTime = clamp(offset, 0, trimEnd);
-        clip.element.muted = isMuted;
-        continue;
-      }
-
-      const threshold = playing ? 0.5 : 0.05;
-      if (Math.abs(clip.element.currentTime - offset) > threshold) {
-        clip.element.currentTime = clamp(offset, 0, trimEnd);
-      }
-
-      if (playing && clip.element.paused) {
-        clip.element.volume = clip.volume ?? 1;
-        clip.element.muted = isMuted;
-        clip.element.playbackRate = Math.abs(playbackRate);
-        clip.element.play().catch(() => {});
-      } else if (!playing && !clip.element.paused) {
-        clip.element.pause();
-      } else {
-        clip.element.muted = isMuted;
-      }
-    }
-  }
-
   for (const clip of composition.clips) {
     if (!clip.element || (clip.type !== 'video' && clip.type !== 'audio')) continue;
-    const active = time >= clip.startTime - 1e-9 && time <= clip.startTime + clip.duration + 1e-9;
-    if (!active && !clip.element.paused) {
-      clip.element.pause();
+
+    const element = clip.element;
+    const track = composition.getTrack(clip.trackId);
+    const state = getClipPlaybackState(
+      clip,
+      time,
+      Number.isFinite(element.duration) && element.duration > 0 ? element.duration : Infinity
+    );
+
+    element.volume = state.volume;
+    element.muted = Boolean(track?.muted);
+    // Native looping is safe only when the selected source range is the
+    // complete media file. Trimmed loops are wrapped against sourceTime above.
+    const mediaDuration = Number.isFinite(element.duration) ? element.duration : 0;
+    const trimStart = Math.max(0, Number(clip.trimStart) || 0);
+    const trimEnd = Number.isFinite(Number(clip.trimEnd)) ? Number(clip.trimEnd) : mediaDuration;
+    element.loop = state.loop && trimStart <= 0.001 && trimEnd >= mediaDuration - 0.05 && mediaDuration > 0;
+
+    if (!state.active || state.sourceEnded) {
+      if (!element.paused) element.pause();
+      if (state.sourceEnded && !state.loop) {
+        const safeEnd = Number.isFinite(element.duration) && element.duration > 0
+          ? Math.min(element.duration, Math.max(0, Number(clip.trimEnd) || element.duration))
+          : state.sourceTime;
+        if (Math.abs(element.currentTime - safeEnd) > 0.05) element.currentTime = safeEnd;
+      }
+      continue;
+    }
+
+    const threshold = playing
+      ? (clip.type === 'audio' ? 0.12 : 0.3)
+      : 0.04;
+    if (Number.isFinite(state.sourceTime) && Math.abs(element.currentTime - state.sourceTime) > threshold) {
+      try { element.currentTime = state.sourceTime; } catch { /* metadata may still be loading */ }
+    }
+
+    if (playing) {
+      element.playbackRate = Math.abs(playbackRate);
+      if (element.paused) element.play().catch(() => {});
+    } else if (!element.paused) {
+      element.pause();
     }
   }
 }
