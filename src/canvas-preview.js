@@ -215,7 +215,18 @@ export class CanvasPreview {
 
     const selectedClip = this.comp.getSelectedClip();
     if (selectedClip && activeClips.some(c => c.id === selectedClip.id)) {
-      this._renderSelectionOverlay(ctx, selectedClip);
+      const transform = applyClipTransformsAtTime(selectedClip, this.currentTime);
+      const scale = Number.isFinite(transform.scale) ? transform.scale : 1;
+      const animatedX = Number.isFinite(transform.x) ? transform.x : selectedClip.x;
+      const animatedY = Number.isFinite(transform.y) ? transform.y : selectedClip.y;
+      const overlayClip = {
+        ...selectedClip,
+        x: animatedX + selectedClip.width * (1 - scale) / 2,
+        y: animatedY + selectedClip.height * (1 - scale) / 2,
+        width: selectedClip.width * scale,
+        height: selectedClip.height * scale
+      };
+      this._renderSelectionOverlay(ctx, overlayClip);
     }
 
     ctx.restore();
