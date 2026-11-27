@@ -239,16 +239,16 @@ export class PropertiesPanel {
           <span class="prop-section-title">音频</span>
           <div class="prop-row">
             <label>音量</label>
-            <input type="range" min="0" max="2" step="0.05" id="prop-volume" value="${clip.volume ?? 1}">
+            <input type="range" min="0" max="2" step="0.05" id="prop-volume" value="${safeAttr(clip.volume ?? 1)}">
             <span class="prop-val-display" id="prop-volume-val">${Math.round((clip.volume ?? 1) * 100)}%</span>
           </div>
           <div class="prop-row">
             <label>淡入（秒）</label>
-            <input type="number" min="0" step="0.1" id="prop-fade-in" value="${clip.fadeIn || 0}">
+            <input type="number" min="0" step="0.1" id="prop-fade-in" value="${safeAttr(clip.fadeIn || 0)}">
           </div>
           <div class="prop-row">
             <label>淡出（秒）</label>
-            <input type="number" min="0" step="0.1" id="prop-fade-out" value="${clip.fadeOut || 0}">
+            <input type="number" min="0" step="0.1" id="prop-fade-out" value="${safeAttr(clip.fadeOut || 0)}">
           </div>
         </div>
         ` : ''}
