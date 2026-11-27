@@ -1207,3 +1207,48 @@ button, input, select {
   #xiaozhi-workflow { padding:8px; }
   .xzw-card { width:100%; max-height:94dvh; padding:14px; }
 }
+
+/* Merchant project library */
+.project-library-backdrop[hidden] { display:none !important; }
+.project-library-backdrop {
+  position:fixed; inset:0; z-index:4000; display:flex; align-items:center; justify-content:center;
+  padding:16px; background:rgba(0,0,0,.72); backdrop-filter:blur(5px);
+}
+.project-library-panel {
+  width:min(620px,100%); max-height:min(82dvh,760px); overflow:auto;
+  background:var(--panel); border:1px solid rgba(255,255,255,.12); border-radius:14px;
+  box-shadow:0 20px 70px rgba(0,0,0,.55); padding:18px;
+}
+.project-library-header { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+.project-library-header h2 { margin:0; font-size:18px; color:var(--text); }
+.project-library-header p { margin:5px 0 0; color:var(--text-2); font-size:12px; }
+.project-library-header > button {
+  width:34px; height:34px; border:0; border-radius:8px; background:var(--panel-2);
+  color:var(--text); font-size:24px; line-height:1; cursor:pointer;
+}
+.project-library-toolbar { display:flex; align-items:center; gap:10px; margin:16px 0; flex-wrap:wrap; }
+.project-library-toolbar button, .project-library-actions button {
+  border:1px solid rgba(255,255,255,.12); border-radius:8px; padding:9px 12px;
+  color:var(--text); background:var(--panel-2); font-size:12px; cursor:pointer;
+}
+.project-library-toolbar button { background:var(--accent); color:#fff; border-color:transparent; }
+.project-library-toolbar span { color:var(--text-2); font-size:11px; }
+.project-library-list { display:flex; flex-direction:column; gap:8px; }
+.project-library-row {
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  padding:12px; border:1px solid rgba(255,255,255,.08); border-radius:10px; background:var(--panel-2);
+}
+.project-library-info { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.project-library-info strong { color:var(--text); font-size:13px; overflow-wrap:anywhere; }
+.project-library-info span { color:var(--text-2); font-size:10px; }
+.project-library-actions { display:flex; gap:6px; flex-shrink:0; }
+.project-library-actions button.danger { color:#ff8b8b; }
+.project-library-empty { color:var(--text-2); font-size:12px; padding:18px 8px; text-align:center; }
+.project-library-footnote { margin:14px 0 0; color:var(--text-2); font-size:10px; line-height:1.6; }
+@media (max-width:700px) {
+  .project-library-backdrop { padding:8px; align-items:flex-end; }
+  .project-library-panel { width:100%; max-height:88dvh; border-radius:14px 14px 8px 8px; padding:14px; }
+  .project-library-row { align-items:flex-start; padding:10px; }
+  .project-library-actions { flex-direction:column; }
+  .project-library-toolbar { align-items:flex-start; }
+}
