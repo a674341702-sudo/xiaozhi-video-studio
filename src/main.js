@@ -174,12 +174,20 @@ function initApp() {
   // Load the large FFmpeg WASM engine only when the user exports, preserving phone memory during editing.
   onCompositionChanged();
   updateHeaderProjectName();
-  initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, onExport: handleExport });
+  initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport: handleExport });
 }
 
 function onMediaUrlRegistered(clipId, objectUrl) {
   if (objectUrl) mediaUrlRegistry.set(clipId, objectUrl);
   else mediaUrlRegistry.delete(clipId);
+}
+
+// Release all temporary media URLs before replacing or rolling back a composition.
+function releaseMediaUrls() {
+  for (const url of mediaUrlRegistry.values()) {
+    try { URL.revokeObjectURL(url); } catch (_) {}
+  }
+  mediaUrlRegistry.clear();
 }
 
 function onCompositionChanged() {
