@@ -92,8 +92,44 @@ const localSaveStatusEl = document.getElementById('local-save-status');
 
 const mediaUrlRegistry = new Map(); // clipId -> objectUrl for cleanup
 
+function bindHomeDashboard() {
+  document.addEventListener('click', event => {
+    const actionButton = event.target.closest('[data-home-action]');
+    if (!actionButton) return;
+    const action = actionButton.dataset.homeAction;
+    if (action === 'editor') {
+      document.body.classList.remove('home-mode');
+      window.scrollTo({ top: 0, behavior: 'auto' });
+      return;
+    }
+    if (action === 'projects') {
+      document.getElementById('btn-project-library')?.click();
+      return;
+    }
+    const launcher = document.getElementById('xiaozhi-workflow-launcher');
+    if (!launcher) {
+      showToast('制作工作台正在加载，请稍后再试。', 'warning');
+      return;
+    }
+    launcher.click();
+    const targets = {
+      viral: 'xzw-reference-studio',
+      smart: 'xzw-files',
+      materials: 'xzw-files',
+      document: 'xzw-brief-file'
+    };
+    const target = document.getElementById(targets[action]);
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      if (action === 'materials' || action === 'document') target.focus({ preventScroll: true });
+    }
+  });
+}
+
 // --- Initialization ---
 async function initApp() {
+  document.body.classList.add('home-mode');
+  bindHomeDashboard();
   store = createDefaultStore();
   composition = new Composition(1920, 1080);
 
