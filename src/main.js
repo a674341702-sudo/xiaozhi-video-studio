@@ -813,6 +813,9 @@ function setLocalSaveStatus(message, state = 'normal') {
 }
 
 function saveCurrentProjectLocally() {
+  // Cancel the debounce immediately, not when the queued write eventually runs.
+  if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+  localAutosaveTimer = null;
   const targetComposition = composition;
   const targetProjectId = activeProjectId;
   const targetProjectName = activeProjectName;
@@ -852,6 +855,18 @@ function saveCurrentProjectLocally() {
       if (localAutosaveDirty && localRestoreComplete) scheduleLocalAutosave();
     }
   });
+}
+
+async function flushCurrentProjectLocally() {
+  let saved = await saveCurrentProjectLocally();
+  // Edits made while an IndexedDB write is in progress mark the save dirty.
+  // Drain those edits before replacing the active composition/project ID.
+  while (saved && (localAutosaveDirty || localAutosaveTimer || localAutosaveInProgress)) {
+    if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+    localAutosaveTimer = null;
+    saved = await saveCurrentProjectLocally();
+  }
+  return saved;
 }
 
 function scheduleLocalAutosave() {
@@ -991,7 +1006,7 @@ async function renderProjectLibrary() {
       open.type = 'button'; open.textContent = '打开';
       open.addEventListener('click', async () => {
         try {
-          const currentSaved = await saveCurrentProjectLocally();
+          const currentSaved = await flushCurrentProjectLocally();
           if (!currentSaved && composition.clips.length > 0) {
             throw new Error('当前项目没有成功保存，为避免丢失素材，已取消切换');
           }
@@ -1050,7 +1065,7 @@ async function importProjectBundleFile(file) {
     const result = await readProjectBundle(file);
     const projectName = result.project.name || file.name.replace(/\.(xzproj|zip)$/i, '') || '导入的商家项目';
     result.project.name = projectName;
-    const currentSaved = await saveCurrentProjectLocally();
+    const currentSaved = await flushCurrentProjectLocally();
     if (!currentSaved && composition.clips.length > 0) {
       throw new Error('当前项目没有成功保存，为避免丢失素材，已取消导入');
     }
@@ -1069,7 +1084,7 @@ async function saveAsNewLocalProject() {
   const suggested = activeProjectName && activeProjectName !== '新建视频项目' ? activeProjectName + ' - 副本' : '新商家项目';
   const name = window.prompt('给这个商家项目起个名字：', suggested);
   if (!name || !name.trim()) return;
-  const savedCurrent = await saveCurrentProjectLocally();
+  const savedCurrent = await flushCurrentProjectLocally();
   if (!savedCurrent && composition.clips.length > 0) {
     showToast('当前项目没有成功保存，暂时不能另存为副本，以免丢失素材。', 'warning', 8000);
     return;
@@ -1090,7 +1105,7 @@ async function saveAsNewLocalProject() {
 }
 
 window.newProject = async function newProject() {
-  const currentSaved = await saveCurrentProjectLocally();
+  const currentSaved = await flushCurrentProjectLocally();
   if (!currentSaved && composition.clips.length > 0) {
     showToast('当前项目没有成功保存，已取消新建，避免丢失素材。请先导出完整项目包或检查浏览器存储空间。', 'warning', 9000);
     return false;
@@ -1132,7 +1147,7 @@ window.loadProject = async function loadProject(file) {
       throw new Error('项目文件格式不正确');
     }
     if (!window.confirm('打开项目会替换当前时间线。确定继续吗？')) return;
-    const currentSaved = await saveCurrentProjectLocally();
+    const currentSaved = await flushCurrentProjectLocally();
     if (!currentSaved && composition.clips.length > 0) {
       showToast('当前项目没有成功保存，已取消打开新项目，避免丢失素材。', 'warning', 9000);
       return;
