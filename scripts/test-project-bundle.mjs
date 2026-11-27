@@ -26,6 +26,20 @@ assert.equal(restored.media[0].clipId, 'clip-001');
 assert.equal(restored.media[0].name, '门店照片.txt');
 assert.equal(await restored.media[0].blob.text(), await sourceBlob.text());
 
+const damaged = new Uint8Array(await bundle.arrayBuffer());
+const marker = new TextEncoder().encode('小智视频项目素材校验');
+let markerOffset = -1;
+for (let i = 0; i <= damaged.length - marker.length; i++) {
+  let match = true;
+  for (let j = 0; j < marker.length; j++) {
+    if (damaged[i + j] !== marker[j]) { match = false; break; }
+  }
+  if (match) { markerOffset = i; break; }
+}
+assert.notEqual(markerOffset, -1);
+damaged[markerOffset] ^= 1;
+await assert.rejects(() => readProjectBundle(new Blob([damaged])), /校验失败/);
+
 const emptyBundle = await createProjectBundle(project, []);
 const emptyRestored = await readProjectBundle(emptyBundle);
 assert.equal(emptyRestored.media.length, 0);
