@@ -122,9 +122,14 @@ export class CanvasPreview {
 
     if (applyOpacity) ctx.globalAlpha = t.opacity;
 
+    // Position keyframes are offsets from the clip's base coordinates.
+    // Apply them before rotating/scaling so Ken Burns pans remain centered and smooth.
+    const animatedX = Number.isFinite(t.x) ? t.x : clip.x;
+    const animatedY = Number.isFinite(t.y) ? t.y : clip.y;
     const cx = clip.x + clip.width / 2;
     const cy = clip.y + clip.height / 2;
 
+    ctx.translate(animatedX - clip.x, animatedY - clip.y);
     ctx.translate(cx, cy);
     if (t.rotation) ctx.rotate((t.rotation * Math.PI) / 180);
     if (t.scale !== 1) ctx.scale(t.scale, t.scale);
