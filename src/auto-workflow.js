@@ -254,7 +254,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const preview = document.createElement('button');
       preview.type = 'button'; preview.textContent = '放大预览';
       preview.addEventListener('click', () => openMediaPreview(file, previewUrl));
-      order.append(preview, up, down);
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = '删除';
+      remove.setAttribute('aria-label', '删除素材：' + file.name);
+      remove.addEventListener('click', () => removeMedia(index));
+      order.append(preview, up, down, remove);
       info.append(name, select, order);
       row.append(thumb, info);
       container.appendChild(row);
@@ -289,6 +293,22 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     [orderedMediaFiles[index], orderedMediaFiles[next]] = [orderedMediaFiles[next], orderedMediaFiles[index]];
     renderMediaMapping();
     invalidateProductionPreview();
+  };
+  const updateMediaSummary = () => {
+    const size = orderedMediaFiles.reduce((total, file) => total + file.size, 0);
+    $('xzw-file-summary').textContent = orderedMediaFiles.length
+      ? orderedMediaFiles.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB'
+      : '尚未选择素材';
+  };
+  const removeMedia = (index) => {
+    if (index < 0 || index >= orderedMediaFiles.length) return;
+    syncMediaRolesFromDOM();
+    const [removed] = orderedMediaFiles.splice(index, 1);
+    mediaRoleByFile.delete(removed);
+    renderMediaMapping();
+    updateMediaSummary();
+    invalidateProductionPreview();
+    setStatus('已移除素材：' + removed.name + '。其他素材的镜头用途和顺序已保留。');
   };
   const getMediaAssignments = () => Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role')).map((select, index) => ({
     fileIndex: index, shotIndex: Number(select.value)
@@ -403,7 +423,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       setStatus('请先上传文档或粘贴商家要求，再提取制作清单。');
       return;
     }
-    const selectedCount = Math.max(1, Math.min(8, $('xzw-files').files?.length || 6));
+    const selectedCount = Math.max(1, Math.min(8, orderedMediaFiles.length || 6));
     const shotOptions = getMerchantShotPlan($('xzw-industry').value, selectedCount);
     const classify = text => {
       if (/地址|位置|导航|电话|联系|营业时间|结尾|到店/.test(text)) return shotOptions.length - 1;
