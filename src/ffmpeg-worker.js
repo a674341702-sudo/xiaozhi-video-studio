@@ -5,6 +5,7 @@
  */
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { evaluateKeyframes } from './keyframes.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -112,7 +113,8 @@ async function renderMixedAudio(composition, onProgress) {
     if (track && (track.muted || !track.visible)) return false;
     // Skip muted camera audio entirely. Decoding it still allocates AudioBuffers
     // even when its gain is zero, wasting memory on mobile exports.
-    if ((c.volume ?? 1) <= 0) return false;
+    const hasAudibleEnvelope = (c.keyframes?.volume || []).some(point => Number(point.value) > 0);
+    if ((c.volume ?? 1) <= 0 && !hasAudibleEnvelope) return false;
     return Boolean(c.file || c.src);
   });
 
@@ -140,7 +142,21 @@ async function renderMixedAudio(composition, onProgress) {
       source.buffer = decoded;
 
       const gain = offlineCtx.createGain();
-      gain.gain.value = clip.volume ?? 1;
+      const baseVolume = clip.volume ?? 1;
+      const clipStart = Math.max(0, clip.startTime);
+      const clipEnd = clipStart + Math.min(clip.duration, Math.max(0, decoded.duration - (clip.trimStart || 0)));
+      const envelope = clip.keyframes?.volume || [];
+      const initialVolume = evaluateKeyframes(clip.keyframes, 'volume', clipStart);
+      gain.gain.setValueAtTime(initialVolume ?? baseVolume, clipStart);
+      for (const point of [...envelope].sort((a, b) => a.time - b.time)) {
+        if (point.time > clipStart && point.time < clipEnd) {
+          gain.gain.linearRampToValueAtTime(Math.max(0, Number(point.value) || 0), point.time);
+        }
+      }
+      if (envelope.length) {
+        const endingVolume = evaluateKeyframes(clip.keyframes, 'volume', clipEnd);
+        gain.gain.linearRampToValueAtTime(endingVolume ?? baseVolume, clipEnd);
+      }
 
       source.connect(gain);
       gain.connect(offlineCtx.destination);
