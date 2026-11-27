@@ -64,6 +64,7 @@
       <div class="header-right">
         <button class="tool-btn" id="btn-new-project" type="button" title="新建项目">新建</button>
         <span class="local-save-status" id="local-save-status">本机保存准备中</span>
+        <button class="tool-btn" id="btn-project-library" type="button" title="商家项目管理">项目</button>
         <button class="tool-btn" id="btn-save-project" type="button" title="保存项目">保存</button>
         <button class="tool-btn" id="btn-load-project" type="button" title="打开项目">打开</button>
         <input type="file" id="load-project-input" accept=".json,application/json" style="display:none" aria-hidden="true" tabindex="-1" />
@@ -273,6 +274,25 @@
 
   <!-- Toast Container -->
   <div id="toast-container" class="toast-container"></div>
+
+
+  <div class="project-library-backdrop" id="project-library" hidden>
+    <section class="project-library-panel" role="dialog" aria-modal="true" aria-labelledby="project-library-title">
+      <header class="project-library-header">
+        <div>
+          <h2 id="project-library-title">商家项目库</h2>
+          <p>项目和素材保存在当前手机浏览器中</p>
+        </div>
+        <button type="button" id="project-library-close" aria-label="关闭">×</button>
+      </header>
+      <div class="project-library-toolbar">
+        <button type="button" id="project-save-copy">＋ 保存为新项目</button>
+        <span>不同商家分别保存，互不覆盖</span>
+      </div>
+      <div class="project-library-list" id="project-library-list"></div>
+      <p class="project-library-footnote">提醒：本机项目库不是云端备份。清除浏览器网站数据或卸载浏览器可能导致项目丢失，请定期导出完整项目包。</p>
+    </section>
+  </div>
 
   <script type="module" src="./src/main.js" id="main-script"></script>
   <script>
