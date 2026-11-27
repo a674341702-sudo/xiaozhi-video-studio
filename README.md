@@ -31,6 +31,8 @@ GitHub Pages 只托管静态网页，不提供 AI 模型推理服务，也不能
 
 详细范围、限制和验收标准见 [V1.0 / V2.0 开发路线图](docs/AI_WORKFLOW_ROADMAP.md)。
 
+第一版安卓手机首轮测试步骤见 [V1.0 安卓手机测试清单](docs/V1.0_PHONE_TEST.md)。
+
 ## 本地开发
 
 需要 Node.js 20+ 与 npm：
