@@ -281,7 +281,7 @@ function seekVideoToOffset(video, offset) {
 export async function exportComposition(composition, canvasPreview, onProgress, abortSignal, options = {}) {
   const duration = composition.duration;
   if (duration <= 0) {
-    throw new Error('Composition is empty');
+    throw new Error('时间线上没有可导出的内容。');
   }
 
   if (abortSignal?.aborted) {
@@ -299,6 +299,30 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   const fps = options.fps || 30;
   const quality = options.quality || 'high';
   const totalFramesEstimate = Math.ceil(duration * fps);
+
+  // Validate every timeline media reference before loading FFmpeg or allocating
+  // large frame buffers. A missing image/video element must never become a
+  // seemingly successful MP4 containing blank frames.
+  const mediaClips = composition.clips.filter(clip => ['video', 'image', 'audio'].includes(clip.type));
+  for (const clip of mediaClips) {
+    const label = clip.name || '未命名素材';
+    if (!Number.isFinite(clip.startTime) || clip.startTime < 0 ||
+        !Number.isFinite(clip.duration) || clip.duration <= 0) {
+      throw new Error(`素材“${label}”的时间或时长无效，请删除后重新导入。`);
+    }
+    if (clip.type === 'video') {
+      if (!clip.element || !clip.element.videoWidth || !clip.element.videoHeight) {
+        throw new Error(`视频“${label}”尚未准备好或原始文件已丢失，请重新导入该视频后再导出。`);
+      }
+    } else if (clip.type === 'image') {
+      if (!clip.element || !clip.element.naturalWidth || !clip.element.naturalHeight) {
+        throw new Error(`图片“${label}”尚未加载或原始文件已丢失，请重新导入该图片后再导出。`);
+      }
+    } else if (!clip.file && !clip.src) {
+      throw new Error(`音频“${label}”缺少原始文件，请重新导入后再导出。`);
+    }
+  }
+
   // FFmpeg.wasm keeps imported frames in its virtual filesystem until encoding.
   // Bound the workload on phones before allocating hundreds of large JPEG frames.
   const maxFrames = options.mobileSafe === false ? 1800 : 900;
