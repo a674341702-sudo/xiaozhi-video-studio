@@ -162,6 +162,7 @@ async function initApp() {
     onChangeClipTransform: (clip) => {
       propertiesPanel.render();
     },
+    onCommitClipTransform: () => onCompositionChanged(),
     onContextMenu: (x, y, clipId) => {
       contextMenu.show(x, y, clipId);
     }
@@ -180,6 +181,7 @@ async function initApp() {
       propertiesPanel.render();
       canvasPreview.render();
     },
+    onCommitClipTime: () => onCompositionChanged(),
     onContextMenu: (x, y, clipId, clickTime) => {
       contextMenu.show(x, y, clipId, clickTime);
     }
