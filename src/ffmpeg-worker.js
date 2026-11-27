@@ -236,26 +236,42 @@ function audioBufferToWav(buffer) {
 }
 
 function seekVideoToOffset(video, offset) {
-  return new Promise((resolve) => {
-    if (Math.abs(video.currentTime - offset) < 0.01 && video.readyState >= 2) {
+  return new Promise((resolve, reject) => {
+    const safeOffset = Number.isFinite(video.duration)
+      ? Math.max(0, Math.min(offset, Math.max(0, video.duration - 0.04)))
+      : Math.max(0, offset);
+    if (Math.abs(video.currentTime - safeOffset) < 0.01 && video.readyState >= 2) {
       resolve();
       return;
     }
     let handled = false;
-    const cleanup = () => {
+    let timer = null;
+    const cleanup = (error = null) => {
       if (handled) return;
       handled = true;
-      video.removeEventListener('seeked', cleanup);
-      resolve();
+      clearTimeout(timer);
+      video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('error', onError);
+      if (error) reject(error);
+      else resolve();
     };
-    video.addEventListener('seeked', cleanup);
+    const onError = () => cleanup(new Error('视频定位失败，请检查视频文件是否损坏或格式是否受支持。'));
+    const onSeeked = () => {
+      // Wait for a decoded frame where supported, otherwise wait one paint.
+      if (typeof video.requestVideoFrameCallback === 'function') {
+        video.requestVideoFrameCallback(() => cleanup());
+      } else {
+        requestAnimationFrame(() => cleanup());
+      }
+    };
+    video.addEventListener('seeked', onSeeked, { once: true });
+    video.addEventListener('error', onError, { once: true });
+    timer = setTimeout(() => cleanup(new Error('等待视频画面定位超时，请尝试更短或更兼容的 MP4 素材。')), 3000);
     try {
-      video.currentTime = offset;
-    } catch (e) {
-      cleanup();
-      return;
+      video.currentTime = safeOffset;
+    } catch (error) {
+      cleanup(error);
     }
-    setTimeout(cleanup, 250);
   });
 }
 
