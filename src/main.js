@@ -23,6 +23,7 @@ import { createProjectBundle, readProjectBundle } from './project-bundle.js';
 import { sanitizeProjectDocument, MAX_PROJECT_DOCUMENT_BYTES } from './project-validation.js';
 import { createSerialTaskQueue } from './serial-task-queue.js';
 import { shouldWarnBeforeProjectExit } from './local-save-guard.js';
+import { getLocalStorageFailureMessage } from './local-storage-diagnostics.js';
 
 // --- Global State ---
 let composition = null;
@@ -861,7 +862,8 @@ function saveCurrentProjectLocally() {
       if (targetProjectId === activeProjectId) {
         setLocalSaveStatus('本机保存失败', 'error');
         if (!localAutosaveErrorShown) {
-          showToast('本机自动保存失败：' + (error?.message || '存储空间不足或浏览器限制').slice(0, 100) + '。请及时下载项目配置，并保留原素材。', 'warning', 9000);
+          const diagnostic = await getLocalStorageFailureMessage(error);
+          showToast('本机自动保存失败：' + diagnostic + '。请及时下载项目配置，并保留原素材。', 'warning', 11000);
           localAutosaveErrorShown = true;
         }
       }
