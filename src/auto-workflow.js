@@ -711,7 +711,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
         const baseCaption = captions[assignedShotIndex % captions.length] || profile.shop || '到店体验，发现更多精彩';
         const assignedRequirements = requirementsByShot.get(assignedShotIndex) || [];
-        const caption = [baseCaption, ...assignedRequirements].join(' · ');
+        // Requirement text may already be present in the generated caption list.
+        // Add only missing items so merchant instructions never appear twice.
+        const captionParts = [baseCaption, ...assignedRequirements.filter(item => !baseCaption.includes(item))];
+        const caption = [...new Set(captionParts)].filter(Boolean).join(' · ');
         if (textTrack) {
           const subtitleClip = composition.addClip({
             trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
