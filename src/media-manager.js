@@ -5,6 +5,7 @@
 import { validateFile, showToast } from './utils.js';
 import { generateProxy } from './proxy.js';
 import { getPreciseMediaDuration } from './media-duration.js';
+import { takeSelectedFiles } from './media-file-selection.js';
 
 // Mobile browsers can occasionally leave media metadata loading unresolved.
 // Bound the wait so the workflow can show a useful error instead of hanging forever.
@@ -327,30 +328,21 @@ export class MediaManager {
   }
 
   async _onVideoSelected(e) {
-    // Snapshot the FileList before clearing the picker. Some mobile browsers
-    // expose a live FileList whose contents change when input.value is reset.
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
+    const files = takeSelectedFiles(e.target);
     for (const file of files) {
       await this._importVideo(file, { startTime: 0 });
     }
   }
 
   async _onImageSelected(e) {
-    // Snapshot the FileList before clearing the picker. Some mobile browsers
-    // expose a live FileList whose contents change when input.value is reset.
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
+    const files = takeSelectedFiles(e.target);
     for (const file of files) {
       await this._importImage(file, { startTime: 0 });
     }
   }
 
   async _onAudioSelected(e) {
-    // Snapshot the FileList before clearing the picker. Some mobile browsers
-    // expose a live FileList whose contents change when input.value is reset.
-    const files = Array.from(e.target.files || []);
-    e.target.value = '';
+    const files = takeSelectedFiles(e.target);
     for (const file of files) {
       await this._importAudio(file, { startTime: 0 });
     }
