@@ -24,7 +24,14 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
     .xzs-primary:disabled{opacity:.5}
     .xzs-status{padding:11px;border-radius:9px;background:#10101d;color:#c4b5fd;white-space:pre-wrap;margin-top:10px}
     .xzs-progress{height:7px;background:#303047;border-radius:8px;overflow:hidden;margin-top:9px}.xzs-progress span{display:block;height:100%;width:0;background:#8b5cf6;transition:width .2s}
-    .xzs-list{max-height:260px;overflow:auto}.xzs-row{padding:8px 2px;border-bottom:1px solid #33334b}.xzs-time{color:#a78bfa;font-variant-numeric:tabular-nums;font-size:12px}
+    .xzs-list{max-height:260px;overflow:auto}.xzs-row{padding:10px 2px;border-bottom:1px solid #33334b}.xzs-time{color:#a78bfa;font-variant-numeric:tabular-nums;font-size:12px}
+    .xzs-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin:7px 0}
+    .xzs-edit-grid label{font-size:11px;color:#aaaac4;margin:0}
+    .xzs-edit-grid input,.xzs-row textarea{box-sizing:border-box;width:100%;border:1px solid #454563;background:#10101d;color:#fff;border-radius:8px;padding:8px;font:inherit}
+    .xzs-row textarea{min-height:54px;resize:vertical}
+    .xzs-row-head{display:flex;justify-content:space-between;align-items:center;gap:8px}
+    .xzs-delete{border:0;border-radius:8px;background:#512b38;color:#ffd6df;padding:7px 10px}
+
     @media(max-width:560px){#xiaozhi-subtitle-modal{padding:0;align-items:stretch}.xzs-card{height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.xzs-head{top:-14px}}
   `;
   document.head.appendChild(style);
@@ -50,7 +57,13 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
         <div class="xzs-progress"><span id="xzs-progress"></span></div>
       </div>
       <div class="xzs-panel">
-        <strong>识别结果</strong>
+        <strong>识别结果与字幕校对</strong>
+        <label>字幕样式<select id="xzs-style">
+          <option value="classic">经典白字 · 半透明黑底</option>
+          <option value="yellow">醒目黄字 · 深色底</option>
+          <option value="clean">简洁白字 · 无底色</option>
+        </select></label>
+        <p class="xzs-note">可直接修改每句文字和起止时间，也可以删除不需要的句子。时间单位为秒。</p>
         <div class="xzs-list" id="xzs-results"><p class="xzs-note">识别完成后，字幕会显示在这里。</p></div>
         <div class="xzs-actions">
           <button class="xzs-secondary" id="xzs-download" type="button" disabled>下载 SRT 字幕</button>
@@ -85,18 +98,73 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       state.segments.forEach((seg, index) => {
         const row = document.createElement('div');
         row.className = 'xzs-row';
+        const head = document.createElement('div');
+        head.className = 'xzs-row-head';
         const time = document.createElement('div');
         time.className = 'xzs-time';
-        time.textContent = `${fmt(seg.start)} → ${fmt(seg.end)}`;
-        const text = document.createElement('div');
-        text.textContent = seg.text || '';
-        row.append(time, text);
+        time.textContent = `第 ${index + 1} 句`;
+        const remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'xzs-delete';
+        remove.dataset.removeIndex = String(index);
+        remove.textContent = '删除';
+        head.append(time, remove);
+
+        const times = document.createElement('div');
+        times.className = 'xzs-edit-grid';
+        for (const [field, labelText] of [['start', '开始时间（秒）'], ['end', '结束时间（秒）']]) {
+          const label = document.createElement('label');
+          label.textContent = labelText;
+          const input = document.createElement('input');
+          input.type = 'number';
+          input.min = '0';
+          input.step = '0.1';
+          input.value = String(Number(seg[field] || 0).toFixed(1));
+          input.dataset.timeIndex = String(index);
+          input.dataset.timeField = field;
+          label.appendChild(input);
+          times.appendChild(label);
+        }
+
+        const text = document.createElement('textarea');
+        text.value = seg.text || '';
+        text.setAttribute('aria-label', `编辑第 ${index + 1} 句字幕`);
+        text.dataset.textIndex = String(index);
+        row.append(head, times, text);
         list.appendChild(row);
       });
     }
     $('xzs-download').disabled = !state.segments.length;
     $('xzs-import').disabled = !state.segments.length;
   };
+
+  $('xzs-results').addEventListener('input', (event) => {
+    const textIndex = event.target.dataset.textIndex;
+    if (textIndex !== undefined) {
+      const segment = state.segments[Number(textIndex)];
+      if (segment) segment.text = event.target.value;
+    }
+  });
+
+  $('xzs-results').addEventListener('change', (event) => {
+    const index = Number(event.target.dataset.timeIndex);
+    const field = event.target.dataset.timeField;
+    if (!Number.isInteger(index) || !field) return;
+    const segment = state.segments[index];
+    if (!segment) return;
+    const value = Math.max(0, Number(event.target.value) || 0);
+    if (field === 'start') segment.start = Math.min(value, Math.max(0, segment.end - 0.1));
+    else segment.end = Math.max(value, segment.start + 0.1);
+    render();
+  });
+
+  $('xzs-results').addEventListener('click', (event) => {
+    const index = Number(event.target.dataset.removeIndex);
+    if (!Number.isInteger(index)) return;
+    state.segments.splice(index, 1);
+    render();
+    setStatus(`已删除字幕，当前剩余 ${state.segments.length} 句。`);
+  });
 
   const setStatus = (message, progress) => {
     $('xzs-status').textContent = message;
@@ -203,8 +271,8 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
         fontSize: Math.max(30, Math.round(composition.width * 0.034)),
         fontFamily: 'Inter',
         fontWeight: 'bold',
-        color: '#ffffff',
-        bgColor: 'transparent',
+        color: $('xzs-style').value === 'yellow' ? '#ffe66d' : '#ffffff',
+        bgColor: $('xzs-style').value === 'clean' ? 'transparent' : '#202020',
         textAlign: 'center'
       });
       // addClip shifts overlapping clips to avoid collisions; restore the ASR timestamp.
