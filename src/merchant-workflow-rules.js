@@ -36,3 +36,34 @@ export function mergeCaptionRequirements(baseCaption, requirements = []) {
   }
   return [base, ...additions].filter(Boolean).join(' · ');
 }
+
+/**
+ * Validate uploaded merchant media against the first-version mobile limits.
+ * Keep this independent from browser APIs so the rules can be unit-tested.
+ */
+export function validateMerchantMediaFiles(files, options = {}) {
+  const maxFiles = Number(options.maxFiles) || 8;
+  const maxVideoBytes = Number(options.maxVideoBytes) || 40 * 1024 * 1024;
+  const list = Array.from(files || []);
+  if (!list.length) return { valid: true, files: list };
+  if (list.length > maxFiles) {
+    return { valid: false, message: `一次最多选择 ${maxFiles} 个素材，你选择了 ${list.length} 个。请分批选择。` };
+  }
+  const allowedImage = /^(image\\/(jpeg|png|webp|gif|avif))$/i;
+  const allowedVideo = /^(video\\/(mp4|webm|quicktime))$/i;
+  const extension = name => String(name || '').split('.').pop().toLowerCase();
+  for (const file of list) {
+    const ext = extension(file.name);
+    const imageByExt = ['jpg', 'jpeg', 'png', 'webp', 'gif', 'avif'].includes(ext);
+    const videoByExt = ['mp4', 'webm', 'mov'].includes(ext);
+    const isImage = allowedImage.test(file.type || '') || (!file.type && imageByExt);
+    const isVideo = allowedVideo.test(file.type || '') || (!file.type && videoByExt);
+    if (!isImage && !isVideo) {
+      return { valid: false, message: `“${file.name || '未命名文件'}”格式暂不支持。请使用 JPG、PNG、WEBP 图片或 MP4、WEBM、MOV 视频。` };
+    }
+    if (isVideo && file.size > maxVideoBytes) {
+      return { valid: false, message: `视频“${file.name}”超过40MB。请先压缩视频，或换一段较短的视频。` };
+    }
+  }
+  return { valid: true, files: list };
+}
