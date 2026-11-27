@@ -6,9 +6,10 @@ export function buildMerchantOutroText(profile = {}) {
   if (!shop) return null;
   const product = clean(profile.product);
   const address = clean(profile.address);
+  const cta = clean(profile.cta) || '欢迎咨询了解';
   const lines = [shop];
   if (product) lines.push(`主打：${product}`);
   if (address) lines.push(`地址：${address}`);
-  lines.push('欢迎咨询了解');
+  lines.push(cta);
   return lines.join('\n');
 }

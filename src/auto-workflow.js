@@ -113,7 +113,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           <label class="xzw-field"><span>字幕样式</span><select id="xzw-subtitle"><option value="bold">醒目粗体</option><option value="clean">简洁高级</option></select></label>
         </div>
         <label class="xzw-check"><input id="xzw-branded-outro" type="checkbox" checked><span>自动添加商家品牌片尾（使用已填写的店名、产品和地址）</span></label>
-        <p class="xzw-note">片尾默认约3秒；没有填写店名时不会生成。可随时取消勾选。</p>
+        <label class="xzw-field"><span>片尾引导语（选填）</span><input id="xzw-cta" placeholder="例如：欢迎到店体验、预约请私信"></label>
+        <p class="xzw-note">片尾默认约3秒；没有填写店名时不会生成。引导语留空时使用“欢迎咨询了解”。</p>
       </div>
 
       <div class="xzw-section">
@@ -359,7 +360,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       }
     };
   }
-  const profileKeys = ['shop','industry','product','address','offer','copy','brief','style','length'];
+  const profileKeys = ['shop','industry','product','address','offer','copy','brief','style','length','cta'];
   const readProfile = () => Object.fromEntries(profileKeys.map(key => [key, $('xzw-' + key).value]));
   const renderTemplateGuide = () => {
     const plan = getMerchantShotPlan($('xzw-industry').value, 6);
