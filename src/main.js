@@ -22,6 +22,7 @@ import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLoc
 import { createProjectBundle, readProjectBundle } from './project-bundle.js';
 import { sanitizeProjectDocument, MAX_PROJECT_DOCUMENT_BYTES } from './project-validation.js';
 import { createSerialTaskQueue } from './serial-task-queue.js';
+import { shouldWarnBeforeProjectExit } from './local-save-guard.js';
 
 // --- Global State ---
 let composition = null;
@@ -86,6 +87,7 @@ let isExporting = false;
 let localRestoreComplete = false;
 let localAutosaveTimer = null;
 let localAutosaveInProgress = false;
+let localAutosavePendingCount = 0;
 const enqueueLocalSave = createSerialTaskQueue();
 let localAutosaveDirty = false;
 let localAutosaveErrorShown = false;
@@ -226,6 +228,18 @@ async function initApp() {
 
   bindControls();
   bindDropHandlers();
+  window.addEventListener('beforeunload', event => {
+    if (!shouldWarnBeforeProjectExit({
+      dirty: localAutosaveDirty,
+      timerActive: Boolean(localAutosaveTimer),
+      inProgress: localAutosaveInProgress,
+      pendingCount: localAutosavePendingCount
+    })) return;
+    // The browser may terminate async IndexedDB writes during navigation.
+    // Ask the user to stay so the visible save status can finish first.
+    event.preventDefault();
+    event.returnValue = '';
+  });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden' && localRestoreComplete) {
       if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
@@ -821,6 +835,7 @@ function saveCurrentProjectLocally() {
   const targetProjectId = activeProjectId;
   const targetProjectName = activeProjectName;
 
+  localAutosavePendingCount += 1;
   return enqueueLocalSave(async () => {
     if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
     localAutosaveTimer = null;
@@ -853,6 +868,7 @@ function saveCurrentProjectLocally() {
       return false;
     } finally {
       localAutosaveInProgress = false;
+      localAutosavePendingCount = Math.max(0, localAutosavePendingCount - 1);
       if (localAutosaveDirty && localRestoreComplete) scheduleLocalAutosave();
     }
   });
