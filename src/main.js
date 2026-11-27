@@ -197,8 +197,25 @@ async function initApp() {
   initSubtitleStudio({ composition, onCompositionChanged });
 
   await restoreLastLocalProject();
+  applyDeviceExportDefaults();
   localRestoreComplete = true;
   onCompositionChanged();
+}
+
+function applyDeviceExportDefaults() {
+  const isMobile = (typeof navigator !== 'undefined' && Number(navigator.maxTouchPoints || 0) > 1) ||
+    (typeof window !== 'undefined' && window.matchMedia?.('(max-width: 900px)').matches);
+  if (!isMobile) return;
+
+  const sourceWidth = Math.max(2, Number(composition.width) || 720);
+  const sourceHeight = Math.max(2, Number(composition.height) || 1280);
+  const scale = Math.min(1, 1280 / Math.max(sourceWidth, sourceHeight));
+  const evenDimension = value => Math.max(2, Math.floor(value / 2) * 2);
+
+  if (exportWidthEl) exportWidthEl.value = String(evenDimension(sourceWidth * scale));
+  if (exportHeightEl) exportHeightEl.value = String(evenDimension(sourceHeight * scale));
+  if (exportFpsEl) exportFpsEl.value = '24';
+  if (exportQualityEl) exportQualityEl.value = 'medium';
 }
 
 function onMediaUrlRegistered(clipId, objectUrl) {
