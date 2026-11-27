@@ -82,10 +82,17 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <div id="xzw-file-summary" class="xzw-note">尚未选择素材</div>
         <div id="xzw-media-map" class="xzw-media-map"></div>
         <p class="xzw-note">系统会按文件名和素材类型推荐镜头用途，你可以手动调整；没有明显匹配依据时会标记为待确认。</p>
-        <label class="xzw-field"><span>商家需求文档（可选上传 Word / TXT / PDF以外的文字文件）</span><div class="xzw-file"><input id="xzw-brief-file" type="file" accept=".docx,.txt,.md,.csv,.rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/rtf"><p class="xzw-note">支持 Word（.docx）、TXT、Markdown、CSV、RTF，单个文档不超过10MB。PDF暂不支持直接解析，可复制其中的文字粘贴到下方。</p></div></label>
-        <label class="xzw-field"><span>文档要求 / 商家特别说明（读取后可继续修改）</span><textarea id="xzw-brief" placeholder="例如：重点突出招牌菜；必须出现新店开业优惠；视频结尾显示门店地址；不要出现其他品牌。也可以直接粘贴商家发来的文字。"></textarea></label>
-        <div id="xzw-brief-status" class="xzw-note">尚未添加需求文档</div>
-        <div class="xzw-actions"><button class="xzw-secondary" id="xzw-extract-requirements" type="button">把商家要求拆成制作清单</button></div>
+        <div class="xzw-field">
+          <span>商家文字要求（可选）</span>
+          <div class="xzw-file">
+            <label for="xzw-brief-file"><strong>第1步：点这里选择商家文档</strong></label>
+            <input id="xzw-brief-file" type="file" accept=".docx,.txt,.md,.csv,.rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/rtf">
+            <p class="xzw-note">支持 Word（.docx）、TXT、Markdown、CSV、RTF，最大10MB。选择后会自动读取文字，填到下面的文本框。</p>
+          </div>
+        </div>
+        <label class="xzw-field"><span>第2步：检查或直接粘贴商家要求</span><textarea id="xzw-brief" placeholder="例如：重点突出招牌菜；必须出现开业优惠；结尾显示门店地址；不要出现其他品牌。没有文档时，也可以直接把商家发来的文字粘贴在这里。"></textarea></label>
+        <div id="xzw-brief-status" class="xzw-note">还没有添加文字。上传文档后会自动填入，也可以直接粘贴。</div>
+        <div class="xzw-actions"><button class="xzw-secondary" id="xzw-extract-requirements" type="button">第3步：拆解成制作清单</button></div>
         <p class="xzw-note">自动识别“必须出现、重点突出、优惠、地址、不要出现”等要求；你可以逐条修改并指定放在哪个镜头。识别结果需要人工核对。</p>
         <div id="xzw-requirements" class="xzw-requirements"></div>
       </div>
