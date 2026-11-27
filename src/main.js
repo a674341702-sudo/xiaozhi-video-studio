@@ -481,6 +481,14 @@ function bindControls() {
     if (event.target === projectLibrary) projectLibrary.setAttribute('hidden', '');
   });
   document.getElementById('project-save-copy')?.addEventListener('click', saveAsNewLocalProject);
+  document.getElementById('project-export-bundle')?.addEventListener('click', exportCurrentProjectBundle);
+  const projectBundleInput = document.getElementById('project-bundle-input');
+  document.getElementById('project-import-bundle')?.addEventListener('click', () => projectBundleInput?.click());
+  projectBundleInput?.addEventListener('change', () => {
+    const file = projectBundleInput.files?.[0];
+    if (file) importProjectBundleFile(file);
+    projectBundleInput.value = '';
+  });
   const loadProjectInput = document.getElementById('load-project-input');
 
   if (btnNewProject) btnNewProject.addEventListener('click', () => window.newProject?.());
