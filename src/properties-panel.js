@@ -129,6 +129,7 @@ export class PropertiesPanel {
     const typeNames = { video: '视频', image: '图片', text: '文字', audio: '音频' };
     const safeType = escapeHtml(typeNames[clip.type] || clip.type);
     const safeText = escapeHtml(clip.text || '');
+    const safeAttr = value => escapeHtml(value === null || value === undefined ? '' : String(value));
 
     this.container.innerHTML = `
       <div class="panel-header compact">
@@ -142,11 +143,11 @@ export class PropertiesPanel {
           <span class="prop-section-title">时间与时长</span>
           <div class="prop-row">
             <label>开始时间（秒）</label>
-            <input type="number" step="0.1" min="0" id="prop-start" value="${clip.startTime}">
+            <input type="number" step="0.1" min="0" id="prop-start" value="${safeAttr(clip.startTime)}">
           </div>
           <div class="prop-row">
             <label>持续时间（秒）</label>
-            <input type="number" step="0.1" min="0.5" id="prop-duration" value="${clip.duration}">
+            <input type="number" step="0.1" min="0.5" id="prop-duration" value="${safeAttr(clip.duration)}">
           </div>
         </div>
 
@@ -157,24 +158,24 @@ export class PropertiesPanel {
           <div class="prop-grid-2">
             <div class="prop-field">
               <label>横向位置（像素）</label>
-              <input type="number" id="prop-x" value="${clip.x}">
+              <input type="number" id="prop-x" value="${safeAttr(clip.x)}">
             </div>
             <div class="prop-field">
               <label>纵向位置（像素）</label>
-              <input type="number" id="prop-y" value="${clip.y}">
+              <input type="number" id="prop-y" value="${safeAttr(clip.y)}">
             </div>
             <div class="prop-field">
               <label>宽度（像素）</label>
-              <input type="number" min="10" id="prop-w" value="${clip.width}">
+              <input type="number" min="10" id="prop-w" value="${safeAttr(clip.width)}">
             </div>
             <div class="prop-field">
               <label>高度（像素）</label>
-              <input type="number" min="10" id="prop-h" value="${clip.height}">
+              <input type="number" min="10" id="prop-h" value="${safeAttr(clip.height)}">
             </div>
           </div>
           <div class="prop-row" style="margin-top: 6px;">
             <label>不透明度</label>
-            <input type="range" min="0" max="1" step="0.05" id="prop-opacity" value="${clip.opacity}">
+            <input type="range" min="0" max="1" step="0.05" id="prop-opacity" value="${safeAttr(clip.opacity)}">
             <span class="prop-val-display" id="prop-opacity-val">${Math.round(clip.opacity * 100)}%</span>
           </div>
         </div>
@@ -190,7 +191,7 @@ export class PropertiesPanel {
           </div>
           <div class="prop-row">
             <label>字体大小</label>
-            <input type="number" min="12" max="300" id="prop-text-size" value="${clip.fontSize}">
+            <input type="number" min="12" max="300" id="prop-text-size" value="${safeAttr(clip.fontSize)}">
           </div>
           <div class="prop-row">
             <label>字体</label>
@@ -220,11 +221,11 @@ export class PropertiesPanel {
           </div>
           <div class="prop-row">
             <label>文字颜色</label>
-            <input type="color" id="prop-text-color" value="${clip.color}">
+            <input type="color" id="prop-text-color" value="${safeAttr(clip.color)}">
           </div>
           <div class="prop-row">
             <label>背景颜色</label>
-            <input type="color" id="prop-text-bg" value="${clip.bgColor === 'transparent' ? '#000000' : clip.bgColor}">
+            <input type="color" id="prop-text-bg" value="${safeAttr(clip.bgColor === 'transparent' ? '#000000' : clip.bgColor)}">
           </div>
           <div class="prop-row">
             <label>背景透明</label>
@@ -238,16 +239,16 @@ export class PropertiesPanel {
           <span class="prop-section-title">音频</span>
           <div class="prop-row">
             <label>音量</label>
-            <input type="range" min="0" max="2" step="0.05" id="prop-volume" value="${clip.volume ?? 1}">
+            <input type="range" min="0" max="2" step="0.05" id="prop-volume" value="${safeAttr(clip.volume ?? 1)}">
             <span class="prop-val-display" id="prop-volume-val">${Math.round((clip.volume ?? 1) * 100)}%</span>
           </div>
           <div class="prop-row">
             <label>淡入（秒）</label>
-            <input type="number" min="0" step="0.1" id="prop-fade-in" value="${clip.fadeIn || 0}">
+            <input type="number" min="0" step="0.1" id="prop-fade-in" value="${safeAttr(clip.fadeIn || 0)}">
           </div>
           <div class="prop-row">
             <label>淡出（秒）</label>
-            <input type="number" min="0" step="0.1" id="prop-fade-out" value="${clip.fadeOut || 0}">
+            <input type="number" min="0" step="0.1" id="prop-fade-out" value="${safeAttr(clip.fadeOut || 0)}">
           </div>
         </div>
         ` : ''}
@@ -288,6 +289,7 @@ export class PropertiesPanel {
     const trackCount = this.comp.tracks.length;
     const clipCount = this.comp.clips.length;
     const ratio = getAspectRatioPreset(this.comp.width, this.comp.height);
+    const safeAttr = value => escapeHtml(value === null || value === undefined ? '' : String(value));
 
     this.container.innerHTML = `
       <div class="panel-header compact">
@@ -316,11 +318,11 @@ export class PropertiesPanel {
           <div class="canvas-prop-grid">
             <div class="prop-field">
               <label>宽度</label>
-              <input type="number" min="100" max="7680" id="canvas-width" value="${this.comp.width}">
+              <input type="number" min="100" max="7680" id="canvas-width" value="${safeAttr(this.comp.width)}">
             </div>
             <div class="prop-field">
               <label>高度</label>
-              <input type="number" min="100" max="7680" id="canvas-height" value="${this.comp.height}">
+              <input type="number" min="100" max="7680" id="canvas-height" value="${safeAttr(this.comp.height)}">
             </div>
           </div>
           <div class="canvas-scale-row" style="margin-top: 6px;">
@@ -338,7 +340,7 @@ export class PropertiesPanel {
             <div><strong>时长：</strong> ${formatTime(duration)}</div>
             <div><strong>轨道数：</strong> ${trackCount}</div>
             <div><strong>素材数：</strong> ${clipCount}</div>
-            <div><strong>分辨率：</strong> ${this.comp.width}×${this.comp.height}</div>
+            <div><strong>分辨率：</strong> ${safeAttr(this.comp.width)}×${safeAttr(this.comp.height)}</div>
           </div>
         </div>
 

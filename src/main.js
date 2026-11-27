@@ -20,6 +20,7 @@ import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
 import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
 import { createProjectBundle, readProjectBundle } from './project-bundle.js';
+import { sanitizeProjectDocument, MAX_PROJECT_DOCUMENT_BYTES } from './project-validation.js';
 import { createSerialTaskQueue } from './serial-task-queue.js';
 
 // --- Global State ---
@@ -903,10 +904,13 @@ function waitForRestoredMedia(element, readyCheck, readyEvent) {
 
 async function applyLocalProjectRecord(record, notify = true) {
   if (!record?.project || !Array.isArray(record.project.clips)) throw new Error('项目记录不完整，无法恢复');
+  const safeProject = sanitizeProjectDocument(record.project);
   isRestoringLocalProject = true;
   releaseMediaUrls();
   try {
-    await composition.fromJSON(record.project, async (srcUrl) => srcUrl || null);
+    // Project records restore original media from their IndexedDB Blob entries;
+    // never load a persisted external URL as a fallback.
+    await composition.fromJSON(safeProject, async () => null);
     let restored = 0;
     let missing = 0;
     const mediaByClip = new Map((record.media || []).map(item => [item.clipId, item]));
@@ -1063,6 +1067,7 @@ async function exportCurrentProjectBundle() {
 async function importProjectBundleFile(file) {
   try {
     const result = await readProjectBundle(file);
+    result.project = sanitizeProjectDocument(result.project);
     const projectName = result.project.name || file.name.replace(/\.(xzproj|zip)$/i, '') || '导入的商家项目';
     result.project.name = projectName;
     const currentSaved = await flushCurrentProjectLocally();
@@ -1141,11 +1146,12 @@ window.saveProject = async function saveProject() {
 
 window.loadProject = async function loadProject(file) {
   try {
-    const text = await file.text();
-    const data = JSON.parse(text);
-    if (!data || !Array.isArray(data.clips) || !data.width || !data.height) {
-      throw new Error('项目文件格式不正确');
+    if (!file || !Number.isFinite(file.size) || file.size <= 0 || file.size > MAX_PROJECT_DOCUMENT_BYTES) {
+      throw new Error('项目配置文件无效或超过5MB，请使用完整项目包导入素材');
     }
+    const text = await file.text();
+    const parsed = JSON.parse(text);
+    const data = sanitizeProjectDocument(parsed);
     if (!window.confirm('打开项目会替换当前时间线。确定继续吗？')) return;
     const currentSaved = await flushCurrentProjectLocally();
     if (!currentSaved && composition.clips.length > 0) {
@@ -1154,16 +1160,12 @@ window.loadProject = async function loadProject(file) {
     }
     activeProjectId = createLocalProjectId();
     releaseMediaUrls();
-    const missingMediaCount = (data.clips || []).filter(clip =>
-      clip.file || (clip.src && clip.src.startsWith('blob:'))
+    // JSON projects contain timeline metadata only. Source media is not
+    // embedded, so external URLs are deliberately not fetched on import.
+    const missingMediaCount = data.clips.filter(clip =>
+      ['video', 'image', 'audio'].includes(clip.type)
     ).length;
-    await composition.fromJSON(data, async (srcUrl) => {
-      if (srcUrl && srcUrl.startsWith('blob:')) return null;
-      return srcUrl;
-    });
-    for (const clip of composition.clips) {
-      if (clip.src && !clip.src.startsWith('blob:')) onMediaUrlRegistered(clip.id, clip.src);
-    }
+    await composition.fromJSON(data, async () => null);
     onCompositionChanged();
     updateHeaderProjectName(data.name || file.name.replace(/\.json$/i, ''));
     showToast(missingMediaCount > 0
