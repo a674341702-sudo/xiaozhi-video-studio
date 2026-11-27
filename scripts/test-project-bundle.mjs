@@ -81,14 +81,16 @@ await assert.rejects(() => readProjectBundle(new Blob([localNameMismatch])), /�
 const duplicateCentralName = await bytesOf(bundle);
 const endOffset = findEndOffset(duplicateCentralName);
 const centralOffset = readU32(duplicateCentralName, endOffset + 16);
-const firstNameLength = readU16(duplicateCentralName, centralOffset + 28);
-const firstRecordLength = 46 + firstNameLength + readU16(duplicateCentralName, centralOffset + 30) + readU16(duplicateCentralName, centralOffset + 32);
-const secondEntryOffset = centralOffset + firstRecordLength;
-const secondNameLength = readU16(duplicateCentralName, secondEntryOffset + 28);
-assert.equal(secondNameLength, firstNameLength);
+const manifestNameLength = readU16(duplicateCentralName, centralOffset + 28);
+const mediaOneOffset = centralOffset + 46 + manifestNameLength;
+const mediaOneLength = readU16(duplicateCentralName, mediaOneOffset + 28);
+const mediaOneRecordLength = 46 + mediaOneLength + readU16(duplicateCentralName, mediaOneOffset + 30) + readU16(duplicateCentralName, mediaOneOffset + 32);
+const mediaTwoOffset = mediaOneOffset + mediaOneRecordLength;
+const mediaTwoLength = readU16(duplicateCentralName, mediaTwoOffset + 28);
+assert.equal(mediaTwoLength, mediaOneLength);
 duplicateCentralName.set(
-  duplicateCentralName.slice(centralOffset + 46, centralOffset + 46 + firstNameLength),
-  secondEntryOffset + 46
+  duplicateCentralName.slice(mediaOneOffset + 46, mediaOneOffset + 46 + mediaOneLength),
+  mediaTwoOffset + 46
 );
 await assert.rejects(() => readProjectBundle(new Blob([duplicateCentralName])), /重复文件/);
 
