@@ -122,7 +122,7 @@ export class ContextMenu {
       if (this.clipboard) this.clipboard.duplicate();
     } else if (action === 'delete') {
       if (clip) {
-        this.onMediaUrlRegistered?.(clip.id, null);
+        // Keep the media URL registered while this deletion remains undoable.
         this.comp.removeClip(clip.id);
         showToast('Clip deleted', 'success');
         if (this.onCompositionChanged) this.onCompositionChanged();

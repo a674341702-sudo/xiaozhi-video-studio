@@ -72,7 +72,7 @@ export class ClipboardManager {
     const selected = this.comp.getSelectedClip();
     if (!selected) return false;
 
-    this._revokeClipUrl(selected.id);
+    // Keep the media URL registered while this deletion remains undoable.
     this.comp.removeClip(selected.id);
     showToast('Deleted element', 'success');
 
@@ -98,10 +98,6 @@ export class ClipboardManager {
       return audio;
     }
     return null;
-  }
-
-  _revokeClipUrl(clipId) {
-    this.onMediaUrlRegistered?.(clipId, null);
   }
 
   _bindHotkeys() {

@@ -10,12 +10,13 @@ const TRACK_ROW_HEIGHT = 34;
 const MIN_CLIP_WIDTH_PX = 10;
 
 export class MultiTimeline {
-  constructor({ container, composition, onSeek, onSelectClip, onChangeClipTime, onContextMenu, store }) {
+  constructor({ container, composition, onSeek, onSelectClip, onChangeClipTime, onCommitClipTime, onContextMenu, store }) {
     this.container = container;
     this.comp = composition;
     this.onSeek = onSeek;
     this.onSelectClip = onSelectClip;
     this.onChangeClipTime = onChangeClipTime;
+    this.onCommitClipTime = onCommitClipTime;
     this.onContextMenu = onContextMenu;
     this.store = store;
 
@@ -357,6 +358,7 @@ export class MultiTimeline {
         if (action === 'toggle-mute') track.muted = !track.muted;
         this.comp._pushSnapshot('toggle track');
         this.render();
+        this.onCommitClipTime?.(null, 'track');
       }
     });
 
@@ -512,8 +514,11 @@ export class MultiTimeline {
   }
 
   _onDragClipEnd() {
+    if (!this.dragTarget) return;
+    const target = this.dragTarget;
     this.dragTarget = null;
     this.comp.commitBatch();
+    this.onCommitClipTime?.(this.comp.getClip(target.clipId), target.mode);
   }
 
   onDropFiles(callback) {

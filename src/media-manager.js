@@ -5,6 +5,7 @@
 import { validateFile, showToast } from './utils.js';
 import { generateProxy } from './proxy.js';
 import { getPreciseMediaDuration } from './media-duration.js';
+import { takeSelectedFiles } from './media-file-selection.js';
 
 // Mobile browsers can occasionally leave media metadata loading unresolved.
 // Bound the wait so the workflow can show a useful error instead of hanging forever.
@@ -218,7 +219,6 @@ export class MediaManager {
     }
 
     showToast(`已添加视频： ${file.name}`, 'success');
-    this.videoInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
   }
@@ -275,7 +275,6 @@ export class MediaManager {
 
     if (this.onMediaUrlRegistered) this.onMediaUrlRegistered(clip.id, objectUrl);
     showToast(`已添加图片： ${file.name}`, 'success');
-    this.imageInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
   }
@@ -324,30 +323,26 @@ export class MediaManager {
 
     if (this.onMediaUrlRegistered) this.onMediaUrlRegistered(clip.id, objectUrl);
     showToast(`已添加音频： ${file.name}`, 'success');
-    this.audioInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
   }
 
   async _onVideoSelected(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = takeSelectedFiles(e.target);
     for (const file of files) {
       await this._importVideo(file, { startTime: 0 });
     }
   }
 
   async _onImageSelected(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = takeSelectedFiles(e.target);
     for (const file of files) {
       await this._importImage(file, { startTime: 0 });
     }
   }
 
   async _onAudioSelected(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    const files = takeSelectedFiles(e.target);
     for (const file of files) {
       await this._importAudio(file, { startTime: 0 });
     }
