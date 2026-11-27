@@ -180,6 +180,13 @@ async function initApp() {
 
   bindControls();
   bindDropHandlers();
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden' && localRestoreComplete) {
+      if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+      localAutosaveTimer = null;
+      saveCurrentProjectLocally();
+    }
+  });
   // Load the large FFmpeg WASM engine only when the user exports, preserving phone memory during editing.
   onCompositionChanged();
   updateHeaderProjectName();
