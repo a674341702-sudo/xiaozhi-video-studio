@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { validateFile } from '../src/utils.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
@@ -55,3 +56,8 @@ assert.equal(isVideoMediaFile({ name: '现场.webm', type: 'video/webm' }), true
 assert.equal(isVideoMediaFile({ name: '门头.jpg', type: 'application/octet-stream' }), false);
 assert.equal(isVideoMediaFile({ name: '门头.png', type: 'image/png' }), false);
 console.log('安卓通用 MIME 视频识别测试通过');
+
+assert.equal(validateFile(fakeFile('现代格式.avif', 'image/avif'), 'image').valid, true);
+assert.equal(validateFile(fakeFile('安卓 AVIF.avif', 'application/octet-stream'), 'image').valid, true);
+assert.equal(validateFile(fakeFile('不支持.heic', 'image/heic'), 'image').valid, false);
+console.log('素材上传格式与编辑器导入格式一致性测试通过');

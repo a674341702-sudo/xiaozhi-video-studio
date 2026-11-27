@@ -50,6 +50,7 @@ export const SUPPORTED_TYPES = {
     'image/jpeg': ['.jpg', '.jpeg'],
     'image/webp': ['.webp'],
     'image/gif': ['.gif'],
+    'image/avif': ['.avif'],
   },
   audio: {
     'audio/mpeg': ['.mp3'],

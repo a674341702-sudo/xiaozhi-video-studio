@@ -41,7 +41,7 @@ export class MediaManager {
 
   _bindFileInputs() {
     this.videoInput = this._createHiddenInput('video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov');
-    this.imageInput = this._createHiddenInput('image/png,image/jpeg,image/webp,image/gif,.png,.jpg,.jpeg,.webp,.gif');
+    this.imageInput = this._createHiddenInput('image/png,image/jpeg,image/webp,image/gif,image/avif,.png,.jpg,.jpeg,.webp,.gif,.avif');
     this.audioInput = this._createHiddenInput('audio/mp3,audio/wav,audio/aac,audio/ogg,audio/m4a,.mp3,.wav,.aac,.ogg,.m4a');
 
     this.videoInput.addEventListener('change', (e) => this._onVideoSelected(e));
