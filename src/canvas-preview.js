@@ -9,12 +9,13 @@ import { wrapTextLines } from './text-layout.js';
 import { getMediaDrawGeometry } from './media-fit.js';
 
 export class CanvasPreview {
-  constructor({ canvas, composition, onSelectClip, onChangeClipTransform, onContextMenu }) {
+  constructor({ canvas, composition, onSelectClip, onChangeClipTransform, onCommitClipTransform, onContextMenu }) {
     this.canvas = canvas;
     this.ctx = canvas.getContext('2d');
     this.comp = composition;
     this.onSelectClip = onSelectClip;
     this.onChangeClipTransform = onChangeClipTransform;
+    this.onCommitClipTransform = onCommitClipTransform;
     this.onContextMenu = onContextMenu;
 
     this.currentTime = 0;
@@ -585,6 +586,7 @@ export class CanvasPreview {
       this.isDragging = false;
       this.dragMode = null;
       this.comp.commitBatch();
+      this.onCommitClipTransform?.(this.comp.getSelectedClip());
     }
   }
 }
