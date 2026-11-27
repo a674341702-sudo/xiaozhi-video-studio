@@ -37,7 +37,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-primary:disabled{opacity:.55}
     .xzw-status{margin-top:13px;padding:12px;border-radius:10px;background:#10101d;color:#c4b5fd;white-space:pre-wrap}
     .xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}\n    .xzw-template-guide{margin-top:10px;padding:11px;border:1px solid #41415e;border-radius:11px;background:#141426}.xzw-template-guide>strong{color:#ddd;font-size:13px}.xzw-template-guide small{color:#a5a5bf}
-    .xzw-media-map{display:grid;gap:10px;margin-top:10px}.xzw-media-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid #41415e;border-radius:12px;background:#121222;min-width:0}.xzw-media-thumb{width:92px;height:76px;object-fit:cover;border-radius:8px;background:#080812;display:block}.xzw-media-info{min-width:0;display:grid;gap:7px}.xzw-media-name{font-size:12px;overflow-wrap:anywhere;color:#e5e5f5}.xzw-media-row select{width:100%;min-width:0;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:9px;min-height:40px}.xzw-media-order{display:flex;gap:7px}.xzw-media-order button{flex:1;min-height:38px;border:1px solid #4b4b68;border-radius:8px;background:#292941;color:#fff;font-size:13px}.xzw-media-order button:disabled{opacity:.35}.xzw-preview{margin-top:12px;padding:12px;border:1px solid #5b4a86;border-radius:11px;background:#17152a}.xzw-preview h4{margin:0 0 8px;font-size:14px}.xzw-preview ul{padding-left:20px;margin:7px 0}.xzw-preview li{margin:5px 0;font-size:12px;color:#d5d5e8}.xzw-preview .xzw-check{font-size:13px}
+    .xzw-media-map{display:grid;gap:10px;margin-top:10px}.xzw-media-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid #41415e;border-radius:12px;background:#121222;min-width:0}.xzw-media-thumb{width:92px;height:76px;object-fit:cover;border-radius:8px;background:#080812;display:block}.xzw-media-info{min-width:0;display:grid;gap:7px}.xzw-media-name{font-size:12px;overflow-wrap:anywhere;color:#e5e5f5}.xzw-media-row select{width:100%;min-width:0;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:9px;min-height:40px}.xzw-media-order{display:flex;gap:7px}.xzw-media-order button{flex:1;min-height:38px;border:1px solid #4b4b68;border-radius:8px;background:#292941;color:#fff;font-size:13px}.xzw-media-order button:disabled{opacity:.35}.xzw-media-preview{position:fixed;inset:0;z-index:2600;background:rgba(0,0,0,.94);display:none;align-items:center;justify-content:center;padding:18px;box-sizing:border-box}.xzw-media-preview.open{display:flex}.xzw-media-preview img,.xzw-media-preview video{max-width:100%;max-height:82dvh;object-fit:contain;border-radius:12px}.xzw-media-preview-close{position:absolute;top:calc(12px + env(safe-area-inset-top));right:14px;min-width:48px;min-height:48px;border:0;border-radius:50%;background:#fff;color:#111;font-size:24px;font-weight:700}.xzw-media-preview-name{position:absolute;left:16px;right:70px;top:calc(20px + env(safe-area-inset-top));color:#fff;font-size:13px;overflow-wrap:anywhere}.xzw-preview{margin-top:12px;padding:12px;border:1px solid #5b4a86;border-radius:11px;background:#17152a}.xzw-preview h4{margin:0 0 8px;font-size:14px}.xzw-preview ul{padding-left:20px;margin:7px 0}.xzw-preview li{margin:5px 0;font-size:12px;color:#d5d5e8}.xzw-preview .xzw-check{font-size:13px}
     .xzw-requirements{display:grid;gap:9px;margin-top:10px}.xzw-requirement{border:1px solid #41415e;border-radius:10px;padding:10px;background:#121222}.xzw-requirement textarea{width:100%;box-sizing:border-box;min-height:54px;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:9px;font:inherit}.xzw-requirement select{width:100%;margin-top:7px;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:8px;font:inherit}.xzw-requirement label{font-size:12px;color:#c4b5fd}
     .xzw-badge{display:inline-block;padding:3px 7px;border-radius:6px;background:#30264d;color:#c4b5fd;font-size:11px}
     @media(max-width:560px){#xiaozhi-workflow{padding:0;align-items:stretch}.xzw-card{height:100dvh;max-height:100dvh;border-radius:0;padding:16px 14px calc(24px + env(safe-area-inset-bottom))}.xzw-head{top:-16px;padding-top:calc(8px + env(safe-area-inset-top))}.xzw-head h2{font-size:18px}.xzw-close,.xzw-secondary,.xzw-primary{min-height:46px;font-size:15px}.xzw-grid{grid-template-columns:1fr}.xzw-steps{grid-template-columns:repeat(4,1fr);gap:5px}.xzw-step{font-size:11px;padding:9px 2px}.xzw-field span{font-size:14px}.xzw-field textarea,.xzw-field select,.xzw-field input{font-size:16px;min-height:46px}.xzw-note{font-size:13px;line-height:1.6}.xzw-section{padding:13px 11px}.xzw-media-row{grid-template-columns:88px minmax(0,1fr);gap:9px;padding:9px}.xzw-media-thumb{width:88px;height:74px}.xzw-media-order button{min-height:42px}}
@@ -129,6 +129,36 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       <p class="xzw-note">首版使用浏览器本地规则化脚本与剪辑，不会凭空生成不存在的店铺画面。视频导出依赖手机内存和浏览器性能；建议先用少量素材、720×1280测试。请确保素材和音乐有商用授权。</p>
     </section>`;
   document.body.appendChild(modal);
+  const mediaPreview = document.createElement('div');
+  mediaPreview.className = 'xzw-media-preview';
+  mediaPreview.innerHTML = '<button type="button" class="xzw-media-preview-close" aria-label="关闭预览">×</button><div class="xzw-media-preview-name"></div><div class="xzw-media-preview-stage"></div>';
+  document.body.appendChild(mediaPreview);
+  const closeMediaPreview = () => {
+    mediaPreview.classList.remove('open');
+    const active = mediaPreview.querySelector('video');
+    if (active) { active.pause(); active.removeAttribute('src'); active.load(); }
+    mediaPreview.querySelector('.xzw-media-preview-stage').innerHTML = '';
+  };
+  const openMediaPreview = (file, url) => {
+    const stage = mediaPreview.querySelector('.xzw-media-preview-stage');
+    stage.innerHTML = '';
+    mediaPreview.querySelector('.xzw-media-preview-name').textContent = file.name;
+    let element;
+    if (file.type.startsWith('video/')) {
+      element = document.createElement('video');
+      element.controls = true;
+      element.playsInline = true;
+      element.preload = 'metadata';
+    } else {
+      element = document.createElement('img');
+      element.alt = file.name;
+    }
+    element.src = url;
+    stage.appendChild(element);
+    mediaPreview.classList.add('open');
+  };
+  mediaPreview.querySelector('.xzw-media-preview-close').addEventListener('click', closeMediaPreview);
+  mediaPreview.addEventListener('click', event => { if (event.target === mediaPreview) closeMediaPreview(); });
   initReferenceVideoStudio(modal);
 
   const $ = (id) => modal.querySelector('#' + id);
@@ -168,6 +198,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const plans = roleOptions();
     const container = $('xzw-media-map');
     container.innerHTML = '';
+    closeMediaPreview();
     clearMediaPreviewUrls();
     files.forEach((file, index) => {
       const row = document.createElement('div');
@@ -188,6 +219,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         thumb.setAttribute('aria-label', file.name + ' 视频预览');
       }
       thumb.className = 'xzw-media-thumb';
+      thumb.setAttribute('role', 'button');
+      thumb.setAttribute('tabindex', '0');
+      thumb.setAttribute('aria-label', '放大预览：' + file.name);
+      thumb.addEventListener('click', () => openMediaPreview(file, previewUrl));
+      thumb.addEventListener('keydown', event => { if (event.key === 'Enter' || event.key === ' ') { event.preventDefault(); openMediaPreview(file, previewUrl); } });
       const info = document.createElement('div');
       info.className = 'xzw-media-info';
       const name = document.createElement('span');
@@ -215,7 +251,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const down = document.createElement('button');
       down.type = 'button'; down.textContent = '下移'; down.disabled = index === files.length - 1;
       down.addEventListener('click', () => moveMedia(index, 1));
-      order.append(up, down);
+      const preview = document.createElement('button');
+      preview.type = 'button'; preview.textContent = '放大预览';
+      preview.addEventListener('click', () => openMediaPreview(file, previewUrl));
+      order.append(preview, up, down);
       info.append(name, select, order);
       row.append(thumb, info);
       container.appendChild(row);
