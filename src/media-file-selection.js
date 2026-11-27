@@ -8,3 +8,13 @@ export function takeSelectedFiles(input) {
   if (input) input.value = '';
   return files;
 }
+
+/**
+ * Android media pickers may return an empty or generic MIME type.
+ * Accept recognized filename extensions as a safe fallback.
+ */
+export function isSupportedReferenceVideoFile(file) {
+  const hasVideoMime = String(file?.type || '').toLowerCase().startsWith('video/');
+  const hasVideoExtension = /\.(mp4|mov|webm)$/i.test(file?.name || '');
+  return hasVideoMime || hasVideoExtension;
+}
