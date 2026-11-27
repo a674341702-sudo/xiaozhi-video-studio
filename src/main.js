@@ -712,20 +712,28 @@ function clamp(val, min, max) {
 
 async function buildLocalProjectSnapshot() {
   const project = stripTemporaryMediaUrls(composition.toJSON());
+  project.name = activeProjectName;
+  const previousRecord = await loadLocalProject(activeProjectId).catch(() => null);
+  const previousMedia = new Map((previousRecord?.media || []).map(item => [item.clipId, item]));
   const media = [];
   for (const clip of composition.clips) {
     if (!['video', 'image', 'audio'].includes(clip.type)) continue;
     let blob = clip.file instanceof Blob ? clip.file : null;
+    let previous = null;
     if (!blob && typeof clip.src === 'string' && clip.src.startsWith('blob:')) {
       try {
         const response = await fetch(clip.src);
         if (response.ok) blob = await response.blob();
       } catch (_) {}
     }
+    if (!blob) {
+      previous = previousMedia.get(clip.id);
+      if (previous?.blob instanceof Blob) blob = previous.blob;
+    }
     if (blob) media.push({
       clipId: clip.id,
-      name: clip.file?.name || clip.name || '素材文件',
-      type: blob.type || clip.file?.type || 'application/octet-stream',
+      name: clip.file?.name || previous?.name || clip.name || '素材文件',
+      type: blob.type || clip.file?.type || previous?.type || 'application/octet-stream',
       blob
     });
   }
@@ -990,13 +998,14 @@ window.newProject = function newProject() {
   inPoint = 0;
   outPoint = 0;
   onCompositionChanged();
-  updateHeaderProjectName('Multi-Track Project');
+  updateHeaderProjectName('新建视频项目');
   showToast('已新建项目；新项目会自动保存在本机', 'info');
 };
 
 window.saveProject = async function saveProject() {
   const localSaved = await saveCurrentProjectLocally();
   const data = stripTemporaryMediaUrls(composition.toJSON());
+  data.name = activeProjectName;
   const mediaCount = composition.clips.filter(clip => clip.file || clip.src?.startsWith('blob:')).length;
   data.mediaIncluded = false;
   data.mediaNotice = '此 JSON 文件只保存时间线和编辑参数，不包含原始媒体。当前浏览器会另行自动保存素材；如需换设备，请保留原始照片、视频和音频。';
@@ -1017,6 +1026,7 @@ window.loadProject = async function loadProject(file) {
       throw new Error('项目文件格式不正确');
     }
     if (!window.confirm('打开项目会替换当前时间线。确定继续吗？')) return;
+    activeProjectId = createLocalProjectId();
     releaseMediaUrls();
     const missingMediaCount = (data.clips || []).filter(clip =>
       clip.file || (clip.src && clip.src.startsWith('blob:'))
