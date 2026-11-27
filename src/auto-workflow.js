@@ -4,6 +4,7 @@
  * 当前不冒充云端 AI：脚本由本地模板辅助；配乐与配音通过用户上传的合法音频文件混入成片。
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
+import { extractMerchantDocumentText } from './merchant-document.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -76,6 +77,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <h3>02 · 上传拍摄素材</h3>
         <label class="xzw-field"><span>门店照片 / 产品照片 / 视频（可多选）</span><div class="xzw-file"><input id="xzw-files" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mov" multiple><p class="xzw-note">建议 4–8 个素材；手机首测每次不超过8个，单个视频尽量不超过40MB。优先使用清晰、稳定、光线好的原片。</p></div></label>
         <div id="xzw-file-summary" class="xzw-note">尚未选择素材</div>
+        <label class="xzw-field"><span>商家需求文档（可选上传 Word / TXT / PDF以外的文字文件）</span><div class="xzw-file"><input id="xzw-brief-file" type="file" accept=".docx,.txt,.md,.csv,.rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown,text/csv,application/rtf"><p class="xzw-note">支持 Word（.docx）、TXT、Markdown、CSV、RTF，单个文档不超过10MB。PDF暂不支持直接解析，可复制其中的文字粘贴到下方。</p></div></label>
+        <label class="xzw-field"><span>文档要求 / 商家特别说明（读取后可继续修改）</span><textarea id="xzw-brief" placeholder="例如：重点突出招牌菜；必须出现新店开业优惠；视频结尾显示门店地址；不要出现其他品牌。也可以直接粘贴商家发来的文字。"></textarea></label>
+        <div id="xzw-brief-status" class="xzw-note">尚未添加需求文档</div>
       </div>
 
       <div class="xzw-section">
@@ -152,7 +156,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       }
     };
   }
-  const profileKeys = ['shop','industry','product','address','offer','copy','style','length'];
+  const profileKeys = ['shop','industry','product','address','offer','copy','brief','style','length'];
   const readProfile = () => Object.fromEntries(profileKeys.map(key => [key, $('xzw-' + key).value]));
   const renderTemplateGuide = () => {
     const plan = getMerchantShotPlan($('xzw-industry').value, 6);
@@ -208,12 +212,26 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const size = files.reduce((n, f) => n + f.size, 0);
     $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
   });
+  $('xzw-brief-file').addEventListener('change', async () => {
+    const file = $('xzw-brief-file').files?.[0];
+    if (!file) return;
+    $('xzw-brief-status').textContent = '正在读取文档…';
+    try {
+      const text = await extractMerchantDocumentText(file);
+      $('xzw-brief').value = text;
+      $('xzw-brief-status').textContent = '已读取：' + file.name + ' · ' + text.length + ' 个字符。请核对文字后再生成视频。';
+      setStatus('商家需求文档已读取。生成时会把这些要求与门店资料、图片和视频一起编排。');
+    } catch (error) {
+      $('xzw-brief-status').textContent = error?.message || '文档读取失败';
+      setStatus('文档读取失败：' + (error?.message || '未知错误'));
+    }
+  });
 
   function makeScript(profile) {
     const shop = profile.shop.trim() || '这家门店';
     const product = profile.product.trim() || '特色产品与服务';
     const offer = profile.offer.trim();
-    const detail = profile.copy.trim();
+    const detail = [profile.copy, profile.brief].filter(Boolean).join('\n').trim();
     const address = profile.address.trim();
     const industry = profile.industry;
     const style = profile.style;
@@ -262,7 +280,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (style === '活泼种草') hook = '发现一家值得加入收藏夹的店！今天来看看' + shop + '。';
     if (style === '促销转化' && offer) hook = '到店福利看这里：' + offer + '。';
 
-    const detailLine = detail ? detail.slice(0, 90) : template.detail;
+    const detailLine = detail ? '商家要求与特色：' + detail.slice(0, 180) : template.detail;
     const closing = offer
       ? '当前活动：' + offer + '。具体规则和有效期请以商家现场说明为准。'
       : '想了解更多产品或服务，可以先联系门店咨询。';
