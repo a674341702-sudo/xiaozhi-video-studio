@@ -218,7 +218,6 @@ export class MediaManager {
     }
 
     showToast(`已添加视频： ${file.name}`, 'success');
-    this.videoInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
   }
@@ -275,7 +274,6 @@ export class MediaManager {
 
     if (this.onMediaUrlRegistered) this.onMediaUrlRegistered(clip.id, objectUrl);
     showToast(`已添加图片： ${file.name}`, 'success');
-    this.imageInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
   }
@@ -324,30 +322,35 @@ export class MediaManager {
 
     if (this.onMediaUrlRegistered) this.onMediaUrlRegistered(clip.id, objectUrl);
     showToast(`已添加音频： ${file.name}`, 'success');
-    this.audioInput.value = '';
     if (this.onCompositionChanged) this.onCompositionChanged();
     return clip;
   }
 
   async _onVideoSelected(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    // Snapshot the FileList before clearing the picker. Some mobile browsers
+    // expose a live FileList whose contents change when input.value is reset.
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
     for (const file of files) {
       await this._importVideo(file, { startTime: 0 });
     }
   }
 
   async _onImageSelected(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    // Snapshot the FileList before clearing the picker. Some mobile browsers
+    // expose a live FileList whose contents change when input.value is reset.
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
     for (const file of files) {
       await this._importImage(file, { startTime: 0 });
     }
   }
 
   async _onAudioSelected(e) {
-    const files = e.target.files;
-    if (!files || files.length === 0) return;
+    // Snapshot the FileList before clearing the picker. Some mobile browsers
+    // expose a live FileList whose contents change when input.value is reset.
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
     for (const file of files) {
       await this._importAudio(file, { startTime: 0 });
     }
