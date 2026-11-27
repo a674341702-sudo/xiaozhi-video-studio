@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles } from '../src/merchant-workflow-rules.js';
 
 assert.deepEqual(
   splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10),
@@ -22,3 +22,11 @@ assert.equal(
 );
 assert.equal(mergeCaptionRequirements('', ['门店地址']), '门店地址');
 console.log('字幕要求去重测试通过');
+
+const fakeFile = (name, type, size = 1024) => ({ name, type, size });
+assert.equal(validateMerchantMediaFiles([fakeFile('店面.jpg', 'image/jpeg')]).valid, true);
+assert.equal(validateMerchantMediaFiles([fakeFile('视频.mp4', 'video/mp4')]).valid, true);
+assert.equal(validateMerchantMediaFiles([fakeFile('大视频.mp4', 'video/mp4', 41 * 1024 * 1024)]).valid, false);
+assert.equal(validateMerchantMediaFiles([fakeFile('未知.heic', 'image/heic')]).valid, false);
+assert.equal(validateMerchantMediaFiles(Array.from({ length: 9 }, (_, i) => fakeFile(i + '.jpg', 'image/jpeg'))).valid, false);
+console.log('手机素材上传限制测试通过');
