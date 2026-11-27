@@ -6,6 +6,22 @@ const MODEL_ID = 'onnx-community/Kokoro-82M-v1.1-zh-ONNX';
 const VOICE_PATH = 'https://huggingface.co/onnx-community/Kokoro-82M-v1.1-zh-ONNX/resolve/main/voices';
 
 function status(message) { $('status').textContent = message; }
+
+// Receive the narration passed from the main workflow through the URL fragment.
+// Fragments are not sent to the hosting server; clear it after reading to avoid
+// leaving merchant copy in the visible address bar or browser history.
+try {
+  const params = new URLSearchParams(window.location.hash.slice(1));
+  const incomingText = params.get('text');
+  if (incomingText) {
+    $('script').value = incomingText.slice(0, 500);
+    history.replaceState(null, '', window.location.pathname + window.location.search);
+    status('已从商家工作台带入配音稿。请选择声音和语速，然后点击生成普通话配音。');
+  }
+} catch (error) {
+  console.warn('[中文配音实验室] 无法读取传入的配音稿：', error);
+}
+
 function explainTTSError(error) {
   const message = String(error?.message || error || '');
   if (/failed to fetch|networkerror|load failed|fetch failed|网络|超时/i.test(message)) {
