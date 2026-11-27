@@ -37,10 +37,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-primary:disabled{opacity:.55}
     .xzw-status{margin-top:13px;padding:12px;border-radius:10px;background:#10101d;color:#c4b5fd;white-space:pre-wrap}
     .xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}\n    .xzw-template-guide{margin-top:10px;padding:11px;border:1px solid #41415e;border-radius:11px;background:#141426}.xzw-template-guide>strong{color:#ddd;font-size:13px}.xzw-template-guide small{color:#a5a5bf}
-    .xzw-media-map{display:grid;gap:8px;margin-top:10px}.xzw-media-row{display:grid;grid-template-columns:minmax(0,1fr) minmax(130px,1fr);gap:8px;align-items:center;padding:9px;border:1px solid #41415e;border-radius:9px;background:#121222}.xzw-media-row span{font-size:12px;overflow-wrap:anywhere}.xzw-media-row select{width:100%;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:8px}.xzw-preview{margin-top:12px;padding:12px;border:1px solid #5b4a86;border-radius:11px;background:#17152a}.xzw-preview h4{margin:0 0 8px;font-size:14px}.xzw-preview ul{padding-left:20px;margin:7px 0}.xzw-preview li{margin:5px 0;font-size:12px;color:#d5d5e8}.xzw-preview .xzw-check{font-size:13px}
+    .xzw-media-map{display:grid;gap:10px;margin-top:10px}.xzw-media-row{display:grid;grid-template-columns:92px minmax(0,1fr);gap:10px;align-items:center;padding:10px;border:1px solid #41415e;border-radius:12px;background:#121222;min-width:0}.xzw-media-thumb{width:92px;height:76px;object-fit:cover;border-radius:8px;background:#080812;display:block}.xzw-media-info{min-width:0;display:grid;gap:7px}.xzw-media-name{font-size:12px;overflow-wrap:anywhere;color:#e5e5f5}.xzw-media-row select{width:100%;min-width:0;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:9px;min-height:40px}.xzw-media-order{display:flex;gap:7px}.xzw-media-order button{flex:1;min-height:38px;border:1px solid #4b4b68;border-radius:8px;background:#292941;color:#fff;font-size:13px}.xzw-media-order button:disabled{opacity:.35}.xzw-preview{margin-top:12px;padding:12px;border:1px solid #5b4a86;border-radius:11px;background:#17152a}.xzw-preview h4{margin:0 0 8px;font-size:14px}.xzw-preview ul{padding-left:20px;margin:7px 0}.xzw-preview li{margin:5px 0;font-size:12px;color:#d5d5e8}.xzw-preview .xzw-check{font-size:13px}
     .xzw-requirements{display:grid;gap:9px;margin-top:10px}.xzw-requirement{border:1px solid #41415e;border-radius:10px;padding:10px;background:#121222}.xzw-requirement textarea{width:100%;box-sizing:border-box;min-height:54px;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:9px;font:inherit}.xzw-requirement select{width:100%;margin-top:7px;background:#0c0c18;color:#fff;border:1px solid #454563;border-radius:8px;padding:8px;font:inherit}.xzw-requirement label{font-size:12px;color:#c4b5fd}
     .xzw-badge{display:inline-block;padding:3px 7px;border-radius:6px;background:#30264d;color:#c4b5fd;font-size:11px}
-    @media(max-width:560px){#xiaozhi-workflow{padding:0;align-items:stretch}.xzw-card{height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.xzw-head{top:-14px}.xzw-head h2{font-size:18px}.xzw-grid{grid-template-columns:1fr}.xzw-steps{grid-template-columns:repeat(4,1fr)}}
+    @media(max-width:560px){#xiaozhi-workflow{padding:0;align-items:stretch}.xzw-card{height:100dvh;max-height:100dvh;border-radius:0;padding:16px 14px calc(24px + env(safe-area-inset-bottom))}.xzw-head{top:-16px;padding-top:calc(8px + env(safe-area-inset-top))}.xzw-head h2{font-size:18px}.xzw-close,.xzw-secondary,.xzw-primary{min-height:46px;font-size:15px}.xzw-grid{grid-template-columns:1fr}.xzw-steps{grid-template-columns:repeat(4,1fr);gap:5px}.xzw-step{font-size:11px;padding:9px 2px}.xzw-field span{font-size:14px}.xzw-field textarea,.xzw-field select,.xzw-field input{font-size:16px;min-height:46px}.xzw-note{font-size:13px;line-height:1.6}.xzw-section{padding:13px 11px}.xzw-media-row{grid-template-columns:88px minmax(0,1fr);gap:9px;padding:9px}.xzw-media-thumb{width:88px;height:74px}.xzw-media-order button{min-height:42px}}
   `;
   document.head.appendChild(style);
 
@@ -134,11 +134,18 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   const $ = (id) => modal.querySelector('#' + id);
   const setStatus = (message) => { $('xzw-status').textContent = message; };
   let productionPreviewReady = false;
+  let orderedMediaFiles = [];
+  const mediaRoleByFile = new Map();
+  const mediaPreviewUrls = new Map();
+  const clearMediaPreviewUrls = () => {
+    mediaPreviewUrls.forEach(url => URL.revokeObjectURL(url));
+    mediaPreviewUrls.clear();
+  };
   const invalidateProductionPreview = () => {
     productionPreviewReady = false;
     $('xzw-production-preview').innerHTML = '';
   };
-  const roleOptions = () => getMerchantShotPlan($('xzw-industry').value, Math.max(1, $('xzw-files').files?.length || 6));
+  const roleOptions = () => getMerchantShotPlan($('xzw-industry').value, Math.max(1, orderedMediaFiles.length || 6));
   const suggestShotForFile = (file, index, plans) => {
     const name = file.name.toLowerCase();
     const terms = [
@@ -157,14 +164,34 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     return Math.min(index, plans.length - 1);
   };
   const renderMediaMapping = () => {
-    const files = Array.from($('xzw-files').files || []);
+    const files = orderedMediaFiles;
     const plans = roleOptions();
     const container = $('xzw-media-map');
     container.innerHTML = '';
+    clearMediaPreviewUrls();
     files.forEach((file, index) => {
       const row = document.createElement('div');
       row.className = 'xzw-media-row';
+      const previewUrl = URL.createObjectURL(file);
+      mediaPreviewUrls.set(file, previewUrl);
+      let thumb;
+      if (file.type.startsWith('image/')) {
+        thumb = document.createElement('img');
+        thumb.alt = file.name;
+        thumb.src = previewUrl;
+      } else {
+        thumb = document.createElement('video');
+        thumb.muted = true;
+        thumb.playsInline = true;
+        thumb.preload = 'metadata';
+        thumb.src = previewUrl;
+        thumb.setAttribute('aria-label', file.name + ' 视频预览');
+      }
+      thumb.className = 'xzw-media-thumb';
+      const info = document.createElement('div');
+      info.className = 'xzw-media-info';
       const name = document.createElement('span');
+      name.className = 'xzw-media-name';
       name.textContent = (file.type.startsWith('video/') ? '🎬 ' : '🖼️ ') + file.name;
       const select = document.createElement('select');
       select.className = 'xzw-media-role';
@@ -175,9 +202,22 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         option.textContent = '镜头 ' + (planIndex + 1) + ' · ' + plan.role;
         select.appendChild(option);
       });
-      select.value = String(suggestShotForFile(file, index, plans));
-      select.addEventListener('change', invalidateProductionPreview);
-      row.append(name, select);
+      select.value = String(mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : suggestShotForFile(file, index, plans));
+      select.addEventListener('change', () => {
+        mediaRoleByFile.set(file, Number(select.value));
+        invalidateProductionPreview();
+      });
+      const order = document.createElement('div');
+      order.className = 'xzw-media-order';
+      const up = document.createElement('button');
+      up.type = 'button'; up.textContent = '上移'; up.disabled = index === 0;
+      up.addEventListener('click', () => moveMedia(index, -1));
+      const down = document.createElement('button');
+      down.type = 'button'; down.textContent = '下移'; down.disabled = index === files.length - 1;
+      down.addEventListener('click', () => moveMedia(index, 1));
+      order.append(up, down);
+      info.append(name, select, order);
+      row.append(thumb, info);
       container.appendChild(row);
     });
     const requirementPlans = plans;
@@ -192,6 +232,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       });
       select.value = String(Math.min(previous, requirementPlans.length - 1));
     });
+    invalidateProductionPreview();
+  };
+  const moveMedia = (index, delta) => {
+    const next = index + delta;
+    if (next < 0 || next >= orderedMediaFiles.length) return;
+    [orderedMediaFiles[index], orderedMediaFiles[next]] = [orderedMediaFiles[next], orderedMediaFiles[index]];
+    renderMediaMapping();
     invalidateProductionPreview();
   };
   const getMediaAssignments = () => Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role')).map((select, index) => ({
@@ -289,7 +336,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   modal.querySelector('.xzw-close').addEventListener('click', () => modal.classList.remove('open'));
   modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); });
   $('xzw-files').addEventListener('change', () => {
-    const files = Array.from($('xzw-files').files || []);
+    orderedMediaFiles = Array.from($('xzw-files').files || []);
+    mediaRoleByFile.clear();
+    const files = orderedMediaFiles;
     const size = files.reduce((n, f) => n + f.size, 0);
     $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
     renderMediaMapping();
@@ -434,7 +483,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   }
 
   $('xzw-build-preview').addEventListener('click', () => {
-    const files = Array.from($('xzw-files').files || []);
+    const files = orderedMediaFiles;
     const requirements = Array.from($('xzw-requirements').querySelectorAll('.xzw-requirement'));
     const issues = [];
     if (!files.length) issues.push('还没有选择照片或视频素材');
