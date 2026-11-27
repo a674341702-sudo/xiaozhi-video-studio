@@ -638,10 +638,13 @@ async function handleExport() {
     progressCancelBtn.textContent = '取消导出';
     progressCancelBtn.disabled = false;
     progressCancelBtn.onclick = () => {
-      if (exportAbortController) exportAbortController.abort();
-      exportAbortController = null;
-      hideProgress();
-      showToast('已取消导出', 'info');
+      if (!exportAbortController || exportAbortController.signal.aborted) return;
+      // Keep the progress dialog visible until the exporter has actually
+      // stopped and released its resources; do not report cancellation early.
+      progressCancelBtn.disabled = true;
+      progressCancelBtn.textContent = '正在停止…';
+      if (progressSubtitle) progressSubtitle.textContent = '正在停止渲染并释放手机内存，请稍候。';
+      exportAbortController.abort();
     };
   }
 
@@ -690,8 +693,12 @@ async function handleExport() {
   } finally {
     exportAbortController = null;
     isExporting = false;
+    hideProgress();
     if (btnExport) btnExport.disabled = false;
-    if (progressCancelBtn) progressCancelBtn.disabled = true;
+    if (progressCancelBtn) {
+      progressCancelBtn.disabled = true;
+      progressCancelBtn.textContent = '取消导出';
+    }
   }
 }
 
