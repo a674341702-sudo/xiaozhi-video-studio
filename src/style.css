@@ -1252,3 +1252,8 @@ button, input, select {
   .project-library-actions { flex-direction:column; }
   .project-library-toolbar { align-items:flex-start; }
 }
+
+
+/* Clear touch editing hint on narrow screens. */
+.preview-touch-hint{display:none;margin:6px 10px;color:#b8b8cf;font-size:12px;text-align:center}
+@media(max-width:700px){.preview-touch-hint{display:block}}
