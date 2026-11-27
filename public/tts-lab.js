@@ -86,8 +86,18 @@ $('generate').addEventListener('click', async () => {
   if (text.length > 500) { status('手机测试版建议控制在500字以内，较长文案请分段生成。'); return; }
   const button = $('generate');
   button.disabled = true;
+  // Release the previous preview before starting another synthesis so a long
+  // generated WAV does not remain in memory while the next model run executes.
+  $('player').pause();
+  $('player').removeAttribute('src');
+  $('player').load();
   $('player').hidden = true;
+  $('download').removeAttribute('href');
   $('download').hidden = true;
+  if (audioUrl) {
+    URL.revokeObjectURL(audioUrl);
+    audioUrl = null;
+  }
   try {
     const engine = await loadModel();
     status('中文模型已就绪，正在分段合成语音……');
@@ -134,4 +144,12 @@ $('generate').addEventListener('click', async () => {
     console.error('[中文配音实验室]', error);
     status('生成失败：' + explainTTSError(error));
   } finally { button.disabled = false; }
+});
+
+
+window.addEventListener('pagehide', () => {
+  if (audioUrl) {
+    URL.revokeObjectURL(audioUrl);
+    audioUrl = null;
+  }
 });
