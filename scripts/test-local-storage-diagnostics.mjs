@@ -6,7 +6,7 @@ const quota = await getLocalStorageFailureMessage(
   { usage: 95 * 1024 * 1024, quota: 100 * 1024 * 1024 }
 );
 assert.match(quota, /存储空间可能不足/);
-assert.match(quota, /剩余空间约 5 MB/);
+assert.match(quota, /剩余空间约 5(?:\.0)? MB/);
 assert.match(quota, /完整项目包/);
 
 const lowSpace = await getLocalStorageFailureMessage(
