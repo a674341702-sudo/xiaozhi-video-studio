@@ -194,20 +194,64 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   });
 
   function makeScript(profile) {
-    const shop = profile.shop.trim() || '这家宝藏门店';
-    const product = profile.product.trim() || profile.industry;
+    const shop = profile.shop.trim() || '这家门店';
+    const product = profile.product.trim() || '特色产品与服务';
     const offer = profile.offer.trim();
     const detail = profile.copy.trim();
     const address = profile.address.trim();
+    const industry = profile.industry;
     const style = profile.style;
-    const hook = profile.industry === '餐饮探店' ? '想找一家值得打卡的好店？先看看这家。'
-      : profile.industry === '酒店民宿' ? '来这里住一晚，给自己一个放松的理由。'
-      : profile.industry === '服装穿搭' ? '想找到适合自己的风格？来看看这家。'
-      : profile.industry === '美容美发' ? '想让自己状态焕然一新？这家可以了解一下。'
-      : '好东西不只看外表，更要看细节和体验。';
-    const lines = [hook, shop + '，主打' + product + '。', detail ? detail.slice(0, 70) : '从产品细节到实际体验，每一处都值得你亲自感受。', offer || '喜欢的话，不妨到店了解更多。', address ? '地址：' + address : '记得收藏，方便下次到店。'];
-    if (style === '促销转化' && offer) lines[0] = '这次到店福利别错过：' + offer + '。';
-    if (style === '活泼种草') lines[0] = '挖到一家值得分享的好店！' + shop + '走起。';
+
+    const industryCopy = {
+      '餐饮探店': {
+        hook: '今天带你看看一家值得收藏的餐饮小店。',
+        intro: '来到' + shop + '，这里主打' + product + '。',
+        detail: '镜头带你看看菜品细节、用餐环境和实际体验。'
+      },
+      '商品宣传': {
+        hook: '一件产品值不值得了解，先看看细节。',
+        intro: shop + '带来' + product + '。',
+        detail: '从外观、细节到使用场景，带你近距离了解这款产品。'
+      },
+      '服装穿搭': {
+        hook: '今天看看怎样找到适合自己的穿搭灵感。',
+        intro: shop + '主打' + product + '。',
+        detail: '通过上身展示、面料细节和搭配方式，看看不同风格的呈现。'
+      },
+      '美容美发': {
+        hook: '想换个造型或护理方式？先了解一下门店服务。',
+        intro: shop + '提供' + product + '相关服务。',
+        detail: '带你看看服务环境、项目细节和造型展示，具体方案可到店沟通。'
+      },
+      '酒店民宿': {
+        hook: '计划出行住宿？先跟着镜头看看这处空间。',
+        intro: shop + '，主打' + product + '。',
+        detail: '从房间布局、设施细节到周边环境，提前了解入住空间。'
+      },
+      '休闲娱乐': {
+        hook: '周末想找点新体验？来看看这里有什么。',
+        intro: shop + '提供' + product + '。',
+        detail: '跟着镜头看看现场环境、体验项目和适合的游玩方式。'
+      },
+      '其他门店': {
+        hook: '今天带你认识一家有自己特色的门店。',
+        intro: shop + '，主要提供' + product + '。',
+        detail: '通过现场画面，了解产品、服务和门店特色。'
+      }
+    };
+    const template = industryCopy[industry] || industryCopy['其他门店'];
+    let hook = template.hook;
+    if (style === '高级质感') hook = '把镜头放慢，一起看看' + shop + '的细节与质感。';
+    if (style === '真实探店') hook = '今天实地来到' + shop + '，带你看看现场。';
+    if (style === '活泼种草') hook = '发现一家值得加入收藏夹的店！今天来看看' + shop + '。';
+    if (style === '促销转化' && offer) hook = '到店福利看这里：' + offer + '。';
+
+    const detailLine = detail ? detail.slice(0, 90) : template.detail;
+    const closing = offer
+      ? '当前活动：' + offer + '。具体规则和有效期请以商家现场说明为准。'
+      : '想了解更多产品或服务，可以先联系门店咨询。';
+    const lines = [hook, template.intro, detailLine, closing,
+      address ? '门店地址：' + address + '。' : '喜欢这类内容，记得先收藏，方便需要时查找。'];
     return lines.filter(Boolean);
   }
 
