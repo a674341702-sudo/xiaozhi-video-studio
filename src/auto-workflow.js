@@ -288,7 +288,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   });
   $('xzw-extract-requirements').addEventListener('click', () => {
     const source = $('xzw-brief').value.trim();
-    const lines = source.split(/\\r?\\n|[。；;]+/).map(line => line.replace(/^\\s*(?:[-*•]|\\d+[.、）)])\\s*/, '').trim()).filter(line => line.length >= 3);
+    const lines = source.split(/\r?\n|[。；;]+/).map(line => line.replace(/^\s*(?:[-*•]|\d+[.、）)])\s*/, '').trim()).filter(line => line.length >= 3);
     const unique = [...new Set(lines)].slice(0, 16);
     const container = $('xzw-requirements');
     container.innerHTML = '';
