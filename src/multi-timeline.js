@@ -155,7 +155,7 @@ export class MultiTimeline {
         <span class="mt-sidebar-name">${escapeHtml(track.name)}</span>
         <div class="mt-sidebar-actions">
           <button class="mt-track-btn ${!track.visible ? 'active-off' : ''}" data-action="toggle-visible" data-track="${escapeHtml(String(track.id ?? ''))}" title="切换显示">👁️</button>
-          <button class="mt-track-btn ${track.muted ? 'active-off' : ''}" data-action="toggle-mute" data-track="${track.id}" title="切换静音">🔇</button>
+          <button class="mt-track-btn ${track.muted ? 'active-off' : ''}" data-action="toggle-mute" data-track="${escapeHtml(String(track.id ?? ''))}" title="切换静音">🔇</button>
         </div>
       `;
 
