@@ -310,21 +310,38 @@ export class CanvasPreview {
                   align === 'right' ? clip.x + clip.width - bgWidth : clip.x + clip.width / 2 - bgWidth / 2;
       const bgY = Math.max(clip.y, clip.y + clip.height / 2 - totalHeight / 2 - verticalPadding);
       const bgHeight = Math.min(clip.height, totalHeight + verticalPadding * 2);
+      ctx.save();
       ctx.fillStyle = clip.bgColor;
-      ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
+      ctx.shadowColor = 'rgba(0,0,0,0.28)';
+      ctx.shadowBlur = Math.max(4, Math.round(fontSize * 0.16));
+      ctx.shadowOffsetY = Math.max(1, Math.round(fontSize * 0.05));
+      const radius = Math.min(Math.round(fontSize * 0.34), bgHeight / 2, bgWidth / 2);
+      if (typeof ctx.roundRect === 'function') {
+        ctx.beginPath();
+        ctx.roundRect(bgX, bgY, bgWidth, bgHeight, radius);
+        ctx.fill();
+      } else {
+        ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
+      }
+      ctx.restore();
     }
 
     const textX = align === 'left' ? clip.x + horizontalPadding :
                   align === 'right' ? clip.x + clip.width - horizontalPadding :
                   clip.x + clip.width / 2;
+    ctx.save();
     ctx.fillStyle = clip.color || '#ffffff';
-    ctx.strokeStyle = clip.strokeColor || 'rgba(0,0,0,0.88)';
-    ctx.lineWidth = Math.max(2, fontSize * 0.075);
+    ctx.strokeStyle = clip.strokeColor || 'rgba(0,0,0,0.92)';
+    ctx.lineWidth = Math.max(2.5, fontSize * 0.085);
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(0,0,0,0.55)';
+    ctx.shadowBlur = Math.max(2, Math.round(fontSize * 0.08));
     for (let i = 0; i < lines.length; i++) {
       const y = startY + i * lineHeight;
       if (typeof ctx.strokeText === 'function') ctx.strokeText(lines[i], textX, y, maxTextWidth);
       ctx.fillText(lines[i], textX, y, maxTextWidth);
     }
+    ctx.restore();
   }
 
   _renderSelectionOverlay(ctx, clip) {
