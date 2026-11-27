@@ -11,6 +11,7 @@ import { getPhotoMotionKeyframes } from './photo-motion.js';
 import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
+import { getVoiceCoverageNote } from './voice-coverage.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
@@ -789,7 +790,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const durationNote = cursor < targetSeconds - 0.5
         ? '\\n说明：当前素材实际可用时长约 ' + cursor.toFixed(1) + ' 秒，短于目标 ' + targetSeconds + ' 秒。视频素材保持原速，不会为了凑时长而强行慢放或重复画面。'
         : '';
-      setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (missingAudio.length ? '\\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
+      const voiceDurationNote = voiceFile ? getVoiceCoverageNote(voiceFile.duration, cursor) : '';
+      setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (voiceDurationNote ? '\\n配音检查：' + voiceDurationNote : '') + (missingAudio.length ? '\\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
 
       const restrictions = requirementCards.map(card => card.querySelector('.xzw-requirement-text')?.value.trim() || '').filter(isRestrictionRequirement);
       $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">镜头清单 · 已落实商家要求</h3>' +
