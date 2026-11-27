@@ -93,9 +93,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <h3>04 · 配乐与配音</h3>
         <label class="xzw-field"><span>背景音乐（上传已获授权的音乐文件）</span><input id="xzw-music" type="file" accept="audio/*"></label>
         <label class="xzw-field"><span>配音文件（手机录音或中文AI配音文件）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
-        <p class="xzw-note"><a href="./tts-lab.html" target="_blank" rel="noopener">✦ 打开中文配音实验室（普通话）</a>：生成并试听后，下载 WAV，再回到这里上传。</p>
+        <p class="xzw-note"><a href="./tts-lab.html" target="_blank" rel="noopener">✦ 打开中文配音实验室（普通话）</a>：生成后会尝试自动传回当前工作台；若未成功，再下载 WAV 手动上传。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
-        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室目前独立运行，生成后下载 WAV 再上传；尚未完成与主工作台的一键直连。</p>
+        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室支持同源自动回传；如果主工作台未打开、浏览器不支持或导入失败，可下载 WAV 后手动上传。</p>
       </div>
 
       <label class="xzw-field"><span>手机导出方案</span><select id="xzw-export-preset"><option value="mobile">手机稳定优先 · 720p / 24fps / 中等画质</option><option value="clear">画面清晰优先 · 720p / 30fps / 高画质</option></select></label>
@@ -125,9 +125,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       }
       const file = new File([data.blob], '小智普通话配音.wav', { type: 'audio/wav' });
       pendingVoiceFile = file;
-      // ACK lets the TTS page know that the main workspace received the audio.
-      ttsChannel.postMessage({ type: 'xiaozhi-tts-audio-ack' });
       if (!composition.clips.length) {
+        // The file is safely buffered for the next auto-arrange operation.
+        ttsChannel.postMessage({ type: 'xiaozhi-tts-audio-ack' });
         setStatus('普通话配音已自动传回工作台并暂存。接下来点击“自动编排商家视频”，配音会自动加入时间线。');
         return;
       }
@@ -139,6 +139,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         voice.trimEnd = (voice.trimStart || 0) + voice.duration;
         pendingVoiceFile = null;
         onCompositionChanged();
+        // ACK only after the audio is imported, so the TTS page does not
+        // mistake a failed import for a successful delivery.
+        ttsChannel.postMessage({ type: 'xiaozhi-tts-audio-ack' });
         setStatus('普通话配音已自动传回，并加入时间线的配音轨。可以试听或继续导出。');
       } catch (error) {
         pendingVoiceFile = file;
@@ -180,7 +183,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     ttsUrl.hash = new URLSearchParams({ text: script }).toString();
     const opened = window.open(ttsUrl.toString(), '_blank');
     if (!opened) setStatus('浏览器拦截了新页面，请允许此站点打开新标签页后重试。');
-    else setStatus('配音稿已带入中文配音实验室。生成并下载 WAV 后，回到这里上传配音文件。');
+    else setStatus('配音稿已带入中文配音实验室。主工作台保持打开时会尝试自动回传；若未成功，可下载 WAV 后手动上传。');
   });
   $('xzw-copy-script').addEventListener('click', async () => {
     const script = $('xzw-narration').value.trim();
