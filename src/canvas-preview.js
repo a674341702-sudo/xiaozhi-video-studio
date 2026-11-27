@@ -6,6 +6,7 @@
 import { clamp } from './utils.js';
 import { applyClipTransformsAtTime } from './keyframes.js';
 import { wrapTextLines } from './text-layout.js';
+import { getMediaDrawGeometry } from './media-fit.js';
 
 export class CanvasPreview {
   constructor({ canvas, composition, onSelectClip, onChangeClipTransform, onContextMenu }) {
@@ -140,28 +141,40 @@ export class CanvasPreview {
   }
 
   _drawMediaClip(ctx, element, clip) {
+    const sourceWidth = element.videoWidth || element.naturalWidth || element.width;
+    const sourceHeight = element.videoHeight || element.naturalHeight || element.height;
+    if (!sourceWidth || !sourceHeight) return;
+
+    if (clip.fit === 'contain') {
+      // Fill the empty bands with a softened version of the same frame, then
+      // place the complete, undistorted source image/video in front.
+      const cover = getMediaDrawGeometry(sourceWidth, sourceHeight, clip.x, clip.y, clip.width, clip.height, 'cover');
+      const contain = getMediaDrawGeometry(sourceWidth, sourceHeight, clip.x, clip.y, clip.width, clip.height, 'contain');
+      ctx.save();
+      ctx.beginPath();
+      ctx.rect(clip.x, clip.y, clip.width, clip.height);
+      ctx.clip();
+      ctx.fillStyle = '#101018';
+      ctx.fillRect(clip.x, clip.y, clip.width, clip.height);
+      const previousFilter = ctx.filter;
+      const previousAlpha = ctx.globalAlpha;
+      if ('filter' in ctx) ctx.filter = 'blur(28px)';
+      ctx.globalAlpha = previousAlpha * 0.42;
+      ctx.drawImage(element, cover.sx, cover.sy, cover.sw, cover.sh, cover.dx, cover.dy, cover.dw, cover.dh);
+      if ('filter' in ctx) ctx.filter = previousFilter || 'none';
+      ctx.globalAlpha = previousAlpha;
+      ctx.drawImage(element, contain.sx, contain.sy, contain.sw, contain.sh, contain.dx, contain.dy, contain.dw, contain.dh);
+      ctx.restore();
+      return;
+    }
+
     if (clip.fit !== 'cover') {
       ctx.drawImage(element, clip.x, clip.y, clip.width, clip.height);
       return;
     }
 
-    const sourceWidth = element.videoWidth || element.naturalWidth || element.width;
-    const sourceHeight = element.videoHeight || element.naturalHeight || element.height;
-    if (!sourceWidth || !sourceHeight) return;
-
-    const sourceRatio = sourceWidth / sourceHeight;
-    const targetRatio = clip.width / clip.height;
-    let sx = 0, sy = 0, sw = sourceWidth, sh = sourceHeight;
-
-    if (sourceRatio > targetRatio) {
-      sw = sourceHeight * targetRatio;
-      sx = (sourceWidth - sw) / 2;
-    } else {
-      sh = sourceWidth / targetRatio;
-      sy = (sourceHeight - sh) / 2;
-    }
-
-    ctx.drawImage(element, sx, sy, sw, sh, clip.x, clip.y, clip.width, clip.height);
+    const geometry = getMediaDrawGeometry(sourceWidth, sourceHeight, clip.x, clip.y, clip.width, clip.height, 'cover');
+    ctx.drawImage(element, geometry.sx, geometry.sy, geometry.sw, geometry.sh, geometry.dx, geometry.dy, geometry.dw, geometry.dh);
   }
 
   _renderVideoClipAtTime(ctx, clip, time) {
