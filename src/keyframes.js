@@ -70,3 +70,41 @@ export function applyClipTransformsAtTime(clip, time, out = {}) {
   out.volume = getAnimatedValue(clip, 'volume', time, clip.volume ?? 1);
   return out;
 }
+
+/**
+ * Resolve an audio/video clip's source time and volume for live preview.
+ * Timeline time is absolute; keyframe times use the same timeline coordinate.
+ */
+export function getClipPlaybackState(clip, timelineTime, mediaDuration = Infinity) {
+  const start = Math.max(0, Number(clip?.startTime) || 0);
+  const duration = Math.max(0, Number(clip?.duration) || 0);
+  const trimStart = Math.max(0, Number(clip?.trimStart) || 0);
+  const declaredTrimEnd = Number(clip?.trimEnd);
+  const fallbackEnd = trimStart + duration;
+  const trimEnd = Number.isFinite(declaredTrimEnd) && declaredTrimEnd > trimStart
+    ? declaredTrimEnd
+    : fallbackEnd;
+  const sourceEnd = Number.isFinite(mediaDuration) && mediaDuration > 0
+    ? Math.min(trimEnd, mediaDuration)
+    : trimEnd;
+  const sourceLength = Math.max(0, sourceEnd - trimStart);
+  const localTime = Math.max(0, timelineTime - start);
+  const active = timelineTime >= start && timelineTime < start + duration;
+  const loop = clip?.loop === true && sourceLength > 0;
+  const sourceTime = loop
+    ? trimStart + (localTime % sourceLength)
+    : Math.min(sourceEnd, trimStart + localTime);
+  const sourceEnded = !loop && localTime >= sourceLength;
+  const animatedVolume = evaluateKeyframes(clip?.keyframes, 'volume', timelineTime);
+  const rawVolume = animatedVolume === null ? (clip?.volume ?? 1) : animatedVolume;
+  const volume = Math.max(0, Math.min(1, Number(rawVolume) || 0));
+
+  return {
+    active,
+    loop,
+    sourceTime,
+    sourceEnded,
+    volume,
+    timelineEnd: start + duration
+  };
+}
