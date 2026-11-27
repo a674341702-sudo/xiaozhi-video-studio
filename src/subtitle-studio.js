@@ -182,6 +182,10 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       setStatus('请先选择一段视频或音频文件。');
       return;
     }
+    if (file.size > 80 * 1024 * 1024) {
+      setStatus('这份素材超过 80MB，手机识别容易占满内存。请先裁剪成较短片段，或使用压缩后的音频文件再识别。');
+      return;
+    }
     if (state.busy) return;
     state.busy = true;
     state.segments = [];
@@ -205,7 +209,13 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       for await (const segment of stream) {
         const text = String(segment.text || '').trim();
         if (text) {
-          state.segments.push({ start: Number(segment.start) || 0, end: Number(segment.end) || (Number(segment.start) + 2), text });
+          if (state.segments.length >= 500) {
+            throw new Error('识别结果超过 500 条，已停止继续处理。请将素材分成更短的片段后分别识别。');
+          }
+          const start = Math.max(0, Number(segment.start) || 0);
+          const rawEnd = Number(segment.end);
+          const end = Number.isFinite(rawEnd) && rawEnd > start ? rawEnd : start + 2;
+          state.segments.push({ start, end, text });
           render();
         }
       }
@@ -253,15 +263,21 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       return;
     }
     let imported = 0;
+    const projectDuration = Math.max(0, Number(composition.duration) || 0);
     for (const segment of state.segments) {
-      const start = Math.max(0, Number(segment.start) || 0);
-      const end = Math.max(start + 0.35, Number(segment.end) || start + 2);
+      const text = String(segment.text || '').trim();
+      if (!text || projectDuration < 0.35) continue;
+      const rawStart = Math.max(0, Number(segment.start) || 0);
+      const start = Math.min(rawStart, Math.max(0, projectDuration - 0.35));
+      const rawEnd = Math.max(start + 0.35, Number(segment.end) || start + 2);
+      const end = Math.min(projectDuration, rawEnd);
       const duration = Math.min(12, end - start);
+      if (duration < 0.2) continue;
       const clip = composition.addClip({
         trackId: track.id,
         type: 'text',
-        name: segment.text.slice(0, 18),
-        text: segment.text,
+        name: text.slice(0, 18),
+        text,
         startTime: start,
         duration,
         x: Math.round(composition.width * 0.08),
@@ -280,6 +296,6 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       imported += 1;
     }
     onCompositionChanged();
-    setStatus(`已把 ${imported} 条字幕导入文字轨道。请在预览画面中检查位置、字号和时间。`, 1);
+    setStatus(imported ? `已把 ${imported} 条字幕导入文字轨道。请在预览画面中检查位置、字号和时间。` : '没有可导入的字幕时间段，请检查识别结果是否落在当前视频时长内。', imported ? 1 : 0);
   });
 }
