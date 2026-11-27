@@ -413,6 +413,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const music = await mediaManager.importFile(musicFile, { startTime: 0, trackIndex: 4 });
         if (!music) throw new Error('背景音乐导入失败：' + musicFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
         music.volume = 0.22;
+        music.loop = true;
         music.duration = Math.min(cursor, music.duration);
         music.trimEnd = (music.trimStart || 0) + music.duration;
         const musicFade = Math.min(1.2, music.duration / 3);
