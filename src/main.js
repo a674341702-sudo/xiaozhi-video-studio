@@ -669,8 +669,8 @@ async function handleExport() {
       return;
     }
 
-    const safeProjectName = String(activeProjectName || '商家视频').trim().replace(/[\\\\/:*?\"<>|\\x00-\\x1f]/g, '_').replace(/\\s+/g, '_').slice(0, 48) || '商家视频';
-    const timestamp = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[\\s/:]/g, '-');
+    const safeProjectName = String(activeProjectName || '商家视频').trim().replace(/[\/:*?"<>|\\]/g, '_').replace(/[\u0000-\u001f]/g, '_').replace(/\s+/g, '_').slice(0, 48) || '商家视频';
+    const timestamp = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[/: ]/g, '-');
     const filename = `${safeProjectName}_宣传视频_${timestamp}.${ext || 'mp4'}`;
     downloadBlob(blob, filename);
     showToast(`导出完成！正在下载 ${filename}`, 'success', 5000);
