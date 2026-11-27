@@ -139,12 +139,17 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (active) { active.pause(); active.removeAttribute('src'); active.load(); }
     mediaPreview.querySelector('.xzw-media-preview-stage').innerHTML = '';
   };
+  const isVideoMediaFile = file => {
+    const type = String(file?.type || '').toLowerCase();
+    const extension = String(file?.name || '').split('.').pop().toLowerCase();
+    return type.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(extension);
+  };
   const openMediaPreview = (file, url) => {
     const stage = mediaPreview.querySelector('.xzw-media-preview-stage');
     stage.innerHTML = '';
     mediaPreview.querySelector('.xzw-media-preview-name').textContent = file.name;
     let element;
-    if (file.type.startsWith('video/')) {
+    if (isVideoMediaFile(file)) {
       element = document.createElement('video');
       element.controls = true;
       element.playsInline = true;
@@ -190,7 +195,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const match = plans.findIndex(plan => terms.some(pattern => pattern.test(plan.role)));
       if (match >= 0) return match;
     }
-    if (file.type.startsWith('video/')) return Math.min(index, plans.length - 1);
+    if (isVideoMediaFile(file)) return Math.min(index, plans.length - 1);
     return Math.min(index, plans.length - 1);
   };
   const renderMediaMapping = () => {
@@ -206,7 +211,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const previewUrl = URL.createObjectURL(file);
       mediaPreviewUrls.set(file, previewUrl);
       let thumb;
-      if (file.type.startsWith('image/')) {
+      if (!isVideoMediaFile(file)) {
         thumb = document.createElement('img');
         thumb.alt = file.name;
         thumb.src = previewUrl;
@@ -228,7 +233,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       info.className = 'xzw-media-info';
       const name = document.createElement('span');
       name.className = 'xzw-media-name';
-      name.textContent = (file.type.startsWith('video/') ? '🎬 ' : '🖼️ ') + file.name;
+      name.textContent = (isVideoMediaFile(file) ? '🎬 ' : '🖼️ ') + file.name;
       const select = document.createElement('select');
       select.className = 'xzw-media-role';
       select.setAttribute('aria-label', file.name + ' 的镜头用途');
