@@ -5,7 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -641,6 +641,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       return;
     }
 
+    const audioMix = getMerchantAudioMix({ hasVoice: Boolean(voiceFile), keepOriginalAudio: $('xzw-original-audio').checked });
     $('xzw-generate').disabled = true;
     $('xzw-shots').innerHTML = '';
     setStatus('正在准备画布并导入素材，请不要关闭页面……');
@@ -678,7 +679,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         clip.fit = 'cover';
         if (clip.type === 'video') {
           // Keep camera audio off by default so narration and licensed music remain clear.
-          clip.volume = $('xzw-original-audio').checked ? 1 : 0;
+          clip.volume = audioMix.video;
         }
         if (clip.type === 'image') {
           // Ken Burns motion: alternate gentle push-ins / pull-backs and horizontal
@@ -754,7 +755,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       if (musicFile) {
         const music = await mediaManager.importFile(musicFile, { startTime: 0, trackIndex: 4 });
         if (!music) throw new Error('背景音乐导入失败：' + musicFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
-        music.volume = 0.22;
+        music.volume = audioMix.music;
         music.loop = true;
         if (music.element) music.element.loop = true;
         // The timeline duration represents the required music bed length.
@@ -764,8 +765,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const musicFade = Math.min(1.2, music.duration / 3);
         music.keyframes = { volume: [
           { time: 0, value: 0, easing: 'easeOut' },
-          { time: musicFade, value: 0.22, easing: 'easeInOut' },
-          { time: Math.max(musicFade, music.duration - musicFade), value: 0.22, easing: 'easeInOut' },
+          { time: musicFade, value: audioMix.music, easing: 'easeInOut' },
+          { time: Math.max(musicFade, music.duration - musicFade), value: audioMix.music, easing: 'easeInOut' },
           { time: music.duration, value: 0, easing: 'easeIn' }
         ]};
       }

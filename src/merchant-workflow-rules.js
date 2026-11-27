@@ -100,3 +100,16 @@ export function isVideoMediaFile(file) {
   const extension = String(file?.name || '').split('.').pop().toLowerCase();
   return type.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(extension);
 }
+
+
+/**
+ * Keep narration intelligible by ducking music and camera audio whenever
+ * a voice track is present. Values are normalized 0..1 timeline gains.
+ */
+export function getMerchantAudioMix({ hasVoice = false, keepOriginalAudio = false } = {}) {
+  return {
+    video: keepOriginalAudio ? (hasVoice ? 0.12 : 0.7) : 0,
+    music: hasVoice ? 0.12 : 0.22,
+    voice: 1
+  };
+}

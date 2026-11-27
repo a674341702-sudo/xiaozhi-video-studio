@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -61,3 +61,14 @@ assert.equal(validateFile(fakeFile('现代格式.avif', 'image/avif'), 'image').
 assert.equal(validateFile(fakeFile('安卓 AVIF.avif', 'application/octet-stream'), 'image').valid, true);
 assert.equal(validateFile(fakeFile('不支持.heic', 'image/heic'), 'image').valid, false);
 console.log('素材上传格式与编辑器导入格式一致性测试通过');
+
+const voiceMix = getMerchantAudioMix({ hasVoice: true, keepOriginalAudio: true });
+assert.equal(voiceMix.voice, 1);
+assert.equal(voiceMix.music, 0.12);
+assert.equal(voiceMix.video, 0.12);
+const musicOnlyMix = getMerchantAudioMix({ hasVoice: false, keepOriginalAudio: false });
+assert.equal(musicOnlyMix.music, 0.22);
+assert.equal(musicOnlyMix.video, 0);
+const cameraAudioMix = getMerchantAudioMix({ hasVoice: false, keepOriginalAudio: true });
+assert.equal(cameraAudioMix.video, 0.7);
+console.log('人声优先与背景音压低规则测试通过');
