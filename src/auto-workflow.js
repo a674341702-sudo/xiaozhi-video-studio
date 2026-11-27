@@ -5,7 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
-import { splitMerchantRequirements, isRestrictionRequirement } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -713,8 +713,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const assignedRequirements = requirementsByShot.get(assignedShotIndex) || [];
         // Requirement text may already be present in the generated caption list.
         // Add only missing items so merchant instructions never appear twice.
-        const captionParts = [baseCaption, ...assignedRequirements.filter(item => !baseCaption.includes(item))];
-        const caption = [...new Set(captionParts)].filter(Boolean).join(' · ');
+        const caption = mergeCaptionRequirements(baseCaption, assignedRequirements);
         if (textTrack) {
           const subtitleClip = composition.addClip({
             trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
