@@ -147,9 +147,7 @@ $('generate').addEventListener('click', async () => {
 });
 
 
-window.addEventListener('pagehide', () => {
-  if (audioUrl) {
-    URL.revokeObjectURL(audioUrl);
-    audioUrl = null;
-  }
-});
+// Do not revoke the preview URL on pagehide: mobile browsers may fire
+// pagehide while handing the WAV link to the download manager. The browser
+// releases document-scoped object URLs when the page is discarded; the next
+// synthesis explicitly revokes the previous preview URL above.
