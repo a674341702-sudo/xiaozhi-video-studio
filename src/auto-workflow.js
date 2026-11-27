@@ -8,6 +8,7 @@ import { extractMerchantDocumentText } from './merchant-document.js';
 import { getSubtitleSafeLayout } from './text-layout.js';
 import { getPhotoMotionKeyframes } from './photo-motion.js';
 import { getSequenceEdgeOpacity } from './sequence-opacity.js';
+import { buildMerchantOutroText } from './merchant-outro.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
@@ -111,6 +112,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           <label class="xzw-field"><span>视频画幅</span><select id="xzw-ratio"><option value="9:16">9:16 竖屏（抖音）</option><option value="4:5">4:5（小红书）</option><option value="1:1">1:1 方形</option><option value="16:9">16:9 横屏</option></select></label>
           <label class="xzw-field"><span>字幕样式</span><select id="xzw-subtitle"><option value="bold">醒目粗体</option><option value="clean">简洁高级</option></select></label>
         </div>
+        <label class="xzw-check"><input id="xzw-branded-outro" type="checkbox" checked><span>自动添加商家品牌片尾（使用已填写的店名、产品和地址）</span></label>
+        <p class="xzw-note">片尾默认约3秒；没有填写店名时不会生成。可随时取消勾选。</p>
       </div>
 
       <div class="xzw-section">
@@ -727,6 +730,31 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       for (const [index, clip] of subtitleClips.entries()) {
         const opacity = getSequenceEdgeOpacity(index, subtitleClips.length, clip.startTime, clip.duration, 0.4);
         if (opacity) clip.keyframes = { ...(clip.keyframes || {}), opacity };
+      }
+
+      // Optional branded end card: use only details the merchant supplied.
+      const outroText = $('xzw-branded-outro').checked ? buildMerchantOutroText(profile) : null;
+      if (outroText && textTrack) {
+        const outroDuration = 2.8;
+        const outro = composition.addClip({
+          trackId: textTrack.id, type: 'text', name: '商家品牌片尾',
+          text: outroText, startTime: cursor, duration: outroDuration,
+          x: Math.round(composition.width * 0.08),
+          y: Math.round(composition.height * 0.25),
+          width: Math.round(composition.width * 0.84),
+          height: Math.round(composition.height * 0.5),
+          fontSize: Math.max(30, Math.round(composition.width * 0.055)),
+          fontFamily: 'Noto Sans CJK SC', fontWeight: 'bold', color: '#ffffff',
+          bgColor: 'rgba(15,18,35,0.9)', textAlign: 'center'
+        });
+        outro.startTime = cursor;
+        outro.keyframes = { opacity: [
+          { time: cursor, value: 0, easing: 'easeOut' },
+          { time: cursor + 0.35, value: 1, easing: 'easeInOut' },
+          { time: cursor + outroDuration - 0.3, value: 1, easing: 'easeInOut' },
+          { time: cursor + outroDuration, value: 0, easing: 'easeIn' }
+        ]};
+        cursor += outroDuration;
       }
 
       if (musicFile) {
