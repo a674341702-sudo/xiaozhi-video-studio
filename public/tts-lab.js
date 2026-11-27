@@ -148,6 +148,31 @@ $('generate').addEventListener('click', async () => {
       status('正在生成普通话配音……\n已完成 ' + chunkCount + ' 段，请保持页面打开。');
     }
     const blob = chunksToWav(pcmChunks, sampleRate);
+    // Try to return the generated WAV directly to the same-origin main workspace.
+    // If the workspace is closed or BroadcastChannel is unavailable, keep the normal download path.
+    let deliveredToWorkspace = false;
+    if (typeof BroadcastChannel !== 'undefined') {
+      try {
+        const channel = new BroadcastChannel('xiaozhi-tts-audio-v1');
+        deliveredToWorkspace = await new Promise(resolve => {
+          let settled = false;
+          const finish = value => {
+            if (settled) return;
+            settled = true;
+            clearTimeout(timer);
+            channel.close();
+            resolve(value);
+          };
+          const timer = setTimeout(() => finish(false), 1600);
+          channel.onmessage = event => {
+            if (event.data?.type === 'xiaozhi-tts-audio-ack') finish(true);
+          };
+          channel.postMessage({ type: 'xiaozhi-tts-audio', blob, filename: '小智普通话配音.wav' });
+        });
+      } catch (error) {
+        console.warn('[中文配音实验室] 自动回传失败，将保留下载方式：', error);
+      }
+    }
     if (!(blob instanceof Blob) || blob.size < 1000) throw new Error('语音文件生成失败或内容为空。');
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     audioUrl = URL.createObjectURL(blob);
@@ -155,7 +180,7 @@ $('generate').addEventListener('click', async () => {
     $('player').hidden = false;
     $('download').href = audioUrl;
     $('download').hidden = false;
-    status('生成成功！共分段生成 ' + chunkCount + ' 段。请先试听发音、语速和停顿；满意后下载 WAV，再回到主工作台上传配音文件。');
+    status('生成成功！共分段生成 ' + chunkCount + ' 段。请先试听发音、语速和停顿；' + (deliveredToWorkspace ? '配音已自动传回主工作台，可切回工作台查看。' : '未检测到已打开的主工作台，仍可下载 WAV 后手动上传。'));
   } catch (error) {
     console.error('[中文配音实验室]', error);
     status('生成失败：' + explainTTSError(error));
