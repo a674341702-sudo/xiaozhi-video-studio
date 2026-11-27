@@ -364,7 +364,7 @@ function updateTimeDisplay() {
 function updateUndoRedoButtons() {
   if (btnUndo) btnUndo.disabled = !composition.canUndo();
   if (btnRedo) btnRedo.disabled = !composition.canRedo();
-  toolbar?.setUndoRedo(composition.canUndo(), composition.canRedo());
+  toolbar?.set撤销重做?.(composition.canUndo(), composition.canRedo());
 }
 
 function syncActiveMedia(time, playing) {
