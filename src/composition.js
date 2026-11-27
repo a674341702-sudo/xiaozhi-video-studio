@@ -26,7 +26,10 @@ export class Composition {
     // Internal clip registry by id for O(1) lookups
     this._clipMap = new Map();
 
-    // Push initial blank state so undo can return here
+    // Keep a complete baseline snapshot so the first user edit can be undone.
+    this._lastHistorySnapshot = null;
+    this._batchSnapshot = null;
+    this._batchName = null;
     this._pushSnapshot('new project');
   }
 
@@ -183,27 +186,69 @@ export class Composition {
   }
 
   // --- History ---
-  _pushSnapshot(name) {
-    const snapshot = {
+  _createSnapshot() {
+    return {
       width: this.width,
       height: this.height,
       tracks: JSON.parse(JSON.stringify(this.tracks)),
-      clips: this.clips.map(c => {
-        const copy = { ...c };
-        delete copy.element;
-        return copy;
-      }),
+      clips: this.clips.map(clip => ({
+        ...clip,
+        // Timeline/keyframe objects must not be shared between history entries.
+        keyframes: clip.keyframes ? JSON.parse(JSON.stringify(clip.keyframes)) : null,
+        // Keep the live media references so undo can restore deleted clips.
+        element: clip.element || null,
+        file: clip.file || null
+      })),
       selectedClipId: this.selectedClipId
     };
+  }
 
-    const command = {
+  _snapshotSignature(snapshot) {
+    return JSON.stringify({
+      width: snapshot.width,
+      height: snapshot.height,
+      tracks: snapshot.tracks,
+      clips: snapshot.clips.map(({ element, file, ...clip }) => clip),
+      selectedClipId: snapshot.selectedClipId
+    });
+  }
+
+  _recordSnapshotChange(name, before, after) {
+    if (this._snapshotSignature(before) === this._snapshotSignature(after)) {
+      this._lastHistorySnapshot = after;
+      return false;
+    }
+
+    this.history.push({
       name,
       do: () => {},
-      undo: () => this._applySnapshot(snapshot),
-      redo: () => this._applySnapshot(snapshot)
-    };
+      undo: () => this._applySnapshot(before),
+      redo: () => this._applySnapshot(after)
+    });
+    this._lastHistorySnapshot = after;
+    return true;
+  }
 
-    this.history.push(command);
+  _pushSnapshot(name) {
+    const snapshot = this._createSnapshot();
+
+    // The first snapshot is the history baseline. It gives the first actual
+    // edit a valid previous state to return to.
+    if (!this._lastHistorySnapshot) {
+      this._lastHistorySnapshot = snapshot;
+      this.history.push({
+        name: 'initial state',
+        do: () => {},
+        undo: () => this._applySnapshot(snapshot),
+        redo: () => this._applySnapshot(snapshot)
+      });
+      return;
+    }
+
+    // A grouped gesture records only one before/after pair at pointer-up.
+    if (this._batchSnapshot) return;
+
+    this._recordSnapshotChange(name, this._lastHistorySnapshot, snapshot);
   }
 
   canUndo() {
@@ -223,31 +268,25 @@ export class Composition {
   }
 
   _applySnapshot(snapshot) {
-    if (snapshot.width) this.width = snapshot.width;
-    if (snapshot.height) this.height = snapshot.height;
+    this.width = snapshot.width;
+    this.height = snapshot.height;
     this.tracks = JSON.parse(JSON.stringify(snapshot.tracks));
 
-    const elementMap = new Map();
-    for (const c of this.clips) {
-      if (c.element) elementMap.set(c.id, c.element);
-    }
-
-    this.clips = snapshot.clips.map(c => {
-      const clip = { ...c };
-      if (elementMap.has(clip.id)) {
-        clip.element = elementMap.get(clip.id);
-      }
-      this._clipMap.set(clip.id, clip);
+    const existingElements = new Map(
+      this.clips.filter(clip => clip.element).map(clip => [clip.id, clip.element])
+    );
+    this.clips = snapshot.clips.map(source => {
+      const clip = {
+        ...source,
+        keyframes: source.keyframes ? JSON.parse(JSON.stringify(source.keyframes)) : null,
+        element: source.element || existingElements.get(source.id) || null,
+        file: source.file || null
+      };
       return clip;
     });
-
-    // Clean up stale map entries
-    const validIds = new Set(this.clips.map(c => c.id));
-    for (const id of this._clipMap.keys()) {
-      if (!validIds.has(id)) this._clipMap.delete(id);
-    }
-
+    this._clipMap = new Map(this.clips.map(clip => [clip.id, clip]));
     this.selectedClipId = snapshot.selectedClipId;
+    this._lastHistorySnapshot = this._createSnapshot();
   }
 
   // --- Project serialization ---
@@ -256,6 +295,9 @@ export class Composition {
     this._clipMap.clear();
     this.selectedClipId = null;
     this.history.clear();
+    this._lastHistorySnapshot = null;
+    this._batchSnapshot = null;
+    this._batchName = null;
     this.tracks = [
       { id: 'v1', type: 'video', name: '视频轨道 1', locked: false, muted: false, visible: true },
       { id: 'v2', type: 'video', name: '视频轨道 2', locked: false, muted: false, visible: true },
@@ -322,18 +364,33 @@ export class Composition {
     }
 
     this.history.clear();
+    this._lastHistorySnapshot = null;
+    this._batchSnapshot = null;
+    this._batchName = null;
     this._pushSnapshot('load project');
   }
 
   startBatch(name) {
-    this.history.startBatch(name);
+    if (this._batchSnapshot) return;
+    this._batchSnapshot = this._createSnapshot();
+    this._batchName = name || 'edit';
   }
 
   commitBatch() {
-    this.history.commitBatch();
+    if (!this._batchSnapshot) return false;
+    const before = this._batchSnapshot;
+    const name = this._batchName || 'edit';
+    this._batchSnapshot = null;
+    this._batchName = null;
+    return this._recordSnapshotChange(name, before, this._createSnapshot());
   }
 
   cancelBatch() {
-    this.history.cancelBatch();
+    if (!this._batchSnapshot) return false;
+    const before = this._batchSnapshot;
+    this._batchSnapshot = null;
+    this._batchName = null;
+    this._applySnapshot(before);
+    return true;
   }
 }
