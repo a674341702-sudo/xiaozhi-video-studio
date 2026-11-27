@@ -399,6 +399,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         music.volume = 0.22;
         music.duration = Math.min(cursor, music.duration);
         music.trimEnd = (music.trimStart || 0) + music.duration;
+        const musicFade = Math.min(1.2, music.duration / 3);
+        music.keyframes = { volume: [
+          { time: 0, value: 0, easing: 'easeOut' },
+          { time: musicFade, value: 0.22, easing: 'easeInOut' },
+          { time: Math.max(musicFade, music.duration - musicFade), value: 0.22, easing: 'easeInOut' },
+          { time: music.duration, value: 0, easing: 'easeIn' }
+        ]};
       }
       if (voiceFile) {
         const voice = await mediaManager.importFile(voiceFile, { startTime: 0, trackIndex: 5 });
@@ -406,6 +413,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         voice.volume = 1;
         voice.duration = Math.min(cursor, voice.duration);
         voice.trimEnd = (voice.trimStart || 0) + voice.duration;
+        const voiceFade = Math.min(0.18, voice.duration / 4);
+        voice.keyframes = { volume: [
+          { time: 0, value: 0, easing: 'easeOut' },
+          { time: voiceFade, value: 1, easing: 'easeInOut' },
+          { time: Math.max(voiceFade, voice.duration - voiceFade), value: 1, easing: 'easeInOut' },
+          { time: voice.duration, value: 0, easing: 'easeIn' }
+        ]};
       }
       onCompositionChanged();
       canvasPreview.setCurrentTime(0);
