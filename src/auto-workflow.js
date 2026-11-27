@@ -336,6 +336,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   modal.querySelector('.xzw-close').addEventListener('click', () => modal.classList.remove('open'));
   modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); });
   $('xzw-files').addEventListener('change', () => {
+    orderedMediaFiles = Array.from($('xzw-files').files || []);
+    mediaRoleByFile.clear();
     const files = orderedMediaFiles;
     const size = files.reduce((n, f) => n + f.size, 0);
     $('xzw-file-summary').textContent = files.length + ' 个素材 · ' + (size / 1024 / 1024).toFixed(1) + ' MB';
@@ -481,7 +483,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   }
 
   $('xzw-build-preview').addEventListener('click', () => {
-    const files = Array.from($('xzw-files').files || []);
+    const files = orderedMediaFiles;
     const requirements = Array.from($('xzw-requirements').querySelectorAll('.xzw-requirement'));
     const issues = [];
     if (!files.length) issues.push('还没有选择照片或视频素材');
