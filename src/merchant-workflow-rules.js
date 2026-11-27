@@ -64,3 +64,31 @@ export function validateMerchantMediaFiles(files, options = {}) {
   }
   return { valid: true, files: list };
 }
+
+
+/**
+ * Append newly selected mobile files without discarding existing media.
+ * Re-selecting the same file is ignored using its stable picker metadata.
+ */
+export function appendMerchantMediaFiles(existingFiles = [], incomingFiles = [], options = {}) {
+  const existing = Array.from(existingFiles || []);
+  const incoming = Array.from(incomingFiles || []);
+  const signature = file => [file.name || '', Number(file.size) || 0, Number(file.lastModified) || 0].join('::');
+  const seen = new Set(existing.map(signature));
+  const additions = [];
+  for (const file of incoming) {
+    const key = signature(file);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    additions.push(file);
+  }
+  const combined = [...existing, ...additions];
+  const validation = validateMerchantMediaFiles(combined, options);
+  if (!validation.valid) return { ...validation, files: existing, addedCount: 0, duplicateCount: incoming.length - additions.length };
+  return {
+    valid: true,
+    files: combined,
+    addedCount: additions.length,
+    duplicateCount: incoming.length - additions.length
+  };
+}
