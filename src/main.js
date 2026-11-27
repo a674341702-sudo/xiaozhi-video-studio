@@ -184,6 +184,10 @@ async function initApp() {
   updateHeaderProjectName();
   initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport: handleExport });
   initSubtitleStudio({ composition, onCompositionChanged });
+
+  await restoreLastLocalProject();
+  localRestoreComplete = true;
+  onCompositionChanged();
 }
 
 function onMediaUrlRegistered(clipId, objectUrl) {
@@ -218,6 +222,7 @@ function onCompositionChanged() {
   updateTimeDisplay();
   updateUndoRedoButtons();
   toolbar?.setPlaying(isPlaying);
+  scheduleLocalAutosave();
 }
 
 function updatePreviewResolutionBadge() {
