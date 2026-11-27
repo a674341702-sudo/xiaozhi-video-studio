@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -47,3 +47,11 @@ const rejectedAppend = appendMerchantMediaFiles(existingBatch, Array.from({ leng
 assert.equal(rejectedAppend.valid, false);
 assert.equal(rejectedAppend.files.length, 2, '追加失败时必须保留原素材');
 console.log('分批追加素材与重复文件保护测试通过');
+
+
+assert.equal(isVideoMediaFile({ name: '现场.mp4', type: '' }), true);
+assert.equal(isVideoMediaFile({ name: '现场.mov', type: 'application/octet-stream' }), true);
+assert.equal(isVideoMediaFile({ name: '现场.webm', type: 'video/webm' }), true);
+assert.equal(isVideoMediaFile({ name: '门头.jpg', type: 'application/octet-stream' }), false);
+assert.equal(isVideoMediaFile({ name: '门头.png', type: 'image/png' }), false);
+console.log('安卓通用 MIME 视频识别测试通过');

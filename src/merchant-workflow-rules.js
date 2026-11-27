@@ -92,3 +92,11 @@ export function appendMerchantMediaFiles(existingFiles = [], incomingFiles = [],
     duplicateCount: incoming.length - additions.length
   };
 }
+
+
+/** Identify video files even when Android supplies an empty/generic MIME type. */
+export function isVideoMediaFile(file) {
+  const type = String(file?.type || '').toLowerCase();
+  const extension = String(file?.name || '').split('.').pop().toLowerCase();
+  return type.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(extension);
+}
