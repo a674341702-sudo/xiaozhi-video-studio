@@ -16,3 +16,11 @@ export function getVoiceCoverageNote(voiceDuration, timelineDuration, tolerance 
   }
   return '';
 }
+
+/** Limit narration to the main story, leaving a branded end card voice-free. */
+export function getVoiceClipDuration(voiceDuration, narrationDuration) {
+  const voice = Number(voiceDuration);
+  const narration = Number(narrationDuration);
+  if (!Number.isFinite(voice) || voice <= 0 || !Number.isFinite(narration) || narration <= 0) return 0;
+  return Math.min(voice, narration);
+}
