@@ -1,3 +1,4 @@
+import { getSubtitleSafeLayout } from './text-layout.js';
 /**
  * 小智中文自动字幕实验室
  * 采用 browser-whisper 开源项目的浏览器端识别能力。
@@ -280,12 +281,9 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
         text,
         startTime: start,
         duration,
-        x: Math.round(composition.width * 0.08),
-        y: Math.round(composition.height * 0.76),
-        width: Math.round(composition.width * 0.84),
-        height: Math.round(composition.height * 0.16),
+        ...getSubtitleSafeLayout(composition.width, composition.height),
         fontSize: Math.max(30, Math.round(composition.width * 0.034)),
-        fontFamily: 'Inter',
+        fontFamily: 'Noto Sans CJK SC',
         fontWeight: 'bold',
         color: $('xzs-style').value === 'yellow' ? '#ffe66d' : '#ffffff',
         bgColor: $('xzs-style').value === 'clean' ? 'transparent' : '#202020',
