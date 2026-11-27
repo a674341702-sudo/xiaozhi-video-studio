@@ -61,11 +61,8 @@ export function initReferenceVideoStudio(workflowModal) {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
     const file = fileInput.files?.[0];
     if (!file) return;
-    const hasVideoMime = String(file.type || '').toLowerCase().startsWith('video/');
-    const hasVideoExtension = /\.(mp4|mov|webm)$/i.test(file.name || '');
     // Android pickers sometimes report an empty or generic MIME type.
-    // Match the main media importer by accepting known video extensions too.
-    if (!hasVideoMime && !hasVideoExtension) {
+    if (!isSupportedReferenceVideoFile(file)) {
       meta.textContent = '文件格式不正确，请选择 MP4、MOV 或 WebM 视频文件。';
       fileInput.value = '';
       return;
