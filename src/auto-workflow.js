@@ -5,7 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -138,11 +138,6 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const active = mediaPreview.querySelector('video');
     if (active) { active.pause(); active.removeAttribute('src'); active.load(); }
     mediaPreview.querySelector('.xzw-media-preview-stage').innerHTML = '';
-  };
-  const isVideoMediaFile = file => {
-    const type = String(file?.type || '').toLowerCase();
-    const extension = String(file?.name || '').split('.').pop().toLowerCase();
-    return type.startsWith('video/') || ['mp4', 'webm', 'mov'].includes(extension);
   };
   const openMediaPreview = (file, url) => {
     const stage = mediaPreview.querySelector('.xzw-media-preview-stage');
