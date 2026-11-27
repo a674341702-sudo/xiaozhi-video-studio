@@ -226,6 +226,10 @@ function onCompositionChanged() {
   scheduleLocalAutosave();
 }
 
+function updateHeaderProjectName(name = '新建视频项目') {
+  if (headerFilenameEl) headerFilenameEl.textContent = name;
+}
+
 function updatePreviewResolutionBadge() {
   if (previewBadgeEl) {
     previewBadgeEl.textContent = `${composition.width}×${composition.height}`;
