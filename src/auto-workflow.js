@@ -79,6 +79,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <h3>03 · 生成宣传文案与镜头安排</h3>
         <label class="xzw-field"><span>配音稿（可修改；生成后可复制去制作AI配音）</span><textarea id="xzw-narration" placeholder="先点击“生成宣传文案”，再按商家实际情况修改旁白。"></textarea></label>
         <div class="xzw-actions"><button class="xzw-secondary" id="xzw-make-script" type="button">✦ 生成宣传文案</button><button class="xzw-secondary" id="xzw-copy-script" type="button">复制配音稿</button></div>
+        <div class="xzw-actions"><button class="xzw-secondary" id="xzw-send-tts" type="button">🎙️ 把配音稿送到中文配音实验室</button></div>
+        <p class="xzw-note">点击后会在新页面自动带入上面的配音稿；生成并下载 WAV 后，回到这里的“配音文件”处上传即可。</p>
         <label class="xzw-field"><span>画面字幕（每行一句；可单独修改）</span><textarea id="xzw-captions" placeholder="点击生成宣传文案后会自动填入，可按镜头逐句修改。"></textarea></label>
         <div class="xzw-grid">
           <label class="xzw-field"><span>视频画幅</span><select id="xzw-ratio"><option value="9:16">9:16 竖屏（抖音）</option><option value="4:5">4:5（小红书）</option><option value="1:1">1:1 方形</option><option value="16:9">16:9 横屏</option></select></label>
@@ -122,6 +124,16 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     $('xzw-narration').value = lines.join('。') + '。';
     $('xzw-captions').value = lines.join('\n');
     setStatus('宣传文案已生成。请核对店名、产品、优惠和地址是否准确，再复制配音稿或继续编排。');
+  });
+  $('xzw-send-tts').addEventListener('click', () => {
+    const script = $('xzw-narration').value.trim();
+    if (!script) { setStatus('请先生成或填写配音稿，再发送到中文配音实验室。'); return; }
+    if (script.length > 500) { setStatus('当前配音实验室手机测试版最多支持500字，请先缩短文案或分段生成。'); return; }
+    const ttsUrl = new URL('./tts-lab.html', window.location.href);
+    ttsUrl.hash = new URLSearchParams({ text: script }).toString();
+    const opened = window.open(ttsUrl.toString(), '_blank');
+    if (!opened) setStatus('浏览器拦截了新页面，请允许此站点打开新标签页后重试。');
+    else setStatus('配音稿已带入中文配音实验室。生成并下载 WAV 后，回到这里上传配音文件。');
   });
   $('xzw-copy-script').addEventListener('click', async () => {
     const script = $('xzw-narration').value.trim();
