@@ -16,7 +16,7 @@ import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js'
 import { formatTime, showToast } from './utils.js';
 import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
-import { saveLocalProject, loadLocalProject, stripTemporaryMediaUrls } from './local-project-store.js';
+import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
 
 // --- Global State ---
 let composition = null;
@@ -84,6 +84,8 @@ let localAutosaveInProgress = false;
 let localAutosaveDirty = false;
 let localAutosaveErrorShown = false;
 let isRestoringLocalProject = false;
+let activeProjectId = 'last-open-project';
+let activeProjectName = '小智视频项目';
 const localSaveStatusEl = document.getElementById('local-save-status');
 
 const mediaUrlRegistry = new Map(); // clipId -> objectUrl for cleanup
@@ -234,6 +236,7 @@ function onCompositionChanged() {
 }
 
 function updateHeaderProjectName(name = '新建视频项目') {
+  activeProjectName = name;
   if (headerFilenameEl) headerFilenameEl.textContent = name;
 }
 
@@ -723,7 +726,8 @@ async function saveCurrentProjectLocally() {
   setLocalSaveStatus('正在保存到本机…');
   try {
     const snapshot = await buildLocalProjectSnapshot();
-    const result = await saveLocalProject(snapshot.project, snapshot.media);
+    snapshot.project.name = activeProjectName;
+    const result = await saveLocalProject(snapshot.project, snapshot.media, activeProjectId);
     const time = new Date(result.savedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
     setLocalSaveStatus('本机已保存 ' + time, 'saved');
     localAutosaveErrorShown = false;
@@ -774,15 +778,11 @@ function waitForRestoredMedia(element, readyCheck, readyEvent) {
   });
 }
 
-async function restoreLastLocalProject() {
-  setLocalSaveStatus('正在检查本机项目…');
+async function applyLocalProjectRecord(record, notify = true) {
+  if (!record?.project || !Array.isArray(record.project.clips)) throw new Error('项目记录不完整，无法恢复');
+  isRestoringLocalProject = true;
+  releaseMediaUrls();
   try {
-    const record = await loadLocalProject();
-    if (!record?.project) {
-      setLocalSaveStatus('本机自动保存已开启');
-      return;
-    }
-    isRestoringLocalProject = true;
     await composition.fromJSON(record.project, async (srcUrl) => srcUrl || null);
     let restored = 0;
     let missing = 0;
@@ -824,21 +824,118 @@ async function restoreLastLocalProject() {
         console.warn('[小智恢复素材]', clip.name, error);
       }
     }
-    updateHeaderProjectName(record.project.name || '已恢复项目');
-    const savedAt = new Date(record.savedAt || Date.now()).toLocaleString('zh-CN');
-    setLocalSaveStatus('已恢复本机项目', 'saved');
-    showToast('已恢复上次本机项目（' + savedAt + '）。素材恢复 ' + restored + ' 个' + (missing ? '，另有 ' + missing + ' 个素材未能读取' : '') + '。', missing ? 'warning' : 'success', 8000);
-  } catch (error) {
-    console.warn('[小智读取本机项目]', error);
-    setLocalSaveStatus('本机项目读取失败', 'error');
-    showToast('无法读取上次本机项目：' + (error?.message || '浏览器存储不可用') + '。你仍可手动打开项目文件。', 'warning', 8000);
+    activeProjectId = record.id || 'last-open-project';
+    updateHeaderProjectName(record.name || record.project.name || '已恢复项目');
+    onCompositionChanged();
+    setLocalSaveStatus('已恢复：' + activeProjectName, 'saved');
+    if (notify) {
+      const savedAt = new Date(record.savedAt || Date.now()).toLocaleString('zh-CN');
+      showToast('项目已打开（' + savedAt + '）。素材恢复 ' + restored + ' 个' + (missing ? '，另有 ' + missing + ' 个素材未能读取' : '') + '。', missing ? 'warning' : 'success', 8000);
+    }
+    return { restored, missing };
   } finally {
     isRestoringLocalProject = false;
   }
 }
 
+async function restoreLastLocalProject() {
+  setLocalSaveStatus('正在检查本机项目…');
+  try {
+    const record = await loadLastActiveLocalProject();
+    if (!record?.project) {
+      setLocalSaveStatus('本机自动保存已开启');
+      return;
+    }
+    await applyLocalProjectRecord(record, true);
+  } catch (error) {
+    console.warn('[小智读取本机项目]', error);
+    setLocalSaveStatus('本机项目读取失败', 'error');
+    showToast('无法读取上次本机项目：' + (error?.message || '浏览器存储不可用') + '。你仍可手动打开项目文件。', 'warning', 8000);
+  }
+}
+
+async function renderProjectLibrary() {
+  const listEl = document.getElementById('project-library-list');
+  if (!listEl) return;
+  listEl.replaceChildren();
+  try {
+    const projects = await listLocalProjects();
+    if (!projects.length) {
+      const empty = document.createElement('p');
+      empty.className = 'project-library-empty';
+      empty.textContent = '还没有另存的商家项目。点击上方“保存为新项目”即可建立第一个项目。';
+      listEl.append(empty);
+      return;
+    }
+    for (const item of projects) {
+      const row = document.createElement('div');
+      row.className = 'project-library-row';
+      const info = document.createElement('div');
+      info.className = 'project-library-info';
+      const name = document.createElement('strong');
+      name.textContent = item.name;
+      const meta = document.createElement('span');
+      meta.textContent = new Date(item.savedAt).toLocaleString('zh-CN') + ' · ' + item.clipCount + ' 个片段 · ' + item.mediaCount + ' 个素材';
+      info.append(name, meta);
+      const actions = document.createElement('div');
+      actions.className = 'project-library-actions';
+      const open = document.createElement('button');
+      open.type = 'button'; open.textContent = '打开';
+      open.addEventListener('click', async () => {
+        try {
+          await saveCurrentProjectLocally();
+          const record = await loadLocalProject(item.id);
+          await applyLocalProjectRecord(record, true);
+          document.getElementById('project-library')?.setAttribute('hidden', '');
+          renderProjectLibrary();
+        } catch (error) {
+          showToast('打开项目失败：' + (error?.message || '未知错误'), 'error', 7000);
+        }
+      });
+      const remove = document.createElement('button');
+      remove.type = 'button'; remove.textContent = '删除'; remove.className = 'danger';
+      remove.addEventListener('click', async () => {
+        if (!window.confirm('确定删除“' + item.name + '”及其本机素材备份吗？此操作不可撤销。')) return;
+        try {
+          await deleteLocalProject(item.id);
+          if (activeProjectId === item.id) {
+            activeProjectId = 'last-open-project';
+            await saveCurrentProjectLocally();
+          }
+          renderProjectLibrary();
+          showToast('项目已从本机项目库删除', 'success');
+        } catch (error) {
+          showToast('删除失败：' + (error?.message || '未知错误'), 'error');
+        }
+      });
+      actions.append(open, remove);
+      row.append(info, actions);
+      listEl.append(row);
+    }
+  } catch (error) {
+    const failed = document.createElement('p');
+    failed.className = 'project-library-empty';
+    failed.textContent = '无法读取本机项目库：' + (error?.message || '浏览器存储不可用');
+    listEl.append(failed);
+  }
+}
+
+async function saveAsNewLocalProject() {
+  const suggested = activeProjectName && activeProjectName !== '新建视频项目' ? activeProjectName + ' - 副本' : '新商家项目';
+  const name = window.prompt('给这个商家项目起个名字：', suggested);
+  if (!name || !name.trim()) return;
+  activeProjectId = createLocalProjectId();
+  updateHeaderProjectName(name.trim());
+  const saved = await saveCurrentProjectLocally();
+  if (saved) {
+    showToast('已另存为“' + activeProjectName + '”，项目和素材已保存到本机', 'success', 7000);
+    renderProjectLibrary();
+  }
+}
+
 window.newProject = function newProject() {
   if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+  activeProjectId = createLocalProjectId();
   releaseMediaUrls();
   composition.clear();
   inPoint = 0;
