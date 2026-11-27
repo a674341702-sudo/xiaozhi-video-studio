@@ -16,9 +16,10 @@ export function getPhotoMotionKeyframes(index, width, height, startTime, duratio
   const fromY = horizontal ? 0 : (reverse ? -panY : panY);
   const toY = -fromY;
   const endTime = Number(startTime) + Math.max(0, Number(duration) || 0);
+  const cleanZero = value => Object.is(value, -0) ? 0 : value;
   const pair = (from, to) => [
-    { time: Number(startTime) || 0, value: from, easing: 'easeInOut' },
-    { time: endTime, value: to, easing: 'easeInOut' }
+    { time: Number(startTime) || 0, value: cleanZero(from), easing: 'easeInOut' },
+    { time: endTime, value: cleanZero(to), easing: 'easeInOut' }
   ];
   return {
     scale: pair(startScale, endScale),
