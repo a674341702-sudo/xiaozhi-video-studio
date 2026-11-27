@@ -24,7 +24,8 @@ export async function getLocalStorageFailureMessage(error, estimate = null) {
     if (quotaFailure || remaining < 50 * 1024 * 1024) {
       return '本机存储空间可能不足，' + estimateText + '。请清理手机空间或导出完整项目包后再继续';
     }
-    return '浏览器本机存储写入失败，' + estimateText + '。请检查浏览器存储权限后重试';
+    const detailText = detail ? '（' + detail.slice(0, 80) + '）' : '';
+    return '浏览器本机存储写入失败' + detailText + '，' + estimateText + '。请检查浏览器存储权限后重试';
   }
 
   if (quotaFailure) {
