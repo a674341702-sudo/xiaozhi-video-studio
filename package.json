@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "node scripts/test-project-bundle.mjs && node scripts/test-export-validation.mjs && vite build",
+    "build": "node scripts/test-project-bundle.mjs && node scripts/test-export-validation.mjs && node scripts/test-audio-playback.mjs && vite build",
     "preview": "vite preview",
     "prebuild": "node scripts/copy-ffmpeg-core.js"
   },
