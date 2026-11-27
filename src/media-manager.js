@@ -4,6 +4,7 @@
  */
 import { validateFile, showToast } from './utils.js';
 import { generateProxy } from './proxy.js';
+import { getPreciseMediaDuration } from './media-duration.js';
 
 // Mobile browsers can occasionally leave media metadata loading unresolved.
 // Bound the wait so the workflow can show a useful error instead of hanging forever.
@@ -296,7 +297,7 @@ export class MediaManager {
       return null;
     }
 
-    const dur = Math.round(audio.duration || 10);
+    const dur = getPreciseMediaDuration(audio.duration, 10);
 
     let audioTrack = this.comp.tracks.find(t => t.type === 'audio');
     if (trackIndex !== null) {
