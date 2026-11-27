@@ -736,6 +736,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         if (opacity) clip.keyframes = { ...(clip.keyframes || {}), opacity };
       }
 
+      // Narration belongs to the main merchant story; the branded end card is a
+      // visual/music outro and should not create a false missing-voice warning.
+      const narrationDuration = cursor;
       // Optional branded end card: use only details the merchant supplied.
       const outroText = $('xzw-branded-outro').checked ? buildMerchantOutroText(profile) : null;
       if (outroText && textTrack) {
@@ -779,7 +782,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         if (!voice) throw new Error('中文配音导入失败：' + voiceFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
         voice.volume = 1;
         voiceSourceDuration = voice.duration;
-        voice.duration = Math.min(cursor, voice.duration);
+        voice.duration = Math.min(narrationDuration, voice.duration);
         voice.trimEnd = (voice.trimStart || 0) + voice.duration;
         voice.keyframes = { volume: getAudioFadeKeyframes(voice.duration, 1, 0.18, 0.18) };
       }
@@ -792,7 +795,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const durationNote = cursor < targetSeconds - 0.5
         ? '\\n说明：当前素材实际可用时长约 ' + cursor.toFixed(1) + ' 秒，短于目标 ' + targetSeconds + ' 秒。视频素材保持原速，不会为了凑时长而强行慢放或重复画面。'
         : '';
-      const voiceDurationNote = voiceFile ? getVoiceCoverageNote(voiceSourceDuration, cursor) : '';
+      const voiceDurationNote = voiceFile ? getVoiceCoverageNote(voiceSourceDuration, narrationDuration) : '';
       setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (voiceDurationNote ? '\\n配音检查：' + voiceDurationNote : '') + (missingAudio.length ? '\\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
 
       const restrictions = requirementCards.map(card => card.querySelector('.xzw-requirement-text')?.value.trim() || '').filter(isRestrictionRequirement);
