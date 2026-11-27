@@ -109,11 +109,17 @@ export function getAudioClipPlaybackRange(clip, decodedDuration, compositionDura
       clipDuration <= 0 || timelineRemaining <= 0) return null;
 
   const requestedDuration = Math.min(clipDuration, timelineRemaining);
+  const requestedTrimEnd = Number(clip?.trimEnd);
+  const sourceEnd = Number.isFinite(requestedTrimEnd) && requestedTrimEnd > offset
+    ? Math.min(decodedDuration, requestedTrimEnd)
+    : decodedDuration;
+  if (sourceEnd <= offset) return null;
+
   if (clip.loop === true) {
-    return { start, offset, duration: requestedDuration, loop: true, loopStart: offset, loopEnd: decodedDuration };
+    return { start, offset, duration: requestedDuration, loop: true, loopStart: offset, loopEnd: sourceEnd };
   }
 
-  const availableDuration = Math.max(0, decodedDuration - offset);
+  const availableDuration = Math.max(0, sourceEnd - offset);
   const duration = Math.min(requestedDuration, availableDuration);
   if (duration <= 0.01) return null;
   return { start, offset, duration, loop: false, loopStart: 0, loopEnd: 0 };
