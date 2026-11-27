@@ -80,11 +80,23 @@ async function cleanupFiles(fileList) {
   }
 }
 
-function readFileAsArrayBuffer(file) {
+function readFileAsArrayBuffer(file, abortSignal) {
   return new Promise((resolve, reject) => {
+    if (abortSignal?.aborted) {
+      reject(new DOMException('Export aborted', 'AbortError'));
+      return;
+    }
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = () => reject(reader.error);
+    const cleanup = () => abortSignal?.removeEventListener('abort', onAbort);
+    const onAbort = () => {
+      try { reader.abort(); } catch (_) {}
+      cleanup();
+      reject(new DOMException('Export aborted', 'AbortError'));
+    };
+    reader.onload = () => { cleanup(); resolve(reader.result); };
+    reader.onerror = () => { cleanup(); reject(reader.error); };
+    reader.onabort = () => { cleanup(); reject(new DOMException('Export aborted', 'AbortError')); };
+    abortSignal?.addEventListener('abort', onAbort, { once: true });
     reader.readAsArrayBuffer(file);
   });
 }
@@ -158,7 +170,7 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
     try {
       let arrayBuffer = null;
       if (clip.file) {
-        arrayBuffer = await readFileAsArrayBuffer(clip.file);
+        arrayBuffer = await readFileAsArrayBuffer(clip.file, abortSignal);
       } else if (clip.src) {
         const res = await fetch(clip.src, { signal: abortSignal });
         arrayBuffer = await res.arrayBuffer();
@@ -273,8 +285,12 @@ function audioBufferToWav(buffer) {
   return new Blob([arrayBuffer], { type: 'audio/wav' });
 }
 
-function seekVideoToOffset(video, offset) {
+function seekVideoToOffset(video, offset, abortSignal) {
   return new Promise((resolve, reject) => {
+    if (abortSignal?.aborted) {
+      reject(new DOMException('Export aborted', 'AbortError'));
+      return;
+    }
     const safeOffset = Number.isFinite(video.duration)
       ? Math.max(0, Math.min(offset, Math.max(0, video.duration - 0.04)))
       : Math.max(0, offset);
@@ -290,10 +306,12 @@ function seekVideoToOffset(video, offset) {
       clearTimeout(timer);
       video.removeEventListener('seeked', onSeeked);
       video.removeEventListener('error', onError);
+      abortSignal?.removeEventListener('abort', onAbort);
       if (error) reject(error);
       else resolve();
     };
     const onError = () => cleanup(new Error('视频定位失败，请检查视频文件是否损坏或格式是否受支持。'));
+    const onAbort = () => cleanup(new DOMException('Export aborted', 'AbortError'));
     const onSeeked = () => {
       // Wait for a decoded frame where supported, otherwise wait one paint.
       if (typeof video.requestVideoFrameCallback === 'function') {
@@ -304,6 +322,7 @@ function seekVideoToOffset(video, offset) {
     };
     video.addEventListener('seeked', onSeeked, { once: true });
     video.addEventListener('error', onError, { once: true });
+    abortSignal?.addEventListener('abort', onAbort, { once: true });
     timer = setTimeout(() => cleanup(new Error('等待视频画面定位超时，请尝试更短或更兼容的 MP4 素材。')), 3000);
     try {
       video.currentTime = safeOffset;
@@ -441,7 +460,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
       for (const vClip of videoClips) {
         if (time >= vClip.startTime && time <= vClip.startTime + vClip.duration) {
           const offset = time - vClip.startTime + vClip.trimStart;
-          seekPromises.push(seekVideoToOffset(vClip.element, offset));
+          seekPromises.push(seekVideoToOffset(vClip.element, offset, abortSignal));
         }
       }
       if (seekPromises.length > 0) {
