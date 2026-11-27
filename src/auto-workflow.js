@@ -32,7 +32,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     .xzw-primary{border:0;border-radius:11px;padding:13px 17px;font-weight:800;background:linear-gradient(120deg,#7c3aed,#0891b2);color:#fff;cursor:pointer;flex:1;min-height:46px}
     .xzw-primary:disabled{opacity:.55}
     .xzw-status{margin-top:13px;padding:12px;border-radius:10px;background:#10101d;color:#c4b5fd;white-space:pre-wrap}
-    .xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}
+    .xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}\n    .xzw-template-guide{margin-top:10px;padding:11px;border:1px solid #41415e;border-radius:11px;background:#141426}.xzw-template-guide>strong{color:#ddd;font-size:13px}.xzw-template-guide small{color:#a5a5bf}
     .xzw-badge{display:inline-block;padding:3px 7px;border-radius:6px;background:#30264d;color:#c4b5fd;font-size:11px}
     @media(max-width:560px){#xiaozhi-workflow{padding:0;align-items:stretch}.xzw-card{height:100dvh;max-height:100dvh;border-radius:0;padding:14px}.xzw-head{top:-14px}.xzw-head h2{font-size:18px}.xzw-grid{grid-template-columns:1fr}.xzw-steps{grid-template-columns:repeat(4,1fr)}}
   `;
@@ -289,7 +289,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     }
     const script = $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean);
     const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
-    const captions = customCaptions.length ? customCaptions : script;
+    const shotPlan = getMerchantShotPlan(profile.industry, files.length);
+    const captions = customCaptions.length ? customCaptions : shotPlan.map(item => item.caption);
     const textTrack = composition.tracks.find(t => t.type === 'text');
     const musicFile = $('xzw-music').files?.[0];
     const voiceFile = $('xzw-voice').files?.[0] || pendingVoiceFile;
@@ -401,7 +402,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
             ]
           };
         }
-        shots.push({name:file.name,caption,start:cursor,duration:shotDuration});
+        shots.push({name:file.name,role:shotPlan[i]?.role || '门店展示',caption,start:cursor,duration:shotDuration});
         cursor += shotDuration;
         onCompositionChanged();
       }
