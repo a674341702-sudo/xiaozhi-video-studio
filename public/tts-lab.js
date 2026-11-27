@@ -180,7 +180,7 @@ $('generate').addEventListener('click', async () => {
     $('player').hidden = false;
     $('download').href = audioUrl;
     $('download').hidden = false;
-    status('生成成功！共分段生成 ' + chunkCount + ' 段。请先试听发音、语速和停顿；' + (deliveredToWorkspace ? '配音已自动传回主工作台，可切回工作台查看。' : '未检测到已打开的主工作台，仍可下载 WAV 后手动上传。'));
+    status('生成成功！共分段生成 ' + chunkCount + ' 段。请先试听发音、语速和停顿；' + (deliveredToWorkspace ? '配音已自动传回主工作台，可切回工作台查看。' : '主工作台未确认接收（可能未打开或自动导入失败），可下载 WAV 后手动上传。'));
   } catch (error) {
     console.error('[中文配音实验室]', error);
     status('生成失败：' + explainTTSError(error));
