@@ -108,6 +108,43 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
   const $ = (id) => modal.querySelector('#' + id);
   const setStatus = (message) => { $('xzw-status').textContent = message; };
+
+  // 中文配音实验室通过同源 BroadcastChannel 回传 WAV。
+  // 若主工作台尚未编排时间线，先暂存文件，等自动编排时再加入配音轨。
+  let pendingVoiceFile = null;
+  const ttsChannel = typeof BroadcastChannel !== 'undefined'
+    ? new BroadcastChannel('xiaozhi-tts-audio-v1') : null;
+  if (ttsChannel) {
+    ttsChannel.onmessage = async (event) => {
+      const data = event.data || {};
+      if (data.type !== 'xiaozhi-tts-audio' || !(data.blob instanceof Blob)) return;
+      if (!data.blob.size || data.blob.size > 40 * 1024 * 1024) {
+        setStatus('收到的配音文件为空或超过40MB，请在配音实验室下载后手动上传。');
+        return;
+      }
+      const file = new File([data.blob], '小智普通话配音.wav', { type: 'audio/wav' });
+      // ACK lets the TTS page know that the main workspace received the audio.
+      ttsChannel.postMessage({ type: 'xiaozhi-tts-audio-ack' });
+      if (!composition.clips.length) {
+        pendingVoiceFile = file;
+        setStatus('普通话配音已自动传回工作台并暂存。接下来点击“自动编排商家视频”，配音会自动加入时间线。');
+        return;
+      }
+      try {
+        const voice = await mediaManager.importFile(file, { startTime: 0, trackIndex: 5 });
+        if (!voice) throw new Error('配音音轨导入失败');
+        voice.volume = 1;
+        voice.duration = Math.min(composition.duration, voice.duration);
+        voice.trimEnd = (voice.trimStart || 0) + voice.duration;
+        if (voiceFile === pendingVoiceFile) pendingVoiceFile = null;
+        onCompositionChanged();
+        setStatus('普通话配音已自动传回，并加入时间线的配音轨。可以试听或继续导出。');
+      } catch (error) {
+        pendingVoiceFile = file;
+        setStatus('配音已收到，但自动加入时间线失败：' + (error?.message || '未知错误') + '。已暂存，可重新编排时自动加入，或手动上传。');
+      }
+    };
+  }
   const profileKeys = ['shop','industry','product','address','offer','copy','style','length'];
   const readProfile = () => Object.fromEntries(profileKeys.map(key => [key, $('xzw-' + key).value]));
   const saveProfile = () => {
@@ -199,7 +236,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const captions = customCaptions.length ? customCaptions : script;
     const textTrack = composition.tracks.find(t => t.type === 'text');
     const musicFile = $('xzw-music').files?.[0];
-    const voiceFile = $('xzw-voice').files?.[0];
+    const voiceFile = $('xzw-voice').files?.[0] || pendingVoiceFile;
     const audioFiles = [musicFile, voiceFile].filter(Boolean);
     const audioBytes = audioFiles.reduce((total, file) => total + file.size, 0);
     const maxAudioFileBytes = 40 * 1024 * 1024;
