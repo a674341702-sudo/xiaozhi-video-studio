@@ -429,10 +429,22 @@ export function downloadBlob(blob, filename) {
   const a = document.createElement('a');
   a.href = url;
   a.download = filename;
+  a.style.display = 'none';
   document.body.appendChild(a);
-  a.click();
-  setTimeout(() => {
+
+  try {
+    // Mobile browsers may take longer than desktop browsers to hand the
+    // object URL to the download manager. Keep the URL alive long enough
+    // for Android Chrome/WebView to begin reading the MP4.
+    a.click();
+  } catch (error) {
     URL.revokeObjectURL(url);
     a.remove();
-  }, 1000);
+    throw error;
+  }
+
+  // The click has been dispatched; remove the temporary anchor, but do not
+  // revoke the Blob URL immediately or after an overly short 1-second delay.
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
