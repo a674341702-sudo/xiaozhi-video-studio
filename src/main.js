@@ -956,7 +956,7 @@ async function exportCurrentProjectBundle() {
 async function importProjectBundleFile(file) {
   try {
     const result = await readProjectBundle(file);
-    const projectName = result.project.name || file.name.replace(/\\.(xzproj|zip)$/i, '') || '导入的商家项目';
+    const projectName = result.project.name || file.name.replace(/\.(xzproj|zip)$/i, '') || '导入的商家项目';
     result.project.name = projectName;
     const id = createLocalProjectId();
     const savedAt = Date.now();
