@@ -276,6 +276,36 @@ function seekVideoToOffset(video, offset) {
 }
 
 /**
+ * Validate timeline media references before expensive browser/WASM allocations.
+ * Export must fail clearly rather than silently render missing assets as blanks.
+ */
+export function validateCompositionMedia(composition) {
+  if (!composition || !Array.isArray(composition.clips)) {
+    throw new Error('项目时间线数据无效，请重新打开项目后重试。');
+  }
+  const mediaClips = composition.clips.filter(clip => ['video', 'image', 'audio'].includes(clip.type));
+  for (const clip of mediaClips) {
+    const label = clip.name || '未命名素材';
+    if (!Number.isFinite(clip.startTime) || clip.startTime < 0 ||
+        !Number.isFinite(clip.duration) || clip.duration <= 0) {
+      throw new Error(`素材“${label}”的时间或时长无效，请删除后重新导入。`);
+    }
+    if (clip.type === 'video') {
+      if (!clip.element || !clip.element.videoWidth || !clip.element.videoHeight) {
+        throw new Error(`视频“${label}”尚未准备好或原始文件已丢失，请重新导入该视频后再导出。`);
+      }
+    } else if (clip.type === 'image') {
+      if (!clip.element || !clip.element.naturalWidth || !clip.element.naturalHeight) {
+        throw new Error(`图片“${label}”尚未加载或原始文件已丢失，请重新导入该图片后再导出。`);
+      }
+    } else if (!clip.file && !clip.src) {
+      throw new Error(`音频“${label}”缺少原始文件，请重新导入后再导出。`);
+    }
+  }
+  return true;
+}
+
+/**
  * High quality offline frame export with audio mixing and FFmpeg MP4 encoding.
  */
 export async function exportComposition(composition, canvasPreview, onProgress, abortSignal, options = {}) {
@@ -300,28 +330,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   const quality = options.quality || 'high';
   const totalFramesEstimate = Math.ceil(duration * fps);
 
-  // Validate every timeline media reference before loading FFmpeg or allocating
-  // large frame buffers. A missing image/video element must never become a
-  // seemingly successful MP4 containing blank frames.
-  const mediaClips = composition.clips.filter(clip => ['video', 'image', 'audio'].includes(clip.type));
-  for (const clip of mediaClips) {
-    const label = clip.name || '未命名素材';
-    if (!Number.isFinite(clip.startTime) || clip.startTime < 0 ||
-        !Number.isFinite(clip.duration) || clip.duration <= 0) {
-      throw new Error(`素材“${label}”的时间或时长无效，请删除后重新导入。`);
-    }
-    if (clip.type === 'video') {
-      if (!clip.element || !clip.element.videoWidth || !clip.element.videoHeight) {
-        throw new Error(`视频“${label}”尚未准备好或原始文件已丢失，请重新导入该视频后再导出。`);
-      }
-    } else if (clip.type === 'image') {
-      if (!clip.element || !clip.element.naturalWidth || !clip.element.naturalHeight) {
-        throw new Error(`图片“${label}”尚未加载或原始文件已丢失，请重新导入该图片后再导出。`);
-      }
-    } else if (!clip.file && !clip.src) {
-      throw new Error(`音频“${label}”缺少原始文件，请重新导入后再导出。`);
-    }
-  }
+  validateCompositionMedia(composition);
 
   // FFmpeg.wasm keeps imported frames in its virtual filesystem until encoding.
   // Bound the workload on phones before allocating hundreds of large JPEG frames.
