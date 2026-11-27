@@ -97,17 +97,28 @@ export async function listLocalProjects() {
   const db = await openDatabase();
   try {
     const tx = db.transaction(STORE_NAME, 'readonly');
-    const records = await requestResult(tx.objectStore(STORE_NAME).getAll());
-    return (records || [])
-      .filter(record => record.id !== LAST_PROJECT_ID)
-      .map(record => ({
-        id: record.id,
-        name: record.name || record.project?.name || '未命名项目',
-        savedAt: record.savedAt || 0,
-        clipCount: record.project?.clips?.length || 0,
-        mediaCount: record.media?.length || 0
-      }))
-      .sort((a, b) => b.savedAt - a.savedAt);
+    const store = tx.objectStore(STORE_NAME);
+    const projects = [];
+    await new Promise((resolve, reject) => {
+      const request = store.openCursor();
+      request.onsuccess = () => {
+        const cursor = request.result;
+        if (!cursor) { resolve(); return; }
+        const record = cursor.value;
+        if (record.id !== LAST_PROJECT_ID) {
+          projects.push({
+            id: record.id,
+            name: record.name || record.project?.name || '未命名项目',
+            savedAt: record.savedAt || 0,
+            clipCount: record.project?.clips?.length || 0,
+            mediaCount: record.media?.length || 0
+          });
+        }
+        cursor.continue();
+      };
+      request.onerror = () => reject(request.error || new Error('读取项目列表失败'));
+    });
+    return projects.sort((a, b) => b.savedAt - a.savedAt);
   } finally {
     db.close();
   }
@@ -117,9 +128,10 @@ export async function deleteLocalProject(projectId) {
   if (!projectId || projectId === LAST_PROJECT_ID) throw new Error('不能删除当前自动恢复记录');
   const db = await openDatabase();
   try {
+    const readTx = db.transaction(META_STORE, 'readonly');
+    const active = await requestResult(readTx.objectStore(META_STORE).get(LAST_ACTIVE_KEY));
     const tx = db.transaction([STORE_NAME, META_STORE], 'readwrite');
     tx.objectStore(STORE_NAME).delete(projectId);
-    const active = await requestResult(tx.objectStore(META_STORE).get(LAST_ACTIVE_KEY));
     if (active?.value === projectId) {
       tx.objectStore(META_STORE).put({ key: LAST_ACTIVE_KEY, value: LAST_PROJECT_ID });
     }
