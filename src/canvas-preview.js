@@ -5,6 +5,7 @@
  */
 import { clamp } from './utils.js';
 import { applyClipTransformsAtTime } from './keyframes.js';
+import { wrapTextLines } from './text-layout.js';
 
 export class CanvasPreview {
   constructor({ canvas, composition, onSelectClip, onChangeClipTransform, onContextMenu }) {
@@ -264,41 +265,52 @@ export class CanvasPreview {
     this._loadCustomFont(clip);
 
     const align = clip.textAlign || 'center';
+    const fontSize = Math.max(12, Number(clip.fontSize) || 36);
     const weight = clip.fontWeight === 'bold' ? 'bold ' : '';
-    const fontFamily = clip.customFontUrl ? `"${clip.fontFamily || 'Inter'}"` : (clip.fontFamily || 'Inter');
-    ctx.font = `${weight}${clip.fontSize}px ${fontFamily}, sans-serif`;
+    const fontFamily = clip.customFontUrl
+      ? `"${clip.fontFamily || 'Inter'}"`
+      : (clip.fontFamily || '"Noto Sans CJK SC", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", Arial');
+    ctx.font = `${weight}${fontSize}px ${fontFamily}, sans-serif`;
     ctx.textAlign = align;
     ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
 
-    const lines = clip.text.split('\n');
-    const lineHeight = clip.fontSize * 1.2;
+    const horizontalPadding = Math.max(8, Math.round(fontSize * 0.24));
+    const maxTextWidth = Math.max(1, clip.width - horizontalPadding * 2);
+    const lineHeight = fontSize * 1.2;
+    const verticalPadding = Math.max(4, Math.round(fontSize * 0.18));
+    const maxLines = Math.max(1, Math.floor((clip.height - verticalPadding * 2) / lineHeight));
+    const lines = wrapTextLines(ctx, clip.text, maxTextWidth, maxLines);
     const totalHeight = lines.length * lineHeight;
     const startY = clip.y + clip.height / 2 - totalHeight / 2 + lineHeight / 2;
 
     let maxWidth = 0;
     for (const line of lines) {
-      const m = ctx.measureText(line);
-      if (m.width > maxWidth) maxWidth = m.width;
+      const measured = ctx.measureText(line).width;
+      if (measured > maxWidth) maxWidth = measured;
     }
 
     if (clip.bgColor && clip.bgColor !== 'transparent') {
-      const padding = 12;
+      const padding = horizontalPadding;
+      const bgWidth = Math.min(clip.width, maxWidth + padding * 2);
       const bgX = align === 'left' ? clip.x :
-                  align === 'right' ? clip.x + clip.width - maxWidth - padding * 2 :
-                  clip.x + clip.width / 2 - maxWidth / 2 - padding;
-      const bgY = clip.y + clip.height / 2 - totalHeight / 2 - padding;
+                  align === 'right' ? clip.x + clip.width - bgWidth : clip.x + clip.width / 2 - bgWidth / 2;
+      const bgY = Math.max(clip.y, clip.y + clip.height / 2 - totalHeight / 2 - verticalPadding);
+      const bgHeight = Math.min(clip.height, totalHeight + verticalPadding * 2);
       ctx.fillStyle = clip.bgColor;
-      ctx.fillRect(bgX, bgY, maxWidth + padding * 2, totalHeight + padding * 2);
+      ctx.fillRect(bgX, bgY, bgWidth, bgHeight);
     }
 
+    const textX = align === 'left' ? clip.x + horizontalPadding :
+                  align === 'right' ? clip.x + clip.width - horizontalPadding :
+                  clip.x + clip.width / 2;
     ctx.fillStyle = clip.color || '#ffffff';
+    ctx.strokeStyle = clip.strokeColor || 'rgba(0,0,0,0.88)';
+    ctx.lineWidth = Math.max(2, fontSize * 0.075);
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const x = align === 'left' ? clip.x + 10 :
-                align === 'right' ? clip.x + clip.width - 10 :
-                clip.x + clip.width / 2;
       const y = startY + i * lineHeight;
-      ctx.fillText(line, x, y);
+      if (typeof ctx.strokeText === 'function') ctx.strokeText(lines[i], textX, y, maxTextWidth);
+      ctx.fillText(lines[i], textX, y, maxTextWidth);
     }
   }
 
