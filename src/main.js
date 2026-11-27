@@ -20,6 +20,7 @@ import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
 import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
 import { createProjectBundle, readProjectBundle } from './project-bundle.js';
+import { createSerialTaskQueue } from './serial-task-queue.js';
 
 // --- Global State ---
 let composition = null;
@@ -84,6 +85,7 @@ let isExporting = false;
 let localRestoreComplete = false;
 let localAutosaveTimer = null;
 let localAutosaveInProgress = false;
+const enqueueLocalSave = createSerialTaskQueue();
 let localAutosaveDirty = false;
 let localAutosaveErrorShown = false;
 let isRestoringLocalProject = false;
@@ -771,13 +773,16 @@ function clamp(val, min, max) {
 
 // --- New Project / Cleanup ---
 
-async function buildLocalProjectSnapshot() {
-  const project = stripTemporaryMediaUrls(composition.toJSON());
-  project.name = activeProjectName;
-  const previousRecord = await loadLocalProject(activeProjectId).catch(() => null);
+async function buildLocalProjectSnapshot(sourceComposition = composition, projectId = activeProjectId, projectName = activeProjectName) {
+  // Capture the timeline and its clip references before awaiting IndexedDB.
+  // This prevents a later edit or project switch from changing this save.
+  const project = stripTemporaryMediaUrls(sourceComposition.toJSON());
+  project.name = projectName;
+  const sourceClips = sourceComposition.clips.map(clip => ({ ...clip }));
+  const previousRecord = await loadLocalProject(projectId).catch(() => null);
   const previousMedia = new Map((previousRecord?.media || []).map(item => [item.clipId, item]));
   const media = [];
-  for (const clip of composition.clips) {
+  for (const clip of sourceClips) {
     if (!['video', 'image', 'audio'].includes(clip.type)) continue;
     let blob = clip.file instanceof Blob ? clip.file : null;
     let previous = null;
@@ -807,31 +812,46 @@ function setLocalSaveStatus(message, state = 'normal') {
   localSaveStatusEl.dataset.state = state;
 }
 
-async function saveCurrentProjectLocally() {
-  if (localAutosaveInProgress) { localAutosaveDirty = true; return false; }
-  localAutosaveInProgress = true;
-  localAutosaveDirty = false;
-  setLocalSaveStatus('正在保存到本机…');
-  try {
-    const snapshot = await buildLocalProjectSnapshot();
-    snapshot.project.name = activeProjectName;
-    const result = await saveLocalProject(snapshot.project, snapshot.media, activeProjectId);
-    const time = new Date(result.savedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
-    setLocalSaveStatus('本机已保存 ' + time, 'saved');
-    localAutosaveErrorShown = false;
-    return true;
-  } catch (error) {
-    console.warn('[小智本机自动保存]', error);
-    setLocalSaveStatus('本机保存失败', 'error');
-    if (!localAutosaveErrorShown) {
-      showToast('本机自动保存失败：' + (error?.message || '存储空间不足或浏览器限制').slice(0, 100) + '。请及时下载项目配置，并保留原素材。', 'warning', 9000);
-      localAutosaveErrorShown = true;
+function saveCurrentProjectLocally() {
+  const targetComposition = composition;
+  const targetProjectId = activeProjectId;
+  const targetProjectName = activeProjectName;
+
+  return enqueueLocalSave(async () => {
+    if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+    localAutosaveTimer = null;
+    localAutosaveDirty = false;
+    localAutosaveInProgress = true;
+    if (targetProjectId === activeProjectId) setLocalSaveStatus('正在保存到本机…');
+
+    try {
+      const snapshot = await buildLocalProjectSnapshot(
+        targetComposition,
+        targetProjectId,
+        targetProjectName
+      );
+      const result = await saveLocalProject(snapshot.project, snapshot.media, targetProjectId);
+      if (targetProjectId === activeProjectId) {
+        const time = new Date(result.savedAt).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+        setLocalSaveStatus('本机已保存 ' + time, 'saved');
+        localAutosaveErrorShown = false;
+      }
+      return true;
+    } catch (error) {
+      console.warn('[小智本机自动保存]', error);
+      if (targetProjectId === activeProjectId) {
+        setLocalSaveStatus('本机保存失败', 'error');
+        if (!localAutosaveErrorShown) {
+          showToast('本机自动保存失败：' + (error?.message || '存储空间不足或浏览器限制').slice(0, 100) + '。请及时下载项目配置，并保留原素材。', 'warning', 9000);
+          localAutosaveErrorShown = true;
+        }
+      }
+      return false;
+    } finally {
+      localAutosaveInProgress = false;
+      if (localAutosaveDirty && localRestoreComplete) scheduleLocalAutosave();
     }
-    return false;
-  } finally {
-    localAutosaveInProgress = false;
-    if (localAutosaveDirty && localRestoreComplete) scheduleLocalAutosave();
-  }
+  });
 }
 
 function scheduleLocalAutosave() {
@@ -971,7 +991,10 @@ async function renderProjectLibrary() {
       open.type = 'button'; open.textContent = '打开';
       open.addEventListener('click', async () => {
         try {
-          await saveCurrentProjectLocally();
+          const currentSaved = await saveCurrentProjectLocally();
+          if (!currentSaved && composition.clips.length > 0) {
+            throw new Error('当前项目没有成功保存，为避免丢失素材，已取消切换');
+          }
           const record = await loadLocalProject(item.id);
           await applyLocalProjectRecord(record, true);
           document.getElementById('project-library')?.setAttribute('hidden', '');
@@ -1027,6 +1050,10 @@ async function importProjectBundleFile(file) {
     const result = await readProjectBundle(file);
     const projectName = result.project.name || file.name.replace(/\.(xzproj|zip)$/i, '') || '导入的商家项目';
     result.project.name = projectName;
+    const currentSaved = await saveCurrentProjectLocally();
+    if (!currentSaved && composition.clips.length > 0) {
+      throw new Error('当前项目没有成功保存，为避免丢失素材，已取消导入');
+    }
     const id = createLocalProjectId();
     const savedAt = Date.now();
     await saveLocalProject(result.project, result.media, id);
@@ -1042,31 +1069,49 @@ async function saveAsNewLocalProject() {
   const suggested = activeProjectName && activeProjectName !== '新建视频项目' ? activeProjectName + ' - 副本' : '新商家项目';
   const name = window.prompt('给这个商家项目起个名字：', suggested);
   if (!name || !name.trim()) return;
+  const savedCurrent = await saveCurrentProjectLocally();
+  if (!savedCurrent && composition.clips.length > 0) {
+    showToast('当前项目没有成功保存，暂时不能另存为副本，以免丢失素材。', 'warning', 8000);
+    return;
+  }
+  const previousId = activeProjectId;
+  const previousName = activeProjectName;
   activeProjectId = createLocalProjectId();
   updateHeaderProjectName(name.trim());
   const saved = await saveCurrentProjectLocally();
   if (saved) {
     showToast('已另存为“' + activeProjectName + '”，项目和素材已保存到本机', 'success', 7000);
     renderProjectLibrary();
+  } else {
+    activeProjectId = previousId;
+    updateHeaderProjectName(previousName);
+    showToast('副本保存失败，已保留原项目。', 'warning', 8000);
   }
 }
 
-window.newProject = function newProject() {
+window.newProject = async function newProject() {
+  const currentSaved = await saveCurrentProjectLocally();
+  if (!currentSaved && composition.clips.length > 0) {
+    showToast('当前项目没有成功保存，已取消新建，避免丢失素材。请先导出完整项目包或检查浏览器存储空间。', 'warning', 9000);
+    return false;
+  }
   if (localAutosaveTimer) clearTimeout(localAutosaveTimer);
+  localAutosaveTimer = null;
   activeProjectId = createLocalProjectId();
   releaseMediaUrls();
   composition.clear();
   inPoint = 0;
   outPoint = 0;
-  onCompositionChanged();
   updateHeaderProjectName('新建视频项目');
+  onCompositionChanged();
   showToast('已新建项目；新项目会自动保存在本机', 'info');
+  return true;
 };
 
 window.saveProject = async function saveProject() {
-  const localSaved = await saveCurrentProjectLocally();
   const data = stripTemporaryMediaUrls(composition.toJSON());
   data.name = activeProjectName;
+  const localSaved = await saveCurrentProjectLocally();
   const mediaCount = composition.clips.filter(clip => clip.file || clip.src?.startsWith('blob:')).length;
   data.mediaIncluded = false;
   data.mediaNotice = '此 JSON 文件只保存时间线和编辑参数，不包含原始媒体。当前浏览器会另行自动保存素材；如需换设备，请保留原始照片、视频和音频。';
@@ -1087,6 +1132,11 @@ window.loadProject = async function loadProject(file) {
       throw new Error('项目文件格式不正确');
     }
     if (!window.confirm('打开项目会替换当前时间线。确定继续吗？')) return;
+    const currentSaved = await saveCurrentProjectLocally();
+    if (!currentSaved && composition.clips.length > 0) {
+      showToast('当前项目没有成功保存，已取消打开新项目，避免丢失素材。', 'warning', 9000);
+      return;
+    }
     activeProjectId = createLocalProjectId();
     releaseMediaUrls();
     const missingMediaCount = (data.clips || []).filter(clip =>
