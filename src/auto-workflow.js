@@ -6,6 +6,7 @@
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
 import { getSubtitleSafeLayout } from './text-layout.js';
+import { getSubtitleFontSize } from './subtitle-sizing.js';
 import { getPhotoMotionKeyframes } from './photo-motion.js';
 import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
@@ -711,7 +712,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
             trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
             text: caption, startTime: cursor, duration: shotDuration,
             ...getSubtitleSafeLayout(composition.width, composition.height),
-            fontSize: Math.max(28, Math.round(composition.width * 0.045)),
+            fontSize: getSubtitleFontSize(caption, composition.width),
             fontFamily: 'Noto Sans CJK SC', fontWeight: 'bold', color: '#ffffff',
             bgColor: $('xzw-subtitle').value === 'clean' ? 'rgba(0,0,0,0.24)' : 'rgba(0,0,0,0.58)',
             textAlign: 'center'
