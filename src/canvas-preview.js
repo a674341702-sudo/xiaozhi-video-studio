@@ -365,15 +365,33 @@ export class CanvasPreview {
 
   _bindEvents() {
     // Pointer Events support mouse, pen and touch on phones/tablets.
+    // Keep the gesture on the window as a fallback: some Android WebViews/PWA
+    // builds stop delivering moves to the canvas after a touch starts.
     this.canvas.style.touchAction = 'none';
+    this.canvas.style.userSelect = 'none';
+    this.canvas.style.webkitUserSelect = 'none';
+    this.activePointerId = null;
     this.canvas.addEventListener('pointerdown', (e) => {
       if (e.pointerType === 'touch') e.preventDefault();
-      this.canvas.setPointerCapture?.(e.pointerId);
+      if (e.button !== undefined && e.button !== 0) return;
+      this.activePointerId = e.pointerId;
+      try { this.canvas.setPointerCapture?.(e.pointerId); } catch (_) {}
       this._onMouseDown(e);
     });
-    this.canvas.addEventListener('pointermove', (e) => this._onMouseMove(e));
-    this.canvas.addEventListener('pointerup', () => this._onMouseUp());
-    this.canvas.addEventListener('pointercancel', () => this._onMouseUp());
+    this._handlePointerMove = (e) => {
+      if (this.activePointerId !== e.pointerId) return;
+      if (e.pointerType === 'touch' && e.cancelable) e.preventDefault();
+      this._onMouseMove(e);
+    };
+    this._handlePointerEnd = (e) => {
+      if (this.activePointerId !== e.pointerId) return;
+      this.activePointerId = null;
+      this._onMouseUp();
+    };
+    window.addEventListener('pointermove', this._handlePointerMove, { passive: false });
+    window.addEventListener('pointerup', this._handlePointerEnd);
+    window.addEventListener('pointercancel', this._handlePointerEnd);
+    this.canvas.addEventListener('lostpointercapture', (e) => this._handlePointerEnd(e));
 
     this.canvas.addEventListener('contextmenu', (e) => {
       e.preventDefault();
