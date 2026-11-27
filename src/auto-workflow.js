@@ -353,17 +353,42 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
             ]
           };
         }
+        // Apply a short fade at both ends of every shot. The offline renderer
+        // also evaluates opacity keyframes, so preview and MP4 share the same motion.
+        const fade = Math.min(0.45, shotDuration / 4);
+        const shotEnd = clip.startTime + shotDuration;
+        clip.keyframes = {
+          ...(clip.keyframes || {}),
+          opacity: [
+            { time: clip.startTime, value: 0, easing: 'easeOut' },
+            { time: clip.startTime + fade, value: 1, easing: 'easeInOut' },
+            { time: shotEnd - fade, value: 1, easing: 'easeInOut' },
+            { time: shotEnd, value: 0, easing: 'easeIn' }
+          ]
+        };
+
         const caption = captions[i % captions.length] || profile.shop || '到店体验，发现更多精彩';
-        if (textTrack) composition.addClip({
-          trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
-          text: caption, startTime: cursor, duration: shotDuration,
-          x: Math.round(composition.width * 0.07), y: Math.round(composition.height * 0.70),
-          width: Math.round(composition.width * 0.86), height: Math.round(composition.height * 0.18),
-          fontSize: Math.max(28, Math.round(composition.width * 0.045)),
-          fontFamily: 'Arial', fontWeight: 'bold', color: '#ffffff',
-          bgColor: $('xzw-subtitle').value === 'clean' ? 'rgba(0,0,0,0.24)' : 'rgba(0,0,0,0.58)',
-          textAlign: 'center'
-        });
+        if (textTrack) {
+          const subtitleClip = composition.addClip({
+            trackId: textTrack.id, type: 'text', name: '字幕 ' + (i + 1),
+            text: caption, startTime: cursor, duration: shotDuration,
+            x: Math.round(composition.width * 0.07), y: Math.round(composition.height * 0.70),
+            width: Math.round(composition.width * 0.86), height: Math.round(composition.height * 0.18),
+            fontSize: Math.max(28, Math.round(composition.width * 0.045)),
+            fontFamily: 'Arial', fontWeight: 'bold', color: '#ffffff',
+            bgColor: $('xzw-subtitle').value === 'clean' ? 'rgba(0,0,0,0.24)' : 'rgba(0,0,0,0.58)',
+            textAlign: 'center'
+          });
+          subtitleClip.startTime = cursor;
+          subtitleClip.keyframes = {
+            opacity: [
+              { time: cursor, value: 0, easing: 'easeOut' },
+              { time: cursor + fade, value: 1, easing: 'easeInOut' },
+              { time: shotEnd - fade, value: 1, easing: 'easeInOut' },
+              { time: shotEnd, value: 0, easing: 'easeIn' }
+            ]
+          };
+        }
         shots.push({name:file.name,caption,start:cursor,duration:shotDuration});
         cursor += shotDuration;
         onCompositionChanged();
