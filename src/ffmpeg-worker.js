@@ -155,7 +155,8 @@ async function renderMixedAudio(composition, onProgress) {
       decodedCount++;
       if (onProgress) onProgress(Math.round(((i + 1) / audioClips.length) * 100));
     } catch (err) {
-      console.warn(`Could not decode audio for clip "${clip.name}":`, err);
+      const label = clip.name || '未命名音频';
+      throw new Error(`音频“${label}”读取或解码失败：${err?.message || '格式不受支持'}。请尝试转换为 MP3 或 WAV 后重新导入。`);
     }
   }
 
@@ -296,7 +297,9 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
         if (onProgress) onProgress(5 + Math.round(pct * 0.15), 'Rendering mixed audio');
       });
     } catch (audioErr) {
-      console.warn('Audio mixing failed, continuing with video only:', audioErr);
+      // Never silently export a silent video when the user added narration or music.
+      // Make the audio problem visible so the user can fix it and retry.
+      throw new Error(`配乐或配音处理失败，已停止导出，避免生成无声视频。原因：${audioErr?.message || '音频处理异常'}`);
     }
 
     checkAborted();
