@@ -94,6 +94,7 @@ export class Composition {
       height: clipData.height ?? Math.round(this.height * 0.8),
       opacity: clipData.opacity ?? 1,
       volume: clipData.volume ?? 1,
+      loop: clipData.loop === true,
       file: clipData.file || null,
       src: clipData.src || null,
       element: clipData.element || null,
