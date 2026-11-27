@@ -128,7 +128,7 @@ export function getAudioClipPlaybackRange(clip, decodedDuration, compositionDura
 /**
  * Renders a mixed AudioBuffer for all audio/video clips in the composition.
  */
-async function renderMixedAudio(composition, onProgress) {
+async function renderMixedAudio(composition, onProgress, abortSignal) {
   const sampleRate = 48000;
   const duration = composition.duration;
   const channels = 2;
@@ -153,18 +153,21 @@ async function renderMixedAudio(composition, onProgress) {
 
   let decodedCount = 0;
   for (let i = 0; i < audioClips.length; i++) {
+    if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
     const clip = audioClips[i];
     try {
       let arrayBuffer = null;
       if (clip.file) {
         arrayBuffer = await readFileAsArrayBuffer(clip.file);
       } else if (clip.src) {
-        const res = await fetch(clip.src);
+        const res = await fetch(clip.src, { signal: abortSignal });
         arrayBuffer = await res.arrayBuffer();
       }
 
       if (!arrayBuffer) continue;
       const decoded = await decodeAudioData(arrayBuffer);
+      arrayBuffer = null;
+      if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
       if (!decoded) continue;
 
       const playback = getAudioClipPlaybackRange(clip, decoded.duration, duration);
@@ -209,8 +212,11 @@ async function renderMixedAudio(composition, onProgress) {
   }
 
   if (decodedCount === 0) return null;
+  if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
 
-  return await offlineCtx.startRendering();
+  const mixed = await offlineCtx.startRendering();
+  if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
+  return mixed;
 }
 
 /**
@@ -392,7 +398,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     try {
       audioBuffer = await renderMixedAudio(composition, (pct) => {
         if (onProgress) onProgress(5 + Math.round(pct * 0.15), 'Rendering mixed audio');
-      });
+      }, abortSignal);
     } catch (audioErr) {
       // Never silently export a silent video when the user added narration or music.
       // Make the audio problem visible so the user can fix it and retry.
@@ -500,10 +506,25 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
     inputFiles.push('export.mp4');
     let ret;
+    const encoder = ffmpeg;
+    const terminateEncoder = () => {
+      // FFmpeg.wasm cannot interrupt an active exec command through AbortSignal.
+      // Terminating its worker is the supported hard-cancel path; a later export
+      // will lazily create and load a fresh instance.
+      try { encoder.terminate(); } catch (_) {}
+      if (ffmpeg === encoder) {
+        ffmpeg = null;
+        ffmpegLoaded = false;
+      }
+    };
+    if (abortSignal) abortSignal.addEventListener('abort', terminateEncoder, { once: true });
     try {
-      ret = await ffmpeg.exec(args);
+      checkAborted();
+      ret = await encoder.exec(args);
+      checkAborted();
     } finally {
-      ffmpeg.off('log', logCb);
+      if (abortSignal) abortSignal.removeEventListener('abort', terminateEncoder);
+      try { encoder.off('log', logCb); } catch (_) {}
     }
 
     if (ret !== 0) {
