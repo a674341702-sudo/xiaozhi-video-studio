@@ -103,7 +103,7 @@ export class CanvasPreview {
 
     for (const clip of activeClips) {
       ctx.save();
-      this._applyClipTransform(ctx, clip, time, false);
+      this._applyClipTransform(ctx, clip, time, true);
 
       if (clip.type === 'video') {
         this._renderVideoClipAtTime(ctx, clip, time);
