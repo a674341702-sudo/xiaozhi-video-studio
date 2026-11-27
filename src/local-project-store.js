@@ -84,10 +84,18 @@ export async function loadLocalProject(projectId = LAST_PROJECT_ID) {
 export async function loadLastActiveLocalProject() {
   const db = await openDatabase();
   try {
+    // Queue both reads before awaiting either one. This avoids relying on a
+    // readonly IndexedDB transaction remaining active across sequential awaits.
     const tx = db.transaction([STORE_NAME, META_STORE], 'readonly');
-    const active = await requestResult(tx.objectStore(META_STORE).get(LAST_ACTIVE_KEY));
-    const record = await requestResult(tx.objectStore(STORE_NAME).get(active?.value || LAST_PROJECT_ID));
-    return record || null;
+    const activeRequest = requestResult(tx.objectStore(META_STORE).get(LAST_ACTIVE_KEY));
+    const fallbackRequest = requestResult(tx.objectStore(STORE_NAME).get(LAST_PROJECT_ID));
+    const [active, fallback] = await Promise.all([activeRequest, fallbackRequest]);
+
+    if (!active?.value || active.value === LAST_PROJECT_ID) return fallback || null;
+
+    const activeTx = db.transaction(STORE_NAME, 'readonly');
+    const activeRecord = await requestResult(activeTx.objectStore(STORE_NAME).get(active.value));
+    return activeRecord || fallback || null;
   } finally {
     db.close();
   }
