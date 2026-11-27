@@ -9,12 +9,42 @@ function decodeXmlText(xml) {
   ).filter(Boolean).join('\n');
 }
 
+export async function readStreamWithLimit(stream, maxBytes, errorMessage = '文档正文过大') {
+  const reader = stream.getReader();
+  const chunks = [];
+  let totalBytes = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > maxBytes) {
+        try { await reader.cancel(); } catch (_) {}
+        throw new Error(errorMessage);
+      }
+      chunks.push(value);
+    }
+  } finally {
+    try { reader.releaseLock(); } catch (_) {}
+  }
+
+  const result = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    result.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return result;
+}
+
 async function inflateRaw(bytes) {
   if (typeof DecompressionStream === 'undefined') {
     throw new Error('当前浏览器不支持读取压缩 Word 文档，请另存为 TXT 后上传');
   }
   const stream = new Blob([bytes]).stream().pipeThrough(new DecompressionStream('deflate-raw'));
-  return new Uint8Array(await new Response(stream).arrayBuffer());
+  // Enforce the expanded-size limit while data is being produced, not after
+  // allocating the complete decompressed DOCX XML in memory.
+  return readStreamWithLimit(stream, MAX_DOCUMENT_BYTES, 'Word 文档正文解压后超过 10MB，已停止读取');
 }
 
 async function readDocx(file) {
