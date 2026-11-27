@@ -414,7 +414,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         if (!music) throw new Error('背景音乐导入失败：' + musicFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
         music.volume = 0.22;
         music.loop = true;
-        music.duration = Math.min(cursor, music.duration);
+        if (music.element) music.element.loop = true;
+        // The timeline duration represents the required music bed length.
+        // Export and preview loop the source until the merchant video ends.
+        music.duration = cursor;
         music.trimEnd = (music.trimStart || 0) + music.duration;
         const musicFade = Math.min(1.2, music.duration / 3);
         music.keyframes = { volume: [
