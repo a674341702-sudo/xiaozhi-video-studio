@@ -3,7 +3,7 @@
  * 手机优先的本地工作流：商家资料 → 素材 → 文案/镜头 → 配乐/配音 → 时间线 → MP4。
  * 当前不冒充云端 AI：脚本由本地模板辅助；配乐与配音通过用户上传的合法音频文件混入成片。
  */
-export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, onExport }) {
+export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
 
   const style = document.createElement('style');
@@ -200,6 +200,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     $('xzw-shots').innerHTML = '';
     setStatus('正在准备画布并导入素材，请不要关闭页面……');
     try {
+      // The user confirmed replacing the current timeline. Release its temporary
+      // object URLs before clearing clips so repeated workflows do not leak memory.
+      if (releaseMediaUrls) releaseMediaUrls();
       composition.clear();
       composition.setDimensions(dims[0], dims[1]);
       const exportWidth = document.getElementById('export-width');
@@ -273,7 +276,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         shots.map((s,i) => '<div class="xzw-shot"><span class="xzw-badge">镜头 '+(i+1)+'</span> '+escapeHtml(s.name)+' · '+s.duration.toFixed(1)+'秒<br><small>'+escapeHtml(s.caption)+'</small></div>').join('');
     } catch (error) {
       console.error('[小智商家短视频]', error);
-      setStatus('编排中断：' + (error?.message || '未知错误') + '。已加入时间线的素材会保留，请检查后重试。');
+      // Treat automatic arrangement as one operation: do not leave a partial
+      // timeline that could be mistaken for a finished merchant video.
+      if (releaseMediaUrls) releaseMediaUrls();
+      composition.clear();
+      onCompositionChanged();
+      canvasPreview.setCurrentTime(0);
+      $('xzw-shots').innerHTML = '';
+      setStatus('编排失败，已清理本次未完成的时间线，没有生成半成品。原因：' + (error?.message || '未知错误') + '。请检查文件后重新编排。');
     } finally {
       $('xzw-generate').disabled = false;
     }
