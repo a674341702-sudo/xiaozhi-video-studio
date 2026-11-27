@@ -470,6 +470,16 @@ function bindControls() {
   const btnNewProject = document.getElementById('btn-new-project');
   const btnSaveProject = document.getElementById('btn-save-project');
   const btnLoadProject = document.getElementById('btn-load-project');
+  const projectLibrary = document.getElementById('project-library');
+  document.getElementById('btn-project-library')?.addEventListener('click', () => {
+    projectLibrary?.removeAttribute('hidden');
+    renderProjectLibrary();
+  });
+  document.getElementById('project-library-close')?.addEventListener('click', () => projectLibrary?.setAttribute('hidden', ''));
+  projectLibrary?.addEventListener('click', event => {
+    if (event.target === projectLibrary) projectLibrary.setAttribute('hidden', '');
+  });
+  document.getElementById('project-save-copy')?.addEventListener('click', saveAsNewLocalProject);
   const loadProjectInput = document.getElementById('load-project-input');
 
   if (btnNewProject) btnNewProject.addEventListener('click', () => window.newProject?.());
