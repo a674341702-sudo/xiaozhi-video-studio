@@ -97,6 +97,29 @@ function decodeAudioData(arrayBuffer) {
 }
 
 /**
+ * Resolve how an audio clip should play inside the composition.
+ * Looping is opt-in (used for background music); narration never loops by default.
+ */
+export function getAudioClipPlaybackRange(clip, decodedDuration, compositionDuration) {
+  const start = Math.max(0, Number(clip?.startTime) || 0);
+  const offset = Math.max(0, Number(clip?.trimStart) || 0);
+  const clipDuration = Math.max(0, Number(clip?.duration) || 0);
+  const timelineRemaining = Math.max(0, Number(compositionDuration) - start);
+  if (!Number.isFinite(decodedDuration) || decodedDuration <= offset ||
+      clipDuration <= 0 || timelineRemaining <= 0) return null;
+
+  const requestedDuration = Math.min(clipDuration, timelineRemaining);
+  if (clip.loop === true) {
+    return { start, offset, duration: requestedDuration, loop: true, loopStart: offset, loopEnd: decodedDuration };
+  }
+
+  const availableDuration = Math.max(0, decodedDuration - offset);
+  const duration = Math.min(requestedDuration, availableDuration);
+  if (duration <= 0.01) return null;
+  return { start, offset, duration, loop: false, loopStart: 0, loopEnd: 0 };
+}
+
+/**
  * Renders a mixed AudioBuffer for all audio/video clips in the composition.
  */
 async function renderMixedAudio(composition, onProgress) {
@@ -138,13 +161,21 @@ async function renderMixedAudio(composition, onProgress) {
       const decoded = await decodeAudioData(arrayBuffer);
       if (!decoded) continue;
 
+      const playback = getAudioClipPlaybackRange(clip, decoded.duration, duration);
+      if (!playback) continue;
+
       const source = offlineCtx.createBufferSource();
       source.buffer = decoded;
+      if (playback.loop) {
+        source.loop = true;
+        source.loopStart = playback.loopStart;
+        source.loopEnd = playback.loopEnd;
+      }
 
       const gain = offlineCtx.createGain();
       const baseVolume = clip.volume ?? 1;
-      const clipStart = Math.max(0, clip.startTime);
-      const clipEnd = clipStart + Math.min(clip.duration, Math.max(0, decoded.duration - (clip.trimStart || 0)));
+      const clipStart = playback.start;
+      const clipEnd = clipStart + playback.duration;
       const envelope = clip.keyframes?.volume || [];
       const initialVolume = evaluateKeyframes(clip.keyframes, 'volume', clipStart);
       gain.gain.setValueAtTime(initialVolume ?? baseVolume, clipStart);
@@ -161,12 +192,7 @@ async function renderMixedAudio(composition, onProgress) {
       source.connect(gain);
       gain.connect(offlineCtx.destination);
 
-      const offset = clip.trimStart || 0;
-      const start = Math.max(0, clip.startTime);
-      const maxDur = Math.min(clip.duration, Math.max(0, decoded.duration - offset));
-      if (maxDur > 0.01) {
-        source.start(start, offset, maxDur);
-      }
+      source.start(playback.start, playback.offset, playback.duration);
 
       decodedCount++;
       if (onProgress) onProgress(Math.round(((i + 1) / audioClips.length) * 100));
@@ -370,6 +396,18 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     checkAborted();
     const hasAudio = Boolean(audioBuffer && audioBuffer.length > 0 && audioBuffer.duration > 0.05);
 
+    // Encode mixed audio now, then release its large AudioBuffer before the
+    // JPEG frame sequence accumulates in FFmpeg's virtual filesystem.
+    if (hasAudio) {
+      let wavBlob = audioBufferToWav(audioBuffer);
+      let wavData = await fetchFile(wavBlob);
+      await ffmpeg.writeFile('audio.wav', wavData);
+      inputFiles.push('audio.wav');
+      wavData = null;
+      wavBlob = null;
+      audioBuffer = null;
+    }
+
     if (onProgress) onProgress(20, 'Rendering video frames');
 
     offscreenCanvas = document.createElement('canvas');
@@ -419,13 +457,6 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
     if (onProgress) onProgress(82, 'Encoding video');
 
-    if (hasAudio) {
-      const wavBlob = audioBufferToWav(audioBuffer);
-      const wavData = await fetchFile(wavBlob);
-      await ffmpeg.writeFile('audio.wav', wavData);
-      inputFiles.push('audio.wav');
-    }
-
     const logMessages = [];
     const logCb = ({ message }) => {
       logMessages.push(message);
@@ -452,11 +483,13 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     );
 
     if (hasAudio) {
-      args.push('-c:a', 'aac', '-b:a', quality === 'low' ? '96k' : '128k', '-shortest');
+      args.push('-c:a', 'aac', '-b:a', quality === 'low' ? '96k' : '128k');
     } else {
       args.push('-an');
     }
 
+    // Preserve the complete composition even when a source audio file is shorter.
+    args.push('-t', duration.toFixed(3));
     args.push('export.mp4');
 
     inputFiles.push('export.mp4');
