@@ -123,10 +123,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         return;
       }
       const file = new File([data.blob], '小智普通话配音.wav', { type: 'audio/wav' });
+      pendingVoiceFile = file;
       // ACK lets the TTS page know that the main workspace received the audio.
       ttsChannel.postMessage({ type: 'xiaozhi-tts-audio-ack' });
       if (!composition.clips.length) {
-        pendingVoiceFile = file;
         setStatus('普通话配音已自动传回工作台并暂存。接下来点击“自动编排商家视频”，配音会自动加入时间线。');
         return;
       }
@@ -136,7 +136,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         voice.volume = 1;
         voice.duration = Math.min(composition.duration, voice.duration);
         voice.trimEnd = (voice.trimStart || 0) + voice.duration;
-        if (voiceFile === pendingVoiceFile) pendingVoiceFile = null;
+        pendingVoiceFile = null;
         onCompositionChanged();
         setStatus('普通话配音已自动传回，并加入时间线的配音轨。可以试听或继续导出。');
       } catch (error) {
