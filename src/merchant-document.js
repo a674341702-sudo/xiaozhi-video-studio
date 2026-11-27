@@ -73,7 +73,7 @@ export async function extractMerchantDocumentText(file) {
   else if (/\.(txt|md|csv)$/.test(name)) text = await file.text();
   else if (name.endsWith('.rtf')) {
     const raw = await file.text();
-    text = raw.replace(/\\'[0-9a-f]{2}/gi, ' ').replace(/\\par[d]?/g, '\\n')
+    text = raw.replace(/\\'[0-9a-f]{2}/gi, ' ').replace(/\\par[d]?/g, '\n')
       .replace(/\\'[0-9a-f]{2}|\\[a-z]+-?\\d* ?|[{}]/gi, ' ').replace(/\\\\/g, '\\');
   } else {
     throw new Error('支持 TXT、Markdown、CSV、RTF 和 Word（.docx）文档；PDF 暂不支持，请复制文字或另存为 TXT');
