@@ -7,6 +7,7 @@ import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
 import { getSubtitleSafeLayout } from './text-layout.js';
 import { getPhotoMotionKeyframes } from './photo-motion.js';
+import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
@@ -659,6 +660,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       if (exportHeight) exportHeight.value = String(dims[1]);
       let cursor = 0;
       const shots = [];
+      const visualClips = [];
+      const subtitleClips = [];
       for (let i = 0; i < files.length && cursor < targetSeconds; i++) {
         const file = files[i];
         const assignedShotIndex = mediaAssignments[i]?.shotIndex ?? i;
@@ -690,19 +693,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
             i, composition.width, composition.height, clip.startTime, shotDuration
           );
         }
-        // Apply a short fade at both ends of every shot. The offline renderer
-        // also evaluates opacity keyframes, so preview and MP4 share the same motion.
         const fade = Math.min(0.45, shotDuration / 4);
-        const shotEnd = clip.startTime + shotDuration;
-        clip.keyframes = {
-          ...(clip.keyframes || {}),
-          opacity: [
-            { time: clip.startTime, value: 0, easing: 'easeOut' },
-            { time: clip.startTime + fade, value: 1, easing: 'easeInOut' },
-            { time: shotEnd - fade, value: 1, easing: 'easeInOut' },
-            { time: shotEnd, value: 0, easing: 'easeIn' }
-          ]
-        };
+        visualClips.push(clip);
 
         const baseCaption = captions[assignedShotIndex % captions.length] || profile.shop || '到店体验，发现更多精彩';
         const assignedRequirements = requirementsByShot.get(assignedShotIndex) || [];
@@ -720,19 +712,23 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
             textAlign: 'center'
           });
           subtitleClip.startTime = cursor;
-          subtitleClip.keyframes = {
-            opacity: [
-              { time: cursor, value: 0, easing: 'easeOut' },
-              { time: cursor + fade, value: 1, easing: 'easeInOut' },
-              { time: shotEnd - fade, value: 1, easing: 'easeInOut' },
-              { time: shotEnd, value: 0, easing: 'easeIn' }
-            ]
-          };
+          subtitleClips.push(subtitleClip);
         }
         shots.push({name:file.name,role:assignedShot?.role || '门店展示',caption,start:cursor,duration:shotDuration});
         cursor += shotDuration;
         onCompositionChanged();
       }
+      // Fade the entire sequence only at its outer edges. Internal shot cuts
+      // remain opaque, avoiding a brief black flash between consecutive clips.
+      for (const [index, clip] of visualClips.entries()) {
+        const opacity = getSequenceEdgeOpacity(index, visualClips.length, clip.startTime, clip.duration, 0.4);
+        if (opacity) clip.keyframes = { ...(clip.keyframes || {}), opacity };
+      }
+      for (const [index, clip] of subtitleClips.entries()) {
+        const opacity = getSequenceEdgeOpacity(index, subtitleClips.length, clip.startTime, clip.duration, 0.4);
+        if (opacity) clip.keyframes = { ...(clip.keyframes || {}), opacity };
+      }
+
       if (musicFile) {
         const music = await mediaManager.importFile(musicFile, { startTime: 0, trackIndex: 4 });
         if (!music) throw new Error('背景音乐导入失败：' + musicFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
