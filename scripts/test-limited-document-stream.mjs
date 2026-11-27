@@ -2,15 +2,16 @@ import assert from 'node:assert/strict';
 import { readStreamWithLimit } from '../src/merchant-document.js';
 
 function streamFromChunks(chunks, onCancel = () => {}) {
+  let index = 0;
   return new ReadableStream({
-    start(controller) {
-      for (const chunk of chunks) controller.enqueue(new Uint8Array(chunk));
-      controller.close();
+    pull(controller) {
+      if (index < chunks.length) controller.enqueue(new Uint8Array(chunks[index++]));
+      else controller.close();
     },
     cancel(reason) {
       onCancel(reason);
     }
-  });
+  }, { highWaterMark: 0 });
 }
 
 const restored = await readStreamWithLimit(
