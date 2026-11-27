@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -27,3 +27,23 @@ assert.equal(validateMerchantMediaFiles([
   fakeFile('五.mp4', 'video/mp4', 1)
 ]).valid, false);
 console.log('手机素材上传限制测试通过');
+
+
+const existingBatch = [
+  { name: '门头.jpg', type: 'image/jpeg', size: 100, lastModified: 1 },
+  { name: '环境.mp4', type: 'video/mp4', size: 200, lastModified: 2 }
+];
+const appended = appendMerchantMediaFiles(existingBatch, [
+  { name: '环境.mp4', type: 'video/mp4', size: 200, lastModified: 2 },
+  { name: '菜品.jpg', type: 'image/jpeg', size: 300, lastModified: 3 }
+]);
+assert.equal(appended.valid, true);
+assert.equal(appended.files.length, 3);
+assert.equal(appended.addedCount, 1);
+assert.equal(appended.duplicateCount, 1);
+const rejectedAppend = appendMerchantMediaFiles(existingBatch, Array.from({ length: 7 }, (_, i) => ({
+  name: '追加' + i + '.jpg', type: 'image/jpeg', size: 100, lastModified: i + 10
+})));
+assert.equal(rejectedAppend.valid, false);
+assert.equal(rejectedAppend.files.length, 2, '追加失败时必须保留原素材');
+console.log('分批追加素材与重复文件保护测试通过');
