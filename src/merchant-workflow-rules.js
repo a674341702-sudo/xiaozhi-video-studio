@@ -22,7 +22,7 @@ export function isRestrictionRequirement(text) {
 export function mergeCaptionRequirements(baseCaption, requirements = []) {
   const base = String(baseCaption || '').trim();
   const normalize = value => String(value || '')
-    .replace(/[\\s，。！？、；：,.!?;:（）()【】［］《》“”"'‘’·…—_-]+/g, '')
+    .replace(/[\s，。！？、；：,.!?;:（）()【】《》“”"'‘’·…—_-]+/g, '')
     .toLocaleLowerCase();
   const normalizedBase = normalize(base);
   const additions = [];
