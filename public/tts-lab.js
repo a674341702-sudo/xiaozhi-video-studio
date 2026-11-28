@@ -148,6 +148,15 @@ $('generate').addEventListener('click', async () => {
       status('正在生成普通话配音……\n已完成 ' + chunkCount + ' 段，请保持页面打开。');
     }
     const blob = chunksToWav(pcmChunks, sampleRate);
+    // Keep the generated file within the same 40 MB limit enforced by the
+    // merchant workflow before attempting cross-tab delivery or preview allocation.
+    if (!(blob instanceof Blob) || blob.size < 1000) {
+      throw new Error('语音文件生成失败或内容为空。');
+    }
+    if (blob.size > 40 * 1024 * 1024) {
+      throw new Error('生成的配音超过40MB，请缩短文案或分段生成后再导入工作台。');
+    }
+
     // Try to return the generated WAV directly to the same-origin main workspace.
     // If the workspace is closed or BroadcastChannel is unavailable, keep the normal download path.
     let deliveredToWorkspace = false;
@@ -173,7 +182,7 @@ $('generate').addEventListener('click', async () => {
         console.warn('[中文配音实验室] 自动回传失败，将保留下载方式：', error);
       }
     }
-    if (!(blob instanceof Blob) || blob.size < 1000) throw new Error('语音文件生成失败或内容为空。');
+
     if (audioUrl) URL.revokeObjectURL(audioUrl);
     audioUrl = URL.createObjectURL(blob);
     $('player').src = audioUrl;
