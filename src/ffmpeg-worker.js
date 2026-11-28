@@ -16,6 +16,7 @@ import { validateExportSettings } from './export-settings.js';
 import { cleanupFFmpegFiles } from './ffmpeg-file-cleanup.js';
 import { trackExportFile } from './export-file-tracker.js';
 import { assertFrameMemoryBudget } from './export-frame-budget.js';
+import { validateMp4Output } from './mp4-output-validation.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -694,6 +695,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     if (!mp4Data || mp4Data.length === 0) {
       throw new Error('FFmpeg failed to produce output MP4');
     }
+    validateMp4Output(mp4Data);
 
     if (onProgress) onProgress(100, 'Export complete');
     return { blob: createMp4Blob(mp4Data), ext: 'mp4' };
