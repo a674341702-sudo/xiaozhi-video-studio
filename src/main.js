@@ -15,7 +15,7 @@ import { createDefaultStore } from './state.js';
 import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js';
 import { formatTime, showToast } from './utils.js';
 import { getExportErrorMessage } from './export-error-message.js';
-import { getClipPlaybackState, getMediaElementVolume } from './keyframes.js';
+import { getClipPlaybackState, getMediaElementVolume, isTrackAudioEnabled } from './keyframes.js';
 import { LiveAudioMixer } from './live-audio-mixer.js';
 import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
@@ -430,7 +430,7 @@ function syncActiveMedia(time, playing) {
     } else {
       element.volume = getMediaElementVolume(state.volume);
     }
-    element.muted = Boolean(track?.muted);
+    element.muted = !isTrackAudioEnabled(track);
     // Native looping is safe only when the selected source range is the
     // complete media file. Trimmed loops are wrapped against sourceTime above.
     const mediaDuration = Number.isFinite(element.duration) ? element.duration : 0;
