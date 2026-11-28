@@ -32,4 +32,11 @@ assert.ok(mediaManagerSource.includes('getPreciseMediaDuration(audio.duration)')
 assert.ok(!mediaManagerSource.includes('getPreciseMediaDuration(audio.duration, 10)'),
   'audio imports must not silently substitute a guessed ten-second duration');
 
+assert.ok(mediaManagerSource.includes('const videoDimensions = validateImageDimensions(vW, vH)'),
+  'video imports must validate decoded source dimensions before adding the clip');
+assert.ok(mediaManagerSource.includes('if (!videoDimensions.valid)'),
+  'video imports must reject extreme source dimensions');
+assert.ok(mediaManagerSource.includes("cleanupFailedMediaElement(video, objectUrl, 'video')"),
+  'rejected oversized videos must release the media element and object URL');
+
 console.log('video/audio import duration guard contract tests passed');
