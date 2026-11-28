@@ -7,6 +7,7 @@ import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { evaluateKeyframes } from './keyframes.js';
 import { appendBoundedExportLog } from './export-log-buffer.js';
+import { captureCanvasBlob } from './abortable-canvas-blob.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -514,9 +515,8 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
       canvasPreview.renderOffline(offCtx, time, width, height);
 
-      const frameBlob = await new Promise((resolve) => {
-        offscreenCanvas.toBlob(resolve, 'image/jpeg', jpegQuality);
-      });
+      const frameBlob = await captureCanvasBlob(offscreenCanvas, 'image/jpeg', jpegQuality, abortSignal);
+      checkAborted();
 
       if (!frameBlob) {
         throw new Error(`Failed to capture canvas frame ${f}`);
