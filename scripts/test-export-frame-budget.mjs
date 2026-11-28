@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { assertFrameMemoryBudget } from '../src/export-frame-budget.js';
 const mib=1024*1024;
 assert.equal(assertFrameMemoryBudget(0,10,100),10);
-assert.equal(assertFrameMemoryBudget(90,10,100),100);
+assert.equal(assertFrameMemoryBudget(90,10,100),100);\n// Seed the same budget with audio bytes, then ensure video frames share that cap.\nconst audioBytes=30;\nassert.equal(assertFrameMemoryBudget(audioBytes,40,100),70);\nassert.throws(()=>assertFrameMemoryBudget(audioBytes,71,100),/内存保护上限/);
 assert.throws(()=>assertFrameMemoryBudget(90,11,100),/内存保护上限/);
 assert.throws(()=>assertFrameMemoryBudget(Number.MAX_SAFE_INTEGER,2,Number.MAX_SAFE_INTEGER),/大小无效/);
 assert.throws(()=>assertFrameMemoryBudget(-1,1,100),/大小无效/);
