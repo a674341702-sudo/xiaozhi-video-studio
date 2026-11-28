@@ -183,6 +183,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
   const $ = (id) => modal.querySelector('#' + id);
   const setStatus = (message) => { $('xzw-status').textContent = message; };
+  // Capture taps at the modal boundary first. This gives immediate feedback on
+  // mobile browsers even if a later workflow callback encounters an exception.
+  modal.addEventListener('click', event => {
+    const button = event.target.closest('button');
+    if (!button || !modal.contains(button)) return;
+    if (button.id === 'xzw-build-preview') setStatus('已收到点击，正在检查素材和商家文案……');
+    if (button.id === 'xzw-generate') setStatus('已收到点击，正在启动自动编排……');
+  }, true);
   let productionPreviewReady = false;
   let productionGeneration = 0;
   let captionsManuallyEdited = false;
@@ -698,6 +706,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   }
 
   $('xzw-build-preview').addEventListener('click', () => {
+    setStatus('正在检查素材和商家文案……');
+    try {
     const files = orderedMediaFiles;
     const requirements = Array.from($('xzw-requirements').querySelectorAll('.xzw-requirement'));
     const issues = [];
@@ -744,8 +754,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     productionPreviewReady = issues.length === 0;
     setStatus(productionPreviewReady ? '制作预览已通过检查。确认无误后，可以点击“确认后自动编排”。' : '请先处理上方待处理项目，再重新生成制作预览。');
     if (issues.length) box.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    } catch (error) {
+      productionPreviewReady = false;
+      setStatus('制作预览检查失败：' + (error?.message || '未知错误') + '。请刷新页面后重试。');
+      console.error('[小智视频] 制作预览检查失败', error);
+    }
   });
   $('xzw-generate').addEventListener('click', async () => {
+    setStatus('已收到自动编排指令，正在检查素材……');
     const files = orderedMediaFiles;
     const profile = readProfile();
     if (!productionPreviewReady) {
