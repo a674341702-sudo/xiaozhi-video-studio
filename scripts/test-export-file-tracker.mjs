@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { trackExportFile } from '../src/export-file-tracker.js';
+const files=[];
+assert.equal(trackExportFile(files,'audio.wav'),true);
+assert.equal(trackExportFile(files,'frame_00000.jpg'),true);
+assert.equal(trackExportFile(files,'frame_00000.jpg'),false,'duplicate path is tracked once');
+assert.equal(trackExportFile(files,''),false);
+assert.equal(trackExportFile(null,'orphan.tmp'),false);
+assert.deepEqual(files,['audio.wav','frame_00000.jpg']);
+console.log('Export file tracking tests passed.');

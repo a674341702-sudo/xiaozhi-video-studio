@@ -14,6 +14,7 @@ import { getExportableVideoClips } from './export-video-clips.js';
 import { releaseRenderedAudioNodes } from './audio-node-cleanup.js';
 import { validateExportSettings } from './export-settings.js';
 import { cleanupFFmpegFiles } from './ffmpeg-file-cleanup.js';
+import { trackExportFile } from './export-file-tracker.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -533,8 +534,8 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     if (hasAudio) {
       let wavBlob = await audioBufferToWav(audioBuffer, abortSignal);
       let wavData = await fetchFile(wavBlob);
+      trackExportFile(inputFiles, 'audio.wav');
       await ffmpeg.writeFile('audio.wav', wavData);
-      inputFiles.push('audio.wav');
       wavData = null;
       wavBlob = null;
       audioBuffer = null;
@@ -579,8 +580,8 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
       const frameName = `frame_${String(f).padStart(5, '0')}.jpg`;
       const frameBuffer = await fetchFile(frameBlob);
+      trackExportFile(inputFiles, frameName);
       await ffmpeg.writeFile(frameName, frameBuffer);
-      inputFiles.push(frameName);
 
       const progressPct = 20 + Math.round((f / totalFrames) * 60);
       if (onProgress) onProgress(progressPct, 'Rendering video frames');
@@ -623,7 +624,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     args.push('-t', duration.toFixed(3));
     args.push('export.mp4');
 
-    inputFiles.push('export.mp4');
+    trackExportFile(inputFiles, 'export.mp4');
     let ret;
     const encoder = ffmpeg;
     const terminateEncoder = () => {
