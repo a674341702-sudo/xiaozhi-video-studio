@@ -149,3 +149,29 @@ export function limitNarrationLines(lines = [], maxChars = 480) {
 
   return { lines: result, text: result.join('\n'), truncated, omittedLines, totalLines: source.length };
 }
+
+
+/**
+ * Order the most decision-critical merchant facts before optional supporting
+ * copy so a mobile TTS length cap is less likely to remove the offer or address.
+ */
+export function prioritizeMerchantNarrationLines({
+  intro = '',
+  product = '',
+  offer = '',
+  address = '',
+  contentPoints = [],
+  disclaimer = ''
+} = {}) {
+  return [
+    intro,
+    product,
+    offer,
+    address,
+    ...Array.from(contentPoints || []).map(point => {
+      const text = String(point || '').trim();
+      return text && !/[。！？!?]$/.test(text) ? text + '。' : text;
+    }),
+    disclaimer
+  ].map(line => String(line || '').trim()).filter(Boolean);
+}
