@@ -5,6 +5,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { isCurrentProxyGeneration } from './proxy-generation-guard.js';
+import { cleanupProxyFFmpeg } from './proxy-ffmpeg-cleanup.js';
 
 const proxyCache = new Map();
 let proxySequence = 0;
@@ -62,7 +63,6 @@ async function generateProxyWithFFmpeg(file, targetHeight, onProgress) {
   const suffix = `${Date.now()}_${++proxySequence}`;
   const inputName = `proxy_input_${suffix}.bin`;
   const outputName = `proxy_output_${suffix}.mp4`;
-  let loaded = false;
   let logHandler = null;
 
   try {
@@ -73,7 +73,6 @@ async function generateProxyWithFFmpeg(file, targetHeight, onProgress) {
       const coreURL = resolveCoreUrl('ffmpeg-core.js');
       const wasmURL = await toBlobURL(resolveCoreUrl('ffmpeg-core.wasm'), 'application/wasm');
       await ffmpeg.load({ coreURL, wasmURL });
-      loaded = true;
     } catch (localError) {
       console.warn('Local proxy FFmpeg core unavailable, trying CDN fallback:', localError);
       const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js';
@@ -82,7 +81,6 @@ async function generateProxyWithFFmpeg(file, targetHeight, onProgress) {
         'application/wasm'
       );
       await ffmpeg.load({ coreURL, wasmURL });
-      loaded = true;
     }
 
     await ffmpeg.writeFile(inputName, await fetchFile(file));
@@ -106,15 +104,7 @@ async function generateProxyWithFFmpeg(file, targetHeight, onProgress) {
     const blob = new Blob([data.slice().buffer], { type: 'video/mp4' });
     return URL.createObjectURL(blob);
   } finally {
-    if (logHandler) {
-      try { ffmpeg.off('log', logHandler); } catch (_) {}
-    }
-    if (loaded) {
-      for (const name of [inputName, outputName]) {
-        try { await ffmpeg.deleteFile(name); } catch (_) {}
-      }
-      try { ffmpeg.terminate(); } catch (_) {}
-    }
+    await cleanupProxyFFmpeg(ffmpeg, [inputName, outputName], logHandler);
   }
 }
 
