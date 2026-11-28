@@ -182,7 +182,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   mediaPreview.addEventListener('click', event => { if (event.target === mediaPreview) closeMediaPreview(); });
   initReferenceVideoStudio(modal);
 
-  const $ = (id) => modal.querySelector('#' + id);
+  const $ = (id) => { const element = modal.querySelector('#' + id); if (!element) throw new Error('商家工作台缺少页面元素 #' + id); return element; };
   const setStatus = (message) => { $('xzw-status').textContent = message; };
   // Capture taps at the modal boundary first. This gives immediate feedback on
   // mobile browsers even if a later workflow callback encounters an exception.
