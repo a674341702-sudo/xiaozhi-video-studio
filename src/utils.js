@@ -77,6 +77,20 @@ export function isMobileMediaDevice(navigatorLike = globalThis.navigator) {
     (Number(navigatorLike?.maxTouchPoints) > 1 && /Mac/i.test(navigatorLike?.platform || ''));
 }
 
+export function validateMediaFileSize(fileSize, isMobile = isMobileMediaDevice()) {
+  const maxSize = getMediaFileSizeLimit(isMobile);
+  if (!Number.isFinite(fileSize) || fileSize < 0 || fileSize > maxSize) {
+    const sizeMB = Number.isFinite(fileSize) ? (fileSize / (1024 * 1024)).toFixed(0) : '未知';
+    const limitMB = Math.round(maxSize / (1024 * 1024));
+    return {
+      valid: false,
+      maxSize,
+      error: `文件过大或大小无效（${sizeMB} MB），当前设备单个素材最大支持 ${limitMB} MB。建议先压缩视频或图片后再导入。`,
+    };
+  }
+  return { valid: true, maxSize };
+}
+
 /**
  * Validates a media file for supported type and size.
  */
@@ -98,16 +112,8 @@ export function validateFile(file, type = 'video') {
     };
   }
 
-  const mobile = isMobileMediaDevice();
-  const maxSize = getMediaFileSizeLimit(mobile);
-  if (!Number.isFinite(file.size) || file.size < 0 || file.size > maxSize) {
-    const sizeMB = (file.size / (1024 * 1024)).toFixed(0);
-    const limitMB = Math.round(maxSize / (1024 * 1024));
-    return {
-      valid: false,
-      error: `文件过大（${sizeMB} MB），当前设备单个素材最大支持 ${limitMB} MB。建议先压缩视频或图片后再导入。`,
-    };
-  }
+  const sizeCheck = validateMediaFileSize(file.size);
+  if (!sizeCheck.valid) return { valid: false, error: sizeCheck.error };
 
   return { valid: true };
 }
