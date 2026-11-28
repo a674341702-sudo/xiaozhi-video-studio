@@ -141,10 +141,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
       <div class="xzw-section">
         <h3>03 · 生成宣传文案与镜头安排</h3>
-        <label class="xzw-field"><span>配音稿（可修改；生成后可复制去制作AI配音）</span><textarea id="xzw-narration" placeholder="先点击“生成宣传文案”，再按商家实际情况修改旁白。"></textarea></label>
+        <label class="xzw-field"><span>配音稿（可修改；可复制或用于录音）</span><textarea id="xzw-narration" placeholder="先点击“生成宣传文案”，再按商家实际情况修改旁白。"></textarea></label>
         <div class="xzw-actions"><button class="xzw-secondary" id="xzw-make-script" type="button">✦ 生成宣传文案</button><button class="xzw-secondary" id="xzw-copy-script" type="button">复制配音稿</button></div>
-        <div class="xzw-actions"><button class="xzw-secondary" id="xzw-send-tts" type="button">🎙️ 把配音稿送到中文配音实验室</button></div>
-        <p class="xzw-note">点击后会在新页面自动带入上面的配音稿；生成并下载 WAV 后，回到这里的“配音文件”处上传即可。</p>
+        <p class="xzw-note">配音稿可点击“复制配音稿”保存。当前版本已停用需要境外下载的旧配音引擎，避免在国内网络下反复失败；可先使用手机录音或已有的中文配音文件。</p>
         <label class="xzw-field"><span>画面字幕（每行一句；可单独修改）</span><textarea id="xzw-captions" placeholder="点击生成宣传文案后会自动填入，可按镜头逐句修改。"></textarea></label>
         <div class="xzw-grid">
           <label class="xzw-field"><span>视频画幅</span><select id="xzw-ratio"><option value="9:16">9:16 竖屏（抖音）</option><option value="4:5">4:5（小红书）</option><option value="1:1">1:1 方形</option><option value="16:9">16:9 横屏</option></select></label>
@@ -159,7 +158,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <h3>04 · 配乐与配音</h3>
         <label class="xzw-field"><span>背景音乐（可上传已获授权音乐；留空自动使用内置原创轻音乐）</span><input id="xzw-music" type="file" accept="audio/*"></label>
         <label class="xzw-field"><span>配音文件（手机录音或中文AI配音文件）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
-        <p class="xzw-note"><a href="./tts-lab.html" target="_blank" rel="noopener">✦ 打开中文配音实验室（普通话）</a>：生成后会尝试自动传回当前工作台；若未成功，再下载 WAV 手动上传。</p>
+        <p class="xzw-note">当前配音入口仅接受本机录音或已有音频文件。旧版在线模型依赖境外下载，已暂时停用；不会要求你购买接口或开通会员。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
         <div class="xzw-grid">
           <label class="xzw-field"><span>背景音乐音量（0–50%）</span><input id="xzw-music-volume" type="number" min="0" max="50" step="1" value="12" inputmode="numeric"></label>
@@ -519,16 +518,6 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     $('xzw-captions').value = makeCaptions(profile, shotCount).join('\n');
     captionsManuallyEdited = false;
     setStatus('已根据商家资料和文档要求生成配音稿、逐镜字幕。请核对每一条信息，尤其价格、优惠和地址；限制类要求不会被写进字幕。' + (narrationDraftOmittedLines || narrationDraftTruncated ? '\n配音稿已控制在480字以内，较长内容可能未全部进入旁白；完整要求仍保留在商家文档和镜头清单中，请检查字幕。' : '') + (narrationDraftMissingPoints.length ? '\n以下商家重点未完整进入配音稿，请检查并补入字幕或手动精简：' + narrationDraftMissingPoints.join('；') : ''));
-  });
-    $('xzw-send-tts').addEventListener('click', () => {
-    const script = $('xzw-narration').value.trim();
-    if (!script) { setStatus('请先生成或填写配音稿，再发送到中文配音实验室。'); return; }
-    if (script.length > 500) { setStatus('当前配音实验室手机测试版最多支持500字，请先缩短文案或分段生成。'); return; }
-    const ttsUrl = new URL('./tts-lab.html', window.location.href);
-    ttsUrl.hash = new URLSearchParams({ text: script }).toString();
-    const opened = window.open(ttsUrl.toString(), '_blank');
-    if (!opened) setStatus('浏览器拦截了新页面，请允许此站点打开新标签页后重试。');
-    else setStatus('配音稿已带入中文配音实验室。主工作台保持打开时会尝试自动回传；若未成功，可下载 WAV 后手动上传。');
   });
   $('xzw-copy-script').addEventListener('click', async () => {
     const script = $('xzw-narration').value.trim();
