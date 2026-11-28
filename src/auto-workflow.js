@@ -235,7 +235,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       select.setAttribute('aria-label', file.name + ' 的镜头用途');
       const unassigned = document.createElement('option');
       unassigned.value = '';
-      unassigned.textContent = '待确认 · 请选择镜头用途';
+      unassigned.textContent = '自动安排（可手动调整）';
       select.appendChild(unassigned);
       plans.forEach((plan, planIndex) => {
         const option = document.createElement('option');
@@ -243,7 +243,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         option.textContent = '镜头 ' + (planIndex + 1) + ' · ' + plan.role;
         select.appendChild(option);
       });
-      const suggestedShot = mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : suggestShotForFile(file, plans);
+      const suggestedShot = mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : (suggestShotForFile(file, plans) ?? (index % Math.max(1, plans.length)));
       select.value = suggestedShot === null || suggestedShot === undefined ? '' : String(suggestedShot);
       select.addEventListener('change', () => {
         if (select.value === '') mediaRoleByFile.delete(file);
