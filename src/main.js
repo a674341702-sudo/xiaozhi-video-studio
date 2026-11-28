@@ -24,6 +24,7 @@ import { sanitizeProjectDocument, MAX_PROJECT_DOCUMENT_BYTES } from './project-v
 import { createSerialTaskQueue } from './serial-task-queue.js';
 import { shouldWarnBeforeProjectExit } from './local-save-guard.js';
 import { getLocalStorageFailureMessage } from './local-storage-diagnostics.js';
+import { revokeProxy } from './proxy.js';
 
 // --- Global State ---
 let composition = null;
@@ -286,6 +287,7 @@ function releaseMediaUrls() {
   // Prevent a slow file read from inserting old-project media after a project switch.
   mediaManager?.cancelPendingImports?.();
   for (const url of mediaUrlRegistry.values()) {
+    try { revokeProxy(url); } catch (_) {}
     try { URL.revokeObjectURL(url); } catch (_) {}
   }
   mediaUrlRegistry.clear();

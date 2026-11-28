@@ -4,6 +4,7 @@
  */
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
+import { isCurrentProxyGeneration } from './proxy-generation-guard.js';
 
 const proxyCache = new Map();
 let proxySequence = 0;
@@ -35,14 +36,23 @@ export async function generateProxy(file, src, targetHeight = 540, onProgress) {
   }
   if (proxyCache.has(src)) return proxyCache.get(src).url;
 
-  proxyCache.set(src, { state: 'generating', url: null });
+  const generationEntry = { state: 'generating', url: null };
+  proxyCache.set(src, generationEntry);
   try {
     const proxyUrl = await generateProxyWithFFmpeg(file, targetHeight, onProgress);
+    // A project switch may revoke this source while FFmpeg is still working.
+    // Do not repopulate the cache or retain an orphaned proxy Blob URL.
+    if (!isCurrentProxyGeneration(proxyCache, src, generationEntry)) {
+      URL.revokeObjectURL(proxyUrl);
+      return src;
+    }
     proxyCache.set(src, { state: 'ready', url: proxyUrl });
     return proxyUrl;
   } catch (error) {
     console.warn('Proxy generation failed, falling back to original:', error);
-    proxyCache.set(src, { state: 'failed', url: src });
+    if (isCurrentProxyGeneration(proxyCache, src, generationEntry)) {
+      proxyCache.set(src, { state: 'failed', url: src });
+    }
     return src;
   }
 }
