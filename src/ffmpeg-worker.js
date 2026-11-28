@@ -8,6 +8,7 @@ import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { evaluateKeyframes } from './keyframes.js';
 import { appendBoundedExportLog } from './export-log-buffer.js';
 import { captureCanvasBlob } from './abortable-canvas-blob.js';
+import { waitForSharedTask } from './wait-for-shared-task.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -35,7 +36,7 @@ export async function loadFFmpeg(onProgress, abortSignal) {
 
   // Reuse the editor's background preload instead of creating a second WASM worker.
   if (ffmpegLoadPromise) {
-    const instance = await ffmpegLoadPromise;
+    const instance = await waitForSharedTask(ffmpegLoadPromise, abortSignal);
     if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
     if (onProgress) onProgress(100);
     return instance;
