@@ -86,7 +86,7 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/xiaozhi-matcha-zh-wasm"
           cp -a "$OUT/." "${RUNNER_TEMP}/xiaozhi-matcha-zh-wasm/"
           cd "${RUNNER_TEMP}/xiaozhi-matcha-zh-wasm"
-          find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          find . -type f ! -name 'SHA256SUMS.txt' ! -name 'FILE_SIZES.txt' ! -name 'BUILD-NOTES.txt' -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
           find . -type f -printf '%P\t%s bytes\n' | sort > FILE_SIZES.txt
           cat > BUILD-NOTES.txt <<'EOF'
           EXPERIMENTAL BUILD ONLY - NOT APPROVED FOR PRODUCTION.
