@@ -48,7 +48,7 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
   modal.id = 'xiaozhi-subtitle-modal';
   modal.innerHTML = `
     <section class="xzs-card" role="dialog" aria-modal="true" aria-label="中文自动字幕实验室">
-      <div class="xzs-head"><h2>字幕实验室 · 中文语音识别</h2><button class="xzs-close" type="button">关闭</button></div>
+      <div class="xzs-head"><h2>字幕实验室 · 中文语音识别</h2><button class="xzs-close" id="xzs-close" type="button">关闭</button></div>
       <p class="xzs-note">选择一段门店视频或音频，尝试自动识别普通话并生成带时间轴的字幕。素材在本机浏览器处理，不上传到小智服务器。</p>
       <div class="xzs-panel">
         <label>选择视频 / 音频文件<input id="xzs-file" type="file" accept="video/*,audio/*"></label>
