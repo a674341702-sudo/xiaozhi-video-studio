@@ -248,8 +248,9 @@ export function prioritizeMerchantNarrationLines({
 
 
 /**
- * Suggest a shot only when the filename contains a recognizable hint.
- * Unknown filenames must remain unassigned for explicit human confirmation.
+ * Suggest a semantic shot only when the filename contains a recognizable hint.
+ * A null result means no semantic hint was found; the merchant workflow then
+ * assigns that file by upload order so manual confirmation is never required.
  */
 export function suggestMerchantShotIndex(fileName, planRoles = []) {
   const name = String(fileName || '').toLowerCase();
