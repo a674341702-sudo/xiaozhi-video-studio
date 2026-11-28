@@ -883,9 +883,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         if (!file) throw new Error('素材镜头排序异常，请重新检查素材匹配');
         const assignedShotIndex = assignment.shotIndex;
         const assignedShot = shotPlan[assignedShotIndex] || shotPlan[i];
+        setStatus((file.type?.startsWith('image/') || /\\.(jpe?g|png|webp|gif|avif)$/i.test(file.name)
+          ? '正在读取照片 ' : '正在读取视频 ') + (i + 1) + '/' + orderedAssignments.length + '：' + file.name + '。手机正在解码素材，请保持页面打开……');
         const clip = await mediaManager.importFile(file, { startTime: cursor });
         assertGenerationCurrent();
-        if (!clip) throw new Error('素材导入失败：' + file.name);
+        if (!clip) throw new Error('素材读取失败或超时：' + file.name + '。请尝试单独上传这份素材，确认是否为该文件导致。');
         // Importer may move a clip forward to avoid overlapping its original full-length
         // duration. The workflow has its own sequential shot schedule, so restore the
         // requested cursor before applying the shorter shot duration.
