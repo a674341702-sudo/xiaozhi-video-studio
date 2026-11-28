@@ -166,12 +166,12 @@ assert.ok(autoWorkflowSource.includes('chars.length > 48'), 'automatically gener
 assert.equal(suggestMerchantShotIndex('门头照片.jpg', ['开场门店亮相', '招牌展示']), 0);
 assert.equal(suggestMerchantShotIndex('招牌菜特写.png', ['开场门店亮相', '招牌展示']), 1);
 assert.equal(suggestMerchantShotIndex('环境大厅.jpg', ['产品亮相', '空间展示']), 1);
-assert.equal(suggestMerchantShotIndex('IMG_20261128_123456.jpg', ['开场门店亮相', '招牌展示']), null, '无语义文件名必须留待人工确认');
+assert.equal(suggestMerchantShotIndex('IMG_20261128_123456.jpg', ['开场门店亮相', '招牌展示']), null, '无语义文件名不应被错误地猜测镜头用途');
 assert.equal(suggestMerchantShotIndex('unknown.mp4', ['开场门店亮相', '招牌展示']), null, '不能仅因视频素材位置自动猜测镜头用途');
 assert.equal(suggestMerchantShotIndex('优惠菜单.png', ['产品亮相', '空间展示']), null, '没有匹配的镜头角色时不得强行分配');
 // Unknown photo names remain usable: the workflow UI falls back to upload order.
 assert.equal((suggestMerchantShotIndex('IMG_20261128_123456.jpg', ['开场门店亮相', '招牌展示']) ?? (3 % 2)), 1, '无语义文件名在工作流中按上传顺序自动安排');
-console.log('素材镜头用途建议与待确认状态测试通过');
+console.log('素材语义建议与上传顺序自动兜底测试通过');
 
 
 assert.deepEqual(
