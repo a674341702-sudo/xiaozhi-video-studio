@@ -7,7 +7,8 @@ import { generateProxy } from './proxy.js';
 import { getPreciseMediaDuration, isUsableMediaDuration } from './media-duration.js';
 import { takeSelectedFiles } from './media-file-selection.js';
 import { createImportGeneration } from './media-import-generation.js';
-import { validateImageDimensions, MAX_IMAGE_PIXELS } from './image-dimensions.js';
+import { validateImageDimensions, MAX_IMAGE_PIXELS, MAX_MOBILE_DECODE_PIXELS } from './image-dimensions.js';
+import { isMobileMediaDevice } from './utils.js';
 import { cleanupFailedMediaElement } from './media-element-cleanup.js';
 
 // Mobile browsers can occasionally leave media metadata loading unresolved.
@@ -181,10 +182,11 @@ export class MediaManager {
     const dur = getPreciseMediaDuration(video.duration);
     const vW = video.videoWidth || 1920;
     const vH = video.videoHeight || 1080;
-    const videoDimensions = validateImageDimensions(vW, vH);
+    const maxDecodePixels = isMobileMediaDevice() ? MAX_MOBILE_DECODE_PIXELS : MAX_IMAGE_PIXELS;
+    const videoDimensions = validateImageDimensions(vW, vH, maxDecodePixels);
     if (!videoDimensions.valid) {
       cleanupFailedMediaElement(video, objectUrl, 'video');
-      showToast('视频分辨率过高（' + vW + ' × ' + vH + '）。当前版本单个视频最多支持约 ' + Math.round(MAX_IMAGE_PIXELS / 1_000_000) + ' 百万像素，请先转换为较低分辨率后重新上传。', 'error');
+      showToast('视频分辨率过高（' + vW + ' × ' + vH + '）。当前版本单个视频最多支持约 ' + Math.round(maxDecodePixels / 1_000_000) + ' 百万像素，请先转换为较低分辨率后重新上传。', 'error');
       return null;
     }
 
@@ -269,10 +271,11 @@ export class MediaManager {
 
     // Very large source images can consume hundreds of megabytes when decoded.
     // Reject extreme dimensions before the image enters the composition/export pipeline.
-    const dimensions = validateImageDimensions(img.naturalWidth, img.naturalHeight);
+    const maxDecodePixels = isMobileMediaDevice() ? MAX_MOBILE_DECODE_PIXELS : MAX_IMAGE_PIXELS;
+    const dimensions = validateImageDimensions(img.naturalWidth, img.naturalHeight, maxDecodePixels);
     if (!dimensions.valid) {
       cleanupFailedMediaElement(img, objectUrl, 'image');
-      showToast('图片分辨率过高（' + img.naturalWidth + ' × ' + img.naturalHeight + '）。手机端单张图片最多支持约 ' + Math.round(MAX_IMAGE_PIXELS / 1_000_000) + ' 百万像素，请先在相册中缩小尺寸后重新上传。', 'error');
+      showToast('图片分辨率过高（' + img.naturalWidth + ' × ' + img.naturalHeight + '）。手机端单张图片最多支持约 ' + Math.round(maxDecodePixels / 1_000_000) + ' 百万像素，请先在相册中缩小尺寸后重新上传。', 'error');
       return null;
     }
 
