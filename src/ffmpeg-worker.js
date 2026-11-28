@@ -18,6 +18,7 @@ import { trackExportFile } from './export-file-tracker.js';
 import { assertFrameMemoryBudget } from './export-frame-budget.js';
 import { validateMp4Output } from './mp4-output-validation.js';
 import { getDefaultExportFrameBudget } from './export-memory-budget.js';
+import { getAudioRenderMemoryEstimate } from './audio-render-memory.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -537,6 +538,21 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
   try {
     if (onProgress) onProgress(5, 'Rendering mixed audio');
+
+    // OfflineAudioContext allocates a float32 stereo output before WAV conversion.
+    // Reject a risky audio render before that large allocation happens on phones.
+    const mayRenderAudio = composition.clips.some(clip => {
+      if (clip.type !== 'audio' && clip.type !== 'video') return false;
+      const track = composition.getTrack(clip.trackId);
+      if (track && (track.muted || !track.visible)) return false;
+      const hasAudibleEnvelope = (clip.keyframes?.volume || []).some(point => Number(point.value) > 0);
+      if ((clip.volume ?? 1) <= 0 && !hasAudibleEnvelope) return false;
+      return Boolean(clip.file || clip.src);
+    });
+    if (mayRenderAudio) {
+      const estimatedAudioBytes = getAudioRenderMemoryEstimate(duration);
+      assertFrameMemoryBudget(0, estimatedAudioBytes, maxFrameBytes);
+    }
 
     let audioBuffer = null;
     try {
