@@ -13,9 +13,9 @@ assert.match(profileBlock, /xzw-narration/);
 assert.match(profileBlock, /captionsManuallyEdited = true/);
 assert.match(profileBlock, /xzw-requirements/);
 assert.match(profileBlock, /xzw-media-map/);
-assert.match(source, /xzw-industry'\\)\\.addEventListener\\('change', \\(\\) => \\{/);
-assert.match(source, /mediaRoleByFile\\.clear\\(\\)/);
-assert.match(source, /renderMediaMapping\\(\\)/);
+assert.ok(source.includes("$('xzw-industry').addEventListener('change', () => {"));
+assert.ok(source.includes('mediaRoleByFile.clear()'));
+assert.ok(source.includes('renderMediaMapping()'));
 assert.match(profileBlock, /xzw-ratio/);
 assert.match(profileBlock, /xzw-branded-outro/);
 for (const id of ['xzw-music', 'xzw-voice', 'xzw-original-audio', 'xzw-music-volume', 'xzw-voice-volume', 'xzw-video-volume', 'xzw-export-preset']) {
