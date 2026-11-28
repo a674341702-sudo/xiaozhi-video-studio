@@ -917,6 +917,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           assertGenerationCurrent();
           usingDefaultMusic = Boolean(musicFile);
         } catch (musicError) {
+          // A stale-generation error is not a recoverable music failure. Let
+          // the outer transaction abort and clear its partial timeline.
+          if (generationVersion !== productionGeneration) throw musicError;
           console.warn('[小智商家短视频] 内置配乐生成失败，将保留无配乐成片能力', musicError);
         }
       }
