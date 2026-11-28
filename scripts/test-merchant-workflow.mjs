@@ -16,6 +16,8 @@ console.log('商家需求拆解与禁止项规则测试通过');
 assert.equal(mergeCaptionRequirements('招牌牛肉面，香气十足！', ['招牌牛肉面香气十足', '到店尝鲜']), '招牌牛肉面，香气十足！ · 到店尝鲜');
 assert.equal(mergeCaptionRequirements('到店体验 · 环境舒适', ['环境舒适', '环境舒适', '']), '到店体验 · 环境舒适');
 assert.equal(mergeCaptionRequirements('', ['门店地址']), '门店地址');
+assert.equal(mergeCaptionRequirements('', ['门店地址', '昆明市五华区门店地址']), '昆明市五华区门店地址', 'overlapping merchant requirements should keep the more informative wording without repeating the same fact');
+assert.equal(mergeCaptionRequirements('昆明市五华区门店地址', ['门店地址', '欢迎到店']), '昆明市五华区门店地址 · 欢迎到店', 'a requirement already covered by the base caption should not be repeated');
 console.log('字幕要求去重测试通过');
 const fakeFile = (name, type, size = 1024) => ({ name, type, size });
 assert.equal(validateMerchantMediaFiles([fakeFile('店面.jpg', 'image/jpeg')]).valid, true);
