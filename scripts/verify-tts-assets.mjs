@@ -25,7 +25,8 @@ for (const asset of manifest.assets) {
   assert.match(asset.sha256, /^[a-f0-9]{64}$/i, 'Invalid SHA-256 for '+asset.id);
   assert.match(asset.source_url, /^https:\/\//i, 'Asset source must be HTTPS: '+asset.id);
   assert.equal(typeof asset.mainland_verified, 'boolean', 'mainland_verified must be boolean');
-  const relative = asset.path.replaceAll('\\\\', '/');
+  const relative = asset.path;
+  assert.ok(!relative.includes('\\\\'), 'Asset paths must use forward slashes: '+asset.path);
   assert.ok(relative.startsWith('public/tts-models/'), 'Asset must live under public/tts-models/: '+asset.path);
   assert.ok(!relative.split('/').includes('..') && !path.isAbsolute(relative), 'Unsafe asset path: '+asset.path);
   const absolute = path.resolve(repoRoot, relative);
