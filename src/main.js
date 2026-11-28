@@ -765,7 +765,19 @@ async function handleExport() {
     const safeProjectName = String(activeProjectName || '商家视频').trim().replace(/[\/:*?"<>|\\]/g, '_').replace(/[\u0000-\u001f]/g, '_').replace(/\s+/g, '_').slice(0, 48) || '商家视频';
     const timestamp = new Date().toLocaleString('zh-CN', { hour12: false }).replace(/[/: ]/g, '-');
     const filename = `${safeProjectName}_宣传视频_${timestamp}.${ext || 'mp4'}`;
-    downloadBlob(blob, filename);
+    const downloadUrl = downloadBlob(blob, filename);
+    const downloadFallback = document.getElementById('export-download-fallback');
+    if (downloadFallback) {
+      downloadFallback.href = downloadUrl;
+      downloadFallback.download = filename;
+      downloadFallback.hidden = false;
+      downloadFallback.textContent = '如果没有自动保存，点这里下载视频';
+      setTimeout(() => {
+        downloadFallback.hidden = true;
+        downloadFallback.removeAttribute('href');
+        downloadFallback.removeAttribute('download');
+      }, 5 * 60 * 1000);
+    }
     showToast(`导出完成！正在下载 ${filename}`, 'success', 5000);
   } catch (err) {
     hideProgress();
