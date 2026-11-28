@@ -634,7 +634,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     invalidateProductionPreview();
     closeMediaPreview();
     if (voiceRecorder?.state === 'recording') voiceRecorder.stop();
-    stopVoiceTracks();
+    else stopVoiceTracks();
+    resetVoicePreview();
     modal.classList.remove('open');
   };
   launcher.addEventListener('click', () => modal.classList.add('open'));
