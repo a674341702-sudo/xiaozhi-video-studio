@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, getNarrationContentCoverage, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -386,7 +386,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const shotCount = Math.max(1, orderedMediaFiles.length || 6);
     $('xzw-narration').value = makeScript(profile).join('\n');
     $('xzw-captions').value = makeCaptions(profile, shotCount).join('\n');
-    setStatus('已根据商家资料和文档要求生成配音稿、逐镜字幕。请核对每一条信息，尤其价格、优惠和地址；限制类要求不会被写进字幕。' + (narrationDraftOmittedLines || narrationDraftTruncated ? '\n配音稿已控制在480字以内，较长内容可能未全部进入旁白；完整要求仍保留在商家文档和镜头清单中，请检查字幕。' : ''));
+    setStatus('已根据商家资料和文档要求生成配音稿、逐镜字幕。请核对每一条信息，尤其价格、优惠和地址；限制类要求不会被写进字幕。' + (narrationDraftOmittedLines || narrationDraftTruncated ? '\n配音稿已控制在480字以内，较长内容可能未全部进入旁白；完整要求仍保留在商家文档和镜头清单中，请检查字幕。' : '') + (narrationDraftMissingPoints.length ? '\n以下商家重点未完整进入配音稿，请检查并补入字幕或手动精简：' + narrationDraftMissingPoints.join('；') : ''));
   });
     $('xzw-send-tts').addEventListener('click', () => {
     const script = $('xzw-narration').value.trim();
