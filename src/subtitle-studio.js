@@ -306,4 +306,5 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       ? '已导入 ' + imported + ' 条字幕。' + (notes.length ? '\n' + notes.join('；') + '。' : '时间范围检查通过。') + '\n请检查字幕位置和配音节奏。'
       : '没有可导入的有效字幕。请检查字幕时间是否落在当前视频时长内。';
     setStatus(summary, imported ? 1 : 0);
-  });}
+    });
+}
