@@ -4,7 +4,7 @@
  */
 import { validateFile, showToast } from './utils.js';
 import { generateProxy } from './proxy.js';
-import { getPreciseMediaDuration } from './media-duration.js';
+import { getPreciseMediaDuration, isUsableMediaDuration } from './media-duration.js';
 import { takeSelectedFiles } from './media-file-selection.js';
 import { createImportGeneration } from './media-import-generation.js';
 import { validateImageDimensions, MAX_IMAGE_PIXELS } from './image-dimensions.js';
@@ -173,7 +173,12 @@ export class MediaManager {
       return null;
     }
 
-    const dur = getPreciseMediaDuration(video.duration, 10);
+    if (!isUsableMediaDuration(video.duration)) {
+      cleanupFailedMediaElement(video, objectUrl, 'video');
+      showToast('无法读取这段视频的真实时长。请换成可正常播放的 MP4 文件后重试。', 'error');
+      return null;
+    }
+    const dur = getPreciseMediaDuration(video.duration);
     const vW = video.videoWidth || 1920;
     const vH = video.videoHeight || 1080;
 
