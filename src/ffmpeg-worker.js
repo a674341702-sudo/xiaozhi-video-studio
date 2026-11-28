@@ -13,6 +13,7 @@ import { waitForSharedTask } from './wait-for-shared-task.js';
 import { getExportableVideoClips } from './export-video-clips.js';
 import { releaseRenderedAudioNodes } from './audio-node-cleanup.js';
 import { validateExportSettings } from './export-settings.js';
+import { cleanupFFmpegFiles } from './ffmpeg-file-cleanup.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -131,11 +132,8 @@ export function isFFmpegLoaded() {
   return ffmpegLoaded;
 }
 
-async function cleanupFiles(fileList) {
-  if (!ffmpeg) return;
-  for (const name of fileList) {
-    try { await ffmpeg.deleteFile(name); } catch (e) {}
-  }
+async function cleanupFiles(fileList, instance = ffmpeg) {
+  await cleanupFFmpegFiles(instance, fileList);
 }
 
 function readFileAsArrayBuffer(file, abortSignal) {
@@ -508,6 +506,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   checkAborted();
 
   const inputFiles = [];
+  const exportFFmpeg = ffmpeg;
   let offscreenCanvas = null;
 
   try {
@@ -674,7 +673,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     if (onProgress) onProgress(100, 'Export complete');
     return { blob: createMp4Blob(mp4Data), ext: 'mp4' };
   } finally {
-    await cleanupFiles(inputFiles);
+    await cleanupFiles(inputFiles, exportFFmpeg);
     if (offscreenCanvas) {
       offscreenCanvas.width = 0;
       offscreenCanvas.height = 0;

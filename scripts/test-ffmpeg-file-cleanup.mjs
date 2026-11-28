@@ -1,0 +1,10 @@
+import assert from 'node:assert/strict';
+import { cleanupFFmpegFiles } from '../src/ffmpeg-file-cleanup.js';
+const deleted=[];
+const original={deleteFile:async name=>{deleted.push(name);if(name==='already-gone.jpg')throw new Error('missing');}};
+const replacement={deleteFile:async name=>{throw new Error('wrong worker');}};
+await cleanupFFmpegFiles(original,['frame_00000.jpg','already-gone.jpg','audio.wav','export.mp4']);
+assert.deepEqual(deleted,['frame_00000.jpg','already-gone.jpg','audio.wav','export.mp4'],'cleanup continues and targets the captured worker');
+await cleanupFFmpegFiles(null,['ignored']);
+await cleanupFFmpegFiles(replacement,[]);
+console.log('FFmpeg temporary file cleanup tests passed.');
