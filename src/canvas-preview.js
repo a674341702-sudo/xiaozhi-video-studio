@@ -19,6 +19,7 @@ export class CanvasPreview {
     this.onContextMenu = onContextMenu;
 
     this.currentTime = 0;
+    this._videoSeekListeners = new WeakSet();
 
     this.isDragging = false;
     this.dragMode = null;
@@ -183,10 +184,22 @@ export class CanvasPreview {
     const video = clip.element;
     const clipOffset = time - clip.startTime + clip.trimStart;
 
-    if (Math.abs(video.currentTime - clipOffset) > 0.04) {
-      video.currentTime = clipOffset;
+    // While playing, syncActiveMedia owns playback and seeking. Re-seeking from
+    // every canvas animation frame fights native decoding and causes stutter.
+    if (!this.isPlaying) {
+      if (!this._videoSeekListeners.has(video) && typeof video.addEventListener === 'function') {
+        video.addEventListener('seeked', () => this.markNeedsRender());
+        this._videoSeekListeners.add(video);
+      }
+      if (Math.abs(video.currentTime - clipOffset) > 0.04) {
+        try { video.currentTime = clipOffset; } catch (_) {}
+      }
+      // Seeking is asynchronous. Never paint the previous frame at the new
+      // playhead position; the seeked listener schedules a fresh preview.
+      if (Math.abs(video.currentTime - clipOffset) > 0.04) return;
     }
 
+    if (typeof video.readyState === 'number' && video.readyState < 2) return;
     try {
       this._drawMediaClip(ctx, video, clip);
     } catch (e) {}
