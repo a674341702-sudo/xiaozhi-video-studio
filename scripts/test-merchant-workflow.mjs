@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -89,3 +89,20 @@ assert.equal(overflowNarration.omittedLines, 2);
 const emptyNarration = limitNarrationLines([], 480);
 assert.deepEqual(emptyNarration, { lines: [], text: '', truncated: false, omittedLines: 0, totalLines: 0 });
 console.log('手机配音文案长度与遗漏提示测试通过');
+
+
+const prioritizedLines = prioritizeMerchantNarrationLines({
+  intro: '开场介绍。',
+  product: '招牌产品。',
+  offer: '商家提供的活动信息：限时套餐。',
+  address: '门店地址：昆明市五华区。',
+  contentPoints: Array.from({ length: 12 }, (_, index) => '补充卖点' + index),
+  disclaimer: '请以商家实际说明为准。'
+});
+assert.equal(prioritizedLines[2], '商家提供的活动信息：限时套餐。');
+assert.equal(prioritizedLines[3], '门店地址：昆明市五华区。');
+const prioritizedDraft = limitNarrationLines(prioritizedLines, 90);
+assert.ok(prioritizedDraft.text.includes('限时套餐'), '字数受限时应优先保留商家活动');
+assert.ok(prioritizedDraft.text.includes('昆明市五华区'), '字数受限时应优先保留门店地址');
+assert.ok(!prioritizedDraft.text.includes('补充卖点11'), '超长时应先省略靠后的补充卖点');
+console.log('商家活动与地址优先保留测试通过');
