@@ -15,6 +15,13 @@ assert.equal(validateCompositionMedia({
     { type: 'text', trackId: 'txt1', startTime: 0, duration: 3 }
   ]
 }), true);
+assert.equal(validateCompositionMedia({
+  tracks: [{ id: 'a1', type: 'audio', visible: true, muted: true }, { id: 'txt1', visible: true }],
+  clips: [
+    { type: 'audio', trackId: 'a1', startTime: 0, duration: 3 },
+    { type: 'text', trackId: 'txt1', startTime: 0, duration: 3 }
+  ]
+}), true);
 
 assert.equal(validateCompositionMedia({ clips: [{
   type: 'video', name: '门店视频', startTime: 0, duration: 5,
