@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -72,3 +72,20 @@ assert.equal(musicOnlyMix.video, 0);
 const cameraAudioMix = getMerchantAudioMix({ hasVoice: false, keepOriginalAudio: true });
 assert.equal(cameraAudioMix.video, 0.7);
 console.log('人声优先与背景音压低规则测试通过');
+
+
+const shortNarration = limitNarrationLines(['今天带你了解这家门店。', '主打产品真实展示。'], 40);
+assert.equal(shortNarration.text, '今天带你了解这家门店。\\n主打产品真实展示。');
+assert.equal(shortNarration.omittedLines, 0);
+assert.equal(shortNarration.truncated, false);
+const longNarration = limitNarrationLines(['开场介绍。', '甲'.repeat(40), '后续活动信息。'], 24);
+assert.ok(longNarration.text.length <= 24, '移动端配音草稿必须受长度上限约束');
+assert.equal(longNarration.truncated, true, '超长单条内容必须显式标记截断');
+assert.equal(longNarration.omittedLines, 1, '未放入旁白的后续内容必须计数');
+assert.ok(longNarration.text.endsWith('…'));
+const overflowNarration = limitNarrationLines(['开场。', '第二条。', '第三条。'], 4);
+assert.ok(overflowNarration.text.length <= 4);
+assert.equal(overflowNarration.omittedLines, 2);
+const emptyNarration = limitNarrationLines([], 480);
+assert.deepEqual(emptyNarration, { lines: [], text: '', truncated: false, omittedLines: 0, totalLines: 0 });
+console.log('手机配音文案长度与遗漏提示测试通过');
