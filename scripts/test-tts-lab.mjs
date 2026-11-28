@@ -13,5 +13,5 @@ for (const token of [
 assert.ok(!/fetch\s*\(|XMLHttpRequest|https?:\/\//i.test(html), 'lab page must not fetch remote resources');
 assert.ok(html.includes('audio/wav'), 'WAV/audio import control missing');
 assert.ok(html.includes('file.size>40*1024*1024'), '40MB file-size guard missing');
-assert.ok(html.includes('URL.revokeObjectURL(fileUrl)'), ''); 
+assert.ok(html.includes('URL.revokeObjectURL(currentUrl)'), 'object URL cleanup missing'); 
 console.log('TTS lab smoke checks passed');
