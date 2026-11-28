@@ -249,8 +249,15 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         option.textContent = '镜头 ' + (planIndex + 1) + ' · ' + plan.role;
         select.appendChild(option);
       });
-      const suggestedShot = mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : (suggestShotForFile(file, plans) ?? (index % Math.max(1, plans.length)));
-      select.value = suggestedShot === null || suggestedShot === undefined ? '' : String(suggestedShot);
+      let suggestedShot = mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : null;
+      // A shorter media list can shrink the shot plan. Never keep a stale
+      // out-of-range role that might unexpectedly become active if more files
+      // are added later.
+      if (!Number.isInteger(suggestedShot) || suggestedShot < 0 || suggestedShot >= plans.length) {
+        mediaRoleByFile.delete(file);
+        suggestedShot = suggestShotForFile(file, plans) ?? (index % Math.max(1, plans.length));
+      }
+      select.value = String(suggestedShot);
       select.addEventListener('change', () => {
         if (select.value === '') mediaRoleByFile.delete(file);
         else mediaRoleByFile.set(file, Number(select.value));
@@ -399,6 +406,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       // A deliberate caption edit belongs to the old merchant facts once the
       // source copy changes. Rebuild captions from the current brief on arrange.
       if (captionSourceKeys.has(key)) captionsManuallyEdited = false;
+      if (key === 'industry') {
+        // Shot indexes have different meanings across industries. Rebuild the
+        // suggestions rather than carrying a restaurant role into a salon or shop.
+        mediaRoleByFile.clear();
+        renderMediaMapping();
+        return;
+      }
       invalidateProductionPreview();
     };
     field?.addEventListener('input', handleProfileChange);
