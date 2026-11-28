@@ -5,6 +5,9 @@ export function assertFrameMemoryBudget(currentBytes, nextBytes, maxBytes) {
       !Number.isSafeInteger(maxBytes) || maxBytes <= 0) {
     throw new Error('导出帧数据大小无效，请检查素材后重试。');
   }
+  if (nextBytes > Number.MAX_SAFE_INTEGER - currentBytes) {
+    throw new Error('导出帧数据大小无效，请检查素材后重试。');
+  }
   const total = currentBytes + nextBytes;
   if (!Number.isSafeInteger(total) || total > maxBytes) {
     const used = Math.round(currentBytes / 1024 / 1024);
