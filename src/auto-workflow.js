@@ -398,7 +398,18 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   let voiceStream = null;
   let voiceChunks = [];
   let voicePreviewUrl = null;
+  let voiceRecordingTimer = null;
+  let voiceRecordingStartedAt = 0;
   let discardVoiceRecording = false;
+  const formatVoiceRecordingTime = elapsedMs => {
+    const totalSeconds = Math.floor(Math.max(0, elapsedMs) / 1000);
+    return String(Math.floor(totalSeconds / 60)).padStart(2, '0') + ':' + String(totalSeconds % 60).padStart(2, '0');
+  };
+  const stopVoiceRecordingTimer = () => {
+    if (voiceRecordingTimer !== null) clearInterval(voiceRecordingTimer);
+    voiceRecordingTimer = null;
+    voiceRecordingStartedAt = 0;
+  };
   const stopVoiceTracks = () => {
     if (voiceStream) voiceStream.getTracks().forEach(track => track.stop());
     voiceStream = null;
@@ -441,6 +452,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         }
       };
       voiceRecorder.onerror = () => {
+        stopVoiceRecordingTimer();
         stopVoiceTracks();
         voiceRecorder = null;
         $('xzw-record-start').disabled = false;
@@ -448,6 +460,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         $('xzw-record-status').textContent = '录音发生错误。请检查麦克风权限，或改用手机系统录音上传。';
       };
       voiceRecorder.onstop = () => {
+        stopVoiceRecordingTimer();
         stopVoiceTracks();
         $('xzw-record-start').disabled = false;
         $('xzw-record-stop').disabled = true;
@@ -475,9 +488,15 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         invalidateProductionPreview();
       };
       voiceRecorder.start(1000);
+      voiceRecordingStartedAt = Date.now();
+      const updateVoiceRecordingStatus = () => {
+        $('xzw-record-status').textContent = '正在录音 ' + formatVoiceRecordingTime(Date.now() - voiceRecordingStartedAt) + '……请自然朗读配音稿；录音大小上限40MB。';
+      };
+      updateVoiceRecordingStatus();
+      voiceRecordingTimer = setInterval(updateVoiceRecordingStatus, 500);
       $('xzw-record-stop').disabled = false;
-      $('xzw-record-status').textContent = '正在录音……请对着麦克风自然朗读配音稿。';
     } catch (error) {
+      stopVoiceRecordingTimer();
       stopVoiceTracks();
       voiceRecorder = null;
       $('xzw-record-start').disabled = false;
@@ -643,7 +662,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (voiceRecorder?.state === 'recording') {
       discardVoiceRecording = true;
       voiceRecorder.stop();
-    } else stopVoiceTracks();
+    } else {
+      stopVoiceRecordingTimer();
+      stopVoiceTracks();
+    }
     resetVoicePreview();
     modal.classList.remove('open');
   };
