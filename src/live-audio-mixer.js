@@ -28,22 +28,34 @@ export class LiveAudioMixer {
     if (this.routes.has(element)) return true;
     const context = this._getContext();
     if (!context?.createMediaElementSource || !context?.createGain || !context.destination) return false;
+    let source = null;
     try {
-      const source = context.createMediaElementSource(element);
+      // Prepare the output side before taking ownership of the media element.
       const gain = context.createGain();
-      source.connect(gain);
       gain.connect(context.destination);
+      source = context.createMediaElementSource(element);
+      source.connect(gain);
       this.routes.set(element, { source, gain });
       return true;
     } catch {
-      // Do not break playback on browsers that reject media-element routing.
+      // Once createMediaElementSource succeeds, the element is routed through
+      // Web Audio. Preserve audible playback with a direct unity-gain path.
+      if (source) {
+        try {
+          source.connect(context.destination);
+          this.routes.set(element, { source, gain: null });
+          return true;
+        } catch {
+          // Nothing else can safely reconnect this source in this context.
+        }
+      }
       return false;
     }
   }
 
   setGain(element, value) {
     const route = this.routes.get(element);
-    if (!route) return false;
+    if (!route?.gain) return false;
     const numeric = Number(value);
     const gain = Number.isFinite(numeric) ? Math.max(0, Math.min(1.5, numeric)) : 1;
     const param = route.gain.gain;
