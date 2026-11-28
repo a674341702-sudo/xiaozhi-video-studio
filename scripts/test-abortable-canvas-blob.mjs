@@ -20,6 +20,16 @@ controller.abort();
 await assert.rejects(pending, error => error?.name === 'AbortError');
 completeCapture(blob); // A late browser callback must not settle the promise twice.
 
+const stalledCapture = captureCanvasBlob({
+  toBlob() { /* Simulate a mobile browser that never calls the callback. */ }
+}, 'image/jpeg', 0.8, undefined, 5);
+await assert.rejects(stalledCapture, /画面帧超时/);
+
+await assert.rejects(
+  captureCanvasBlob({ toBlob() {} }, 'image/jpeg', 0.8, undefined, 0),
+  /timeout must be a positive number/
+);
+
 const alreadyAborted = new AbortController();
 alreadyAborted.abort();
 await assert.rejects(
