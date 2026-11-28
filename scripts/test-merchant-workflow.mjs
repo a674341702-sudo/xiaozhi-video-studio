@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
 import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
@@ -106,3 +107,8 @@ assert.ok(prioritizedDraft.text.includes('限时套餐'), '字数受限时应优
 assert.ok(prioritizedDraft.text.includes('昆明市五华区'), '字数受限时应优先保留门店地址');
 assert.ok(!prioritizedDraft.text.includes('补充卖点11'), '超长时应先省略靠后的补充卖点');
 console.log('商家活动与地址优先保留测试通过');
+
+
+const autoWorkflowSource = readFileSync(new URL('../src/auto-workflow.js', import.meta.url), 'utf8');
+assert.ok(autoWorkflowSource.includes('.xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}\n    .xzw-template-guide{'), '模板说明样式必须通过真实换行与前一条 CSS 规则分隔');
+console.log('商家工作流模板说明 CSS 分隔测试通过');
