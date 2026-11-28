@@ -661,9 +661,12 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (!$('xzw-narration').value.trim()) {
       const draft = makeScript(profile);
       $('xzw-narration').value = draft.join('\n');
-      if (!$('xzw-captions').value.trim()) {
-        $('xzw-captions').value = makeCaptions(profile, files.length).join('\n');
-      }
+    }
+    // Captions are generated independently from the narration field: a merchant
+    // may paste their own voiceover while still expecting on-screen copy from
+    // the shop brief. Never leave the timeline with generic captions by default.
+    if (!$('xzw-captions').value.trim()) {
+      $('xzw-captions').value = makeCaptions(profile, files.length).join('\n');
     }
     const script = $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean);
     const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
