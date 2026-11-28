@@ -59,6 +59,16 @@ export function mergeCaptionRequirements(baseCaption, requirements = []) {
   }
   return [base, ...additions].filter(Boolean).join(' · ');
 }
+
+/** Keep final on-screen captions readable on narrow mobile screens. */
+export function limitMerchantCaption(value, maxChars = 48) {
+  const text = String(value || '').trim();
+  const limit = Math.max(1, Math.floor(Number(maxChars) || 48));
+  const chars = Array.from(text);
+  if (chars.length <= limit) return text;
+  if (limit === 1) return '…';
+  return chars.slice(0, limit - 1).join('') + '…';
+}
 /**
  * Validate mobile uploads before replacing the current selected media.
  * MIME types are preferred; known extensions are a fallback for Android
