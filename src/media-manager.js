@@ -7,6 +7,7 @@ import { generateProxy } from './proxy.js';
 import { getPreciseMediaDuration } from './media-duration.js';
 import { takeSelectedFiles } from './media-file-selection.js';
 import { createImportGeneration } from './media-import-generation.js';
+import { validateImageDimensions, MAX_IMAGE_PIXELS } from './image-dimensions.js';
 
 // Mobile browsers can occasionally leave media metadata loading unresolved.
 // Bound the wait so the workflow can show a useful error instead of hanging forever.
@@ -254,6 +255,16 @@ export class MediaManager {
     if (!imageReady) {
       URL.revokeObjectURL(objectUrl);
       showToast('手机读取图片失败或等待超时，请换成 JPG、PNG 图片后重试。', 'error');
+      return null;
+    }
+
+    // Very large source images can consume hundreds of megabytes when decoded.
+    // Reject extreme dimensions before the image enters the composition/export pipeline.
+    const dimensions = validateImageDimensions(img.naturalWidth, img.naturalHeight);
+    if (!dimensions.valid) {
+      URL.revokeObjectURL(objectUrl);
+      img.src = '';
+      showToast('图片分辨率过高（' + img.naturalWidth + ' × ' + img.naturalHeight + '）。手机端单张图片最多支持约 ' + Math.round(MAX_IMAGE_PIXELS / 1_000_000) + ' 百万像素，请先在相册中缩小尺寸后重新上传。', 'error');
       return null;
     }
 
