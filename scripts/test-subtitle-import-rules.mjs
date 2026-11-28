@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { prepareSubtitleImportSegments } from '../src/subtitle-import-rules.js';
+import { applySubtitleTimeOffset, prepareSubtitleImportSegments } from '../src/subtitle-import-rules.js';
 
 const prepared = prepareSubtitleImportSegments([
   { start: 4, end: 6, text: '后一句' },
@@ -32,4 +32,10 @@ assert.equal(negativeStart.clippedToTimeline, 1);
 const invalidTimeline = prepareSubtitleImportSegments([{ start: 0, end: 1, text: '字幕' }], 0);
 assert.equal(invalidTimeline.segments.length, 0);
 assert.equal(invalidTimeline.skippedInvalid, 1);
+
+const sourceSegments = [{ start: 1.2, end: 2.4, text: '测试字幕' }];
+assert.deepEqual(applySubtitleTimeOffset(sourceSegments, 0.5), [{ start: 1.7, end: 2.9, text: '测试字幕' }], 'positive offset delays subtitles');
+assert.deepEqual(applySubtitleTimeOffset(sourceSegments, -0.3), [{ start: 0.8999999999999999, end: 2.1, text: '测试字幕' }], 'negative offset advances subtitles');
+assert.deepEqual(sourceSegments, [{ start: 1.2, end: 2.4, text: '测试字幕' }], 'offset adjustment must not mutate ASR results');
+assert.deepEqual(applySubtitleTimeOffset(sourceSegments, Number.NaN), sourceSegments, 'invalid offsets safely fall back to zero');
 console.log('字幕导入时间校验测试通过');

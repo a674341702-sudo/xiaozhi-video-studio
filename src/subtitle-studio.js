@@ -1,5 +1,5 @@
 import { getSubtitlePositionLayout } from './text-layout.js';
-import { prepareSubtitleImportSegments } from './subtitle-import-rules.js';
+import { applySubtitleTimeOffset, prepareSubtitleImportSegments } from './subtitle-import-rules.js';
 /**
  * 小智中文自动字幕实验室
  * 采用 browser-whisper 开源项目的浏览器端识别能力。
@@ -71,6 +71,8 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
           <option value="middle">画面居中 · 适合纯背景镜头</option>
         </select></label>
         <p class="xzs-note">如果商品、菜品或招牌在画面下方，可改选顶部；位置仍可在导入后于预览画面中拖动微调。</p>
+        <label>字幕整体时间偏移（秒）<input id="xzs-offset" type="number" step="0.1" min="-600" max="600" value="0"></label>
+        <p class="xzs-note">字幕比配音早：填正数让字幕延后；字幕比配音晚：填负数让字幕提前。每次可微调 0.1 秒。</p>
         <p class="xzs-note">可直接修改每句文字和起止时间，也可以删除不需要的句子。时间单位为秒。</p>
         <div class="xzs-list" id="xzs-results"><p class="xzs-note">识别完成后，字幕会显示在这里。</p></div>
         <div class="xzs-actions">
@@ -271,7 +273,9 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       return;
     }
     const projectDuration = Math.max(0, Number(composition.duration) || 0);
-    const prepared = prepareSubtitleImportSegments(state.segments, projectDuration);
+    const offset = Number($('xzs-offset').value) || 0;
+    const shiftedSegments = applySubtitleTimeOffset(state.segments, offset);
+    const prepared = prepareSubtitleImportSegments(shiftedSegments, projectDuration);
     let imported = 0;
     for (const segment of prepared.segments) {
       const clip = composition.addClip({
@@ -296,6 +300,7 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
     }
     onCompositionChanged();
     const notes = [];
+    if (offset !== 0) notes.push('全部字幕已' + (offset > 0 ? '延后 ' : '提前 ') + Math.abs(offset).toFixed(1) + ' 秒');
     if (prepared.clippedToTimeline) notes.push(prepared.clippedToTimeline + ' 条字幕已按视频时长截取');
     if (prepared.cappedLong) notes.push(prepared.cappedLong + ' 条字幕超过 12 秒，已缩短');
     if (prepared.skippedEmpty + prepared.skippedInvalid + prepared.skippedOutOfRange) {
