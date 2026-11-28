@@ -283,6 +283,8 @@ function onMediaUrlRegistered(clipId, objectUrl) {
 
 // Release all temporary media URLs before replacing or rolling back a composition.
 function releaseMediaUrls() {
+  // Prevent a slow file read from inserting old-project media after a project switch.
+  mediaManager?.cancelPendingImports?.();
   for (const url of mediaUrlRegistry.values()) {
     try { URL.revokeObjectURL(url); } catch (_) {}
   }
