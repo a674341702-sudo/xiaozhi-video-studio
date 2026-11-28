@@ -1257,3 +1257,10 @@ button, input, select {
 /* Clear touch editing hint on narrow screens. */
 .preview-touch-hint{display:none;margin:6px 10px;color:#b8b8cf;font-size:12px;text-align:center}
 @media(max-width:700px){.preview-touch-hint{display:block}}
+
+/* Keep direct timeline gestures reliable on touchscreens without disabling page scrolling elsewhere. */
+.multitimeline-ruler-wrapper,
+.mt-clip,
+.mt-clip-handle {
+  touch-action: none;
+}
