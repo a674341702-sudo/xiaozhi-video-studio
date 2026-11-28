@@ -72,7 +72,7 @@ test('CORS only reflects an explicitly configured origin', async () => {
   const allowed = await main({
     httpMethod: 'GET',
     path: '/health',
-    headers: { origin: 'https://a674341702-sudo.github.io' }
+    headers: { Origin: 'https://a674341702-sudo.github.io' }
   });
   const denied = await main({
     httpMethod: 'GET',
@@ -87,3 +87,38 @@ test('unknown routes return 404', async () => {
   const response = await main({ httpMethod: 'POST', path: '/unknown', body: {} });
   assert.equal(response.statusCode, 404);
 });
+
+test('API Gateway v2 request shape and query-string paths are normalized', async () => {
+  const response = await main({
+    requestContext: {
+      http: { method: 'GET', path: '/api/health' }
+    }
+  });
+  assert.equal(response.statusCode, 200);
+  assert.equal(bodyOf(response).service, 'xiaozhi-reference-api');
+});
+
+test('base64 encoded JSON request bodies are supported', async () => {
+  const body = Buffer.from(JSON.stringify({
+    url: 'https://v.douyin.com/example/'
+  })).toString('base64');
+  const response = await main({
+    httpMethod: 'POST',
+    path: '/api/reference/inspect?source=share',
+    isBase64Encoded: true,
+    body
+  });
+  assert.equal(response.statusCode, 501);
+  assert.equal(bodyOf(response).platform, 'douyin');
+});
+
+test('oversized request bodies are rejected', async () => {
+  const response = await main({
+    httpMethod: 'POST',
+    path: '/reference/inspect',
+    body: JSON.stringify({ url: 'https://douyin.com/', extra: 'x'.repeat(17 * 1024) })
+  });
+  assert.equal(response.statusCode, 413);
+  assert.equal(bodyOf(response).code, 'BODY_TOO_LARGE');
+});
+
