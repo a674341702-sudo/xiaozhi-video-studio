@@ -5,6 +5,20 @@ const composition = new Composition(720, 1280);
 assert.equal(composition.history.stack.length, 1, 'initial state should seed history');
 
 const mediaElement = { marker: 'original-media-element' };
+const createdElements = [];
+globalThis.document = {
+  createElement(type) {
+    const element = { tagName: type.toUpperCase(), src: '', preload: '', playsInline: false, muted: false };
+    createdElements.push(element);
+    return element;
+  }
+};
+globalThis.Image = class ImageMock {
+  constructor() { this.tagName = 'IMG'; this.src = ''; createdElements.push(this); }
+};
+globalThis.Audio = class AudioMock {
+  constructor(src) { this.tagName = 'AUDIO'; this.src = src; this.preload = ''; createdElements.push(this); }
+};
 const mediaFile = new Blob(['original media'], { type: 'video/mp4' });
 const clip = composition.addClip({
   id: 'history-video',
@@ -24,14 +38,17 @@ assert.equal(composition.undo(), true, 'undo should revert the first added clip'
 assert.equal(composition.clips.length, 0);
 assert.equal(composition.redo(), true, 'redo should restore the added clip');
 assert.equal(composition.clips.length, 1);
-assert.equal(composition.getClip('history-video').element, mediaElement, 'redo must preserve the media element');
+assert.notEqual(composition.getClip('history-video').element, mediaElement, 'redo should recreate rather than retain a decoded media element');
+assert.equal(composition.getClip('history-video').element.src, 'blob:history-video');
+assert.equal(composition._lastHistorySnapshot.clips[0].element, null, 'history snapshots must not retain DOM media elements');
 assert.equal(composition.getClip('history-video').file, mediaFile, 'redo must preserve the source file');
 
-// Deleting a media clip must be reversible without losing its decoded element or File.
+// Deleting a media clip must be reversible without losing its source File or URL; its DOM element is recreated.
 assert.equal(composition.removeClip('history-video'), true);
 assert.equal(composition.clips.length, 0);
 assert.equal(composition.undo(), true);
-assert.equal(composition.getClip('history-video').element, mediaElement);
+assert.notEqual(composition.getClip('history-video').element, mediaElement);
+assert.equal(composition.getClip('history-video').element.src, 'blob:history-video');
 assert.equal(composition.getClip('history-video').file, mediaFile);
 assert.equal(composition.redo(), true);
 assert.equal(composition.clips.length, 0);
