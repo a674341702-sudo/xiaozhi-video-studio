@@ -347,6 +347,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       }
       const file = new File([data.blob], '小智普通话配音.wav', { type: 'audio/wav' });
       pendingVoiceFile = file;
+      // A newly received voice track changes the production inputs. If a render
+      // is currently arranging media, stop that stale run and keep this WAV queued.
+      invalidateProductionPreview();
+      if ($('xzw-generate').disabled) {
+        ttsChannel.postMessage({ type: 'xiaozhi-tts-audio-ack' });
+        setStatus('普通话配音已收到并暂存。当前编排已停止，请重新点击自动编排，系统会把这段配音加入新视频。');
+        return;
+      }
       if (!composition.clips.length) {
         // The file is safely buffered for the next auto-arrange operation.
         ttsChannel.postMessage({ type: 'xiaozhi-tts-audio-ack' });
@@ -465,6 +473,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     }
   });
   const closeWorkflow = () => {
+    // Closing the workflow means the merchant has left this production attempt.
+    // Invalidate any async imports so they cannot finish into a hidden, stale session.
+    invalidateProductionPreview();
     closeMediaPreview();
     modal.classList.remove('open');
   };
@@ -573,6 +584,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   $('xzw-brief-file').addEventListener('change', async () => {
     const file = $('xzw-brief-file').files?.[0];
     if (!file) return;
+    // Document extraction is asynchronous; invalidate the previous brief now,
+    // not only after the extracted text is eventually written into the field.
+    invalidateProductionPreview();
     $('xzw-brief-status').textContent = '正在读取文档…';
     try {
       const text = await extractMerchantDocumentText(file);
