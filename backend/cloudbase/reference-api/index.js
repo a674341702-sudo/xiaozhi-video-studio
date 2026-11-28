@@ -55,7 +55,7 @@ function requestPath(event) {
   const context = event.requestContext || {};
   const http = context.http || {};
   const raw = event.path || event.rawPath || http.path || context.path || '/';
-  return (String(raw).split('?')[0].replace(/\\/+$/, '') || '/');
+  return (String(raw).split('?')[0].replace(/\/+$/, '') || '/');
 }
 
 function parseBody(event) {
