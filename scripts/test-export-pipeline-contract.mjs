@@ -29,7 +29,7 @@ assert.match(worker, /return \{ blob: createMp4Blob\(mp4Data\), ext: 'mp4' \}/,
   'FFmpeg结果必须包装成MP4 Blob');
 assert.match(worker, /a\.download = filename/,
   '导出文件必须设置可识别的下载文件名');
-assert.match(worker, /setTimeout\(\(\) => URL\.revokeObjectURL\(url\), 60_000\)/,
+assert.match(worker, /setTimeout\(\(\) => URL\.revokeObjectURL\(url\), 5 \* 60 \* 1000\)/,
   '移动端下载启动后必须保留Blob URL一段时间');
 assert.match(main, /exportWidthEl\) exportWidthEl\.value = String\(dims\.width\)[\s\S]*?exportHeightEl\) exportHeightEl\.value = String\(dims\.height\)/,
   '选择竖屏或方形画幅后，MP4导出尺寸必须同步，不能沿用旧画幅');
