@@ -16,6 +16,7 @@ const ALLOWED_HOSTS = new Set([
 ]);
 
 const MAX_URL_LENGTH = 2048;
+const MAX_BODY_BYTES = 16 * 1024;
 
 function json(statusCode, payload, origin = '') {
   const allowedOrigin = (process.env.CORS_ALLOWED_ORIGINS || '')
@@ -36,14 +37,47 @@ function json(statusCode, payload, origin = '') {
   return { statusCode, headers, body: JSON.stringify(payload) };
 }
 
+function headerValue(headers, name) {
+  const target = name.toLowerCase();
+  for (const [key, value] of Object.entries(headers || {})) {
+    if (key.toLowerCase() === target && typeof value === 'string') return value;
+  }
+  return '';
+}
+
+function requestMethod(event) {
+  const context = event.requestContext || {};
+  const http = context.http || {};
+  return String(event.httpMethod || event.method || http.method || context.httpMethod || 'GET').toUpperCase();
+}
+
+function requestPath(event) {
+  const context = event.requestContext || {};
+  const http = context.http || {};
+  const raw = event.path || event.rawPath || http.path || context.path || '/';
+  return (String(raw).split('?')[0].replace(/\\/+$/, '') || '/');
+}
+
 function parseBody(event) {
   if (event && typeof event.body === 'string') {
     const raw = event.isBase64Encoded
       ? Buffer.from(event.body, 'base64').toString('utf8')
       : event.body;
+    if (Buffer.byteLength(raw, 'utf8') > MAX_BODY_BYTES) {
+      const error = new Error('请求内容过大');
+      error.code = 'BODY_TOO_LARGE';
+      throw error;
+    }
     return JSON.parse(raw || '{}');
   }
-  if (event && event.body && typeof event.body === 'object') return event.body;
+  if (event && event.body && typeof event.body === 'object') {
+    if (Buffer.byteLength(JSON.stringify(event.body), 'utf8') > MAX_BODY_BYTES) {
+      const error = new Error('请求内容过大');
+      error.code = 'BODY_TOO_LARGE';
+      throw error;
+    }
+    return event.body;
+  }
   return {};
 }
 
@@ -72,9 +106,8 @@ function validateShareUrl(input) {
 }
 
 exports.main = async function main(event = {}) {
-  const method = String(event.httpMethod || event.method || 'GET').toUpperCase();
-  const headersIn = event.headers || {};
-  const origin = headersIn.origin || headersIn.Origin || '';
+  const method = requestMethod(event);
+  const origin = headerValue(event.headers, 'origin');
 
   if (method === 'OPTIONS') return json(204, {}, origin);
 
@@ -96,7 +129,10 @@ exports.main = async function main(event = {}) {
   let body;
   try {
     body = parseBody(event);
-  } catch {
+  } catch (error) {
+    if (error && error.code === 'BODY_TOO_LARGE') {
+      return json(413, { success: false, code: 'BODY_TOO_LARGE', message: '请求内容超过 16 KB 限制' }, origin);
+    }
     return json(400, { success: false, code: 'INVALID_JSON', message: '请求内容不是有效 JSON' }, origin);
   }
 
