@@ -166,7 +166,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           <label class="xzw-field"><span>原视频现场声（0–50%）</span><input id="xzw-video-volume" type="number" min="0" max="50" step="1" value="12" inputmode="numeric"></label>
         </div>
         <p class="xzw-note">建议配音 100%、背景音乐 8–15%、现场声 0–12%。如果没有配音，背景音乐会自动使用更高的默认音量。</p>
-        <p class="xzw-note">未上传配乐时会在本机生成一段原创轻音乐并循环铺底；上传自己的音乐时优先使用上传文件。配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室支持同源自动回传；如果主工作台未打开、浏览器不支持或导入失败，可下载 WAV 后手动上传。</p>
+        <p class="xzw-note">未上传配乐时会在本机生成一段原创轻音乐并循环铺底；上传自己的音乐时优先使用上传文件。配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。当前版本不再加载境外配音模型；需要人声时，请上传手机录音或已有的中文配音音频。</p>
       </div>
 
       <label class="xzw-field"><span>手机导出方案</span><select id="xzw-export-preset"><option value="mobile">手机稳定优先 · 720p / 24fps / 中等画质</option><option value="clear">画面清晰优先 · 720p / 30fps / 高画质</option></select></label>
