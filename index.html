@@ -103,6 +103,33 @@
       .xh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
       .xh-grid .xh-card{min-height:116px}
     }
+    /* 手机 App 风格主页：单列大卡片、舒适留白、底部安全区 */
+    @media(max-width:600px){
+      body.home-mode{background:#f4f6fb}
+      #xiaozhi-home{min-height:100svh;padding:calc(18px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));}
+      .xh-wrap{max-width:480px;min-height:calc(100svh - 46px);display:flex;flex-direction:column}
+      .xh-top{margin-bottom:22px;min-height:36px}
+      .xh-brand{font-size:23px;letter-spacing:.2px}
+      .xh-tag{font-size:11px;padding:7px 10px}
+      .xh-hero{padding:24px 21px;border-radius:22px;min-height:132px;display:flex;flex-direction:column;justify-content:center}
+      .xh-hero h1{font-size:24px;line-height:1.35;margin-bottom:10px}
+      .xh-hero p{font-size:14px;line-height:1.7}
+      .xh-section-title{font-size:17px;margin:28px 2px 14px}
+      .xh-card{min-height:96px;padding:18px 17px;border-radius:18px;gap:15px;margin-bottom:12px}
+      .xh-card.primary{min-height:108px}
+      .xh-card strong{font-size:16px;line-height:1.45}
+      .xh-card small{font-size:13px;line-height:1.6}
+      .xh-icon{width:50px;height:50px;flex-basis:50px;border-radius:15px;font-size:25px}
+      .xh-grid{grid-template-columns:1fr;gap:11px}
+      .xh-grid .xh-card{min-height:82px;padding:15px 17px;flex-direction:row;align-items:center;gap:14px}
+      .xh-grid .xh-icon{width:44px;height:44px;flex:0 0 44px}
+      .xh-foot{margin:24px 4px 10px;font-size:12px;line-height:1.7}
+    }
+    @media(min-width:601px) and (max-width:900px){
+      #xiaozhi-home{padding:24px 24px 40px}
+      .xh-wrap{max-width:620px}
+      .xh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    }
   </style>
   <section id="xiaozhi-home" aria-label="小智视频主页">
     <div class="xh-wrap">
