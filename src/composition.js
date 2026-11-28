@@ -5,6 +5,29 @@
 import { uid } from './utils.js';
 import { History } from './history.js';
 
+function createHistoryMediaElement(clip) {
+  if (!clip?.src) return null;
+  if (clip.type === 'video') {
+    const video = document.createElement('video');
+    video.preload = 'auto';
+    video.playsInline = true;
+    video.muted = true;
+    video.src = clip.src;
+    return video;
+  }
+  if (clip.type === 'image') {
+    const image = new Image();
+    image.src = clip.src;
+    return image;
+  }
+  if (clip.type === 'audio') {
+    const audio = new Audio(clip.src);
+    audio.preload = 'metadata';
+    return audio;
+  }
+  return null;
+}
+
 export class Composition {
   constructor(width = 1920, height = 1080) {
     this.width = width;
@@ -196,8 +219,9 @@ export class Composition {
         ...clip,
         // Timeline/keyframe objects must not be shared between history entries.
         keyframes: clip.keyframes ? JSON.parse(JSON.stringify(clip.keyframes)) : null,
-        // Keep the live media references so undo can restore deleted clips.
-        element: clip.element || null,
+        // Do not retain decoded DOM media elements in every undo snapshot.
+        // The source URL/File are enough to recreate an element when undo restores it.
+        element: null,
         file: clip.file || null
       })),
       selectedClipId: this.selectedClipId
@@ -280,7 +304,7 @@ export class Composition {
       const clip = {
         ...source,
         keyframes: source.keyframes ? JSON.parse(JSON.stringify(source.keyframes)) : null,
-        element: source.element || existingElements.get(source.id) || null,
+        element: existingElements.get(source.id) || createHistoryMediaElement(source),
         file: source.file || null
       };
       return clip;
