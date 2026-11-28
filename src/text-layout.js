@@ -9,10 +9,9 @@ export function wrapTextLines(ctx, text, maxWidth, maxLines = 3) {
   const lines = [];
 
   for (const paragraph of paragraphs) {
-    if (!paragraph) {
-      lines.push('');
-      continue;
-    }
+    // Ignore empty separator lines. They otherwise consume the limited subtitle
+    // line budget and can make the final real sentence disappear behind an ellipsis.
+    if (!paragraph.trim()) continue;
     let line = '';
     for (const character of Array.from(paragraph)) {
       const candidate = line + character;
