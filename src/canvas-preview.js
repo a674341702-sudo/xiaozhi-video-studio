@@ -5,7 +5,7 @@
  */
 import { clamp } from './utils.js';
 import { applyClipTransformsAtTime } from './keyframes.js';
-import { wrapTextLines } from './text-layout.js';
+import { hasRenderableText, wrapTextLines } from './text-layout.js';
 import { getMediaDrawGeometry } from './media-fit.js';
 
 export class CanvasPreview {
@@ -274,7 +274,7 @@ export class CanvasPreview {
   }
 
   _renderTextClip(ctx, clip) {
-    if (!clip.text) return;
+    if (!hasRenderableText(clip.text)) return;
 
     this._loadCustomFont(clip);
 
