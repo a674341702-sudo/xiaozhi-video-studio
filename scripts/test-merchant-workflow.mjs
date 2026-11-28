@@ -156,9 +156,10 @@ assert.ok(autoWorkflowSource.includes("import { createDefaultMusicFile } from '.
 assert.ok(autoWorkflowSource.includes("musicFile = await createDefaultMusicFile()"), 'missing uploaded music must trigger local original music generation');
 assert.ok(autoWorkflowSource.includes("usingDefaultMusic ? '、内置原创轻音乐'"), 'completion feedback must distinguish built-in music from merchant-uploaded music');
 
-const captionFallbackIndex = autoWorkflowSource.indexOf("if (!$('xzw-captions').value.trim())");
+const captionRefreshIndex = autoWorkflowSource.indexOf("if (!captionsManuallyEdited)");
 const narrationSplitIndex = autoWorkflowSource.indexOf("const script = $('xzw-narration').value.trim().split");
-assert.ok(captionFallbackIndex > 0 && captionFallbackIndex < narrationSplitIndex, 'missing画面字幕时必须独立根据商家文案生成字幕，不能依赖配音稿是否为空');
+assert.ok(captionRefreshIndex > 0 && captionRefreshIndex < narrationSplitIndex && autoWorkflowSource.includes("makeCaptions(profile, files.length)"), '未手动修改的字幕必须根据当前商家文案刷新，不能沿用上一个项目的旧字幕');
+assert.ok(autoWorkflowSource.includes("xzw-captions').addEventListener('input'"), '商家手动编辑字幕后必须保留其自定义内容');
 assert.ok(autoWorkflowSource.includes("$('xzw-build-preview').click();") && autoWorkflowSource.includes('if (!productionPreviewReady) return;'), 'auto video generation must run preflight checks automatically instead of forcing a separate preview click');
 assert.ok(autoWorkflowSource.includes("split(/[\\n。！？!?；;]+/)"), 'merchant copy must split actual newline characters as well as sentence punctuation');
 assert.ok(!autoWorkflowSource.includes("split(/[\\\\n。！？!?；;]+/)"), 'merchant copy splitting must not treat the letter n as a separator');
