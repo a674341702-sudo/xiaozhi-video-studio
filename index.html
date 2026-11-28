@@ -130,6 +130,27 @@
       .xh-wrap{max-width:620px}
       .xh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
     }
+
+    /* 真正触屏手机布局：不依赖屏幕宽度判断，避免手机被当成平板/桌面 */
+    @media (hover: none) and (pointer: coarse) {
+      body.home-mode { min-width: 0; }
+      body.home-mode #xiaozhi-home { width: 100%; min-height: 100svh; padding: calc(16px + env(safe-area-inset-top)) 16px calc(104px + env(safe-area-inset-bottom)); }
+      body.home-mode .xh-wrap { width: 100%; max-width: none; min-height: calc(100svh - 120px); }
+      body.home-mode .xh-top { margin-bottom: 18px; }
+      body.home-mode .xh-brand { font-size: 24px; }
+      body.home-mode .xh-hero { min-height: 118px; padding: 22px 19px; }
+      body.home-mode .xh-hero h1 { font-size: clamp(23px, 5vw, 28px); }
+      body.home-mode .xh-hero p { font-size: 14px; }
+      body.home-mode .xh-section-title { margin: 22px 2px 12px; font-size: 17px; }
+      body.home-mode .xh-card { min-height: 86px; padding: 15px; }
+      body.home-mode .xh-grid { grid-template-columns: 1fr; gap: 10px; }
+      body.home-mode .xh-grid .xh-card { min-height: 78px; flex-direction: row; align-items: center; gap: 13px; }
+      body.home-mode .xh-grid .xh-icon { width: 44px; height: 44px; flex: 0 0 44px; }
+      body.home-mode .xh-foot { margin: 18px 4px 8px; }
+      .xh-mobile-nav { position: fixed; z-index: 1000; left: 12px; right: 12px; bottom: calc(8px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr 1.35fr 1fr; gap: 8px; padding: 8px; border: 1px solid #e3e9f3; border-radius: 20px; background: rgba(255,255,255,.96); box-shadow: 0 8px 28px #172b4d20; backdrop-filter: blur(14px); }
+      .xh-mobile-nav button { min-height: 48px; border: 0; border-radius: 14px; background: #f0f4fa; color: #34445c; font: 700 14px system-ui,sans-serif; }
+      .xh-mobile-nav button.primary { background: linear-gradient(110deg,#245da8,#1677dc); color: #fff; }
+    }
   </style>
   <section id="xiaozhi-home" aria-label="小智视频主页">
     <div class="xh-wrap">
