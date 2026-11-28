@@ -14,6 +14,7 @@ MOSS-TTS-Nano 值得继续做独立实验，但目前不能直接放进小智视
 - 官方仓库说明 ONNX CPU 推理不需要 PyTorch，并提供 onnxruntime / onnxruntime-web 方向；模型缺失时，默认流程会从 Hugging Face 下载 TTS 模型和音频 tokenizer。
 - 官方 Android 示例：examples/android_onnx_runtime。示例刻意保持最小化，模型文件放在 APK 外部；演示使用预先 token 化的短文本。自定义文本还需要 SentencePiece 兼容实现或预处理步骤，因此它不是可直接嵌入产品的完整 Android TTS 模块。
 - 官方仓库/模型卡标示 Apache-2.0；集成前仍须保留许可证与第三方依赖声明。
+- ModelScope 国内模型页可查到 openmoss/MOSS-TTS-Nano，页面标注 Apache-2.0、中文等多语言支持，模型下载体积约 237.81 MB；但这是 PyTorch 模型页，不等于已经有可直接用于网页的 ONNX 发行包，也不能替代配套音频 tokenizer 的核验。
 - Hugging Face 页面列出的 moss_tts_local_shared.data 单个文件大小为 230 MB。另一个镜像页面列出的 global shared 文件为 441 MB；该镜像不是官方国内分发渠道，不能当作国内可用性证明。
 - 模型推理还依赖 MOSS-Audio-Tokenizer-Nano-ONNX。必须把 tokenizer 的完整文件清单、体积、许可证和实际加载要求一并纳入评估，不能只算 TTS 主模型。
 
