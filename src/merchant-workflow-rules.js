@@ -113,16 +113,16 @@ export function getMerchantAudioMix({
   voiceVolume = 1,
   videoVolume = null
 } = {}) {
-  const clampVolume = (value, fallback) => {
+  const clampVolume = (value, fallback, maximum = 1) => {
     const numeric = Number(value);
-    return Number.isFinite(numeric) ? Math.min(1, Math.max(0, numeric)) : fallback;
+    return Number.isFinite(numeric) ? Math.min(maximum, Math.max(0, numeric)) : fallback;
   };
   return {
     video: keepOriginalAudio
-      ? clampVolume(videoVolume, hasVoice ? 0.12 : 0.7)
+      ? clampVolume(videoVolume, hasVoice ? 0.12 : 0.7, 0.5)
       : 0,
-    music: clampVolume(musicVolume, hasVoice ? 0.12 : 0.22),
-    voice: clampVolume(voiceVolume, 1)
+    music: clampVolume(musicVolume, hasVoice ? 0.12 : 0.22, 0.5),
+    voice: clampVolume(voiceVolume, 1, 1.5)
   };
 }
 
