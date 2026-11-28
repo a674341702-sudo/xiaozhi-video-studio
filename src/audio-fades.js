@@ -7,7 +7,7 @@ export function getAudioFadeKeyframes(duration, peakVolume = 1, fadeInSeconds = 
   const length = Number.isFinite(Number(duration)) ? Math.max(0, Number(duration)) : 0;
   if (length <= 0) return [];
   const peak = Number.isFinite(Number(peakVolume))
-    ? Math.max(0, Math.min(1, Number(peakVolume)))
+    ? Math.max(0, Math.min(1.5, Number(peakVolume)))
     : 1;
   const fadeIn = Math.min(Math.max(0, Number(fadeInSeconds) || 0), length / 3);
   const fadeOut = Math.min(Math.max(0, Number(fadeOutSeconds) || 0), length / 3);
