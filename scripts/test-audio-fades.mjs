@@ -16,5 +16,7 @@ assert.deepEqual(short.map(point => point.value), [0, 0.7, 0.7, 0]);
 assert.deepEqual(getAudioFadeKeyframes(0, 1), []);
 assert.deepEqual(getAudioFadeKeyframes(-2, 1), []);
 assert.deepEqual(getAudioFadeKeyframes(2, 3).map(point => point.value), [0, 1, 1, 0]);
+assert.deepEqual(getAudioFadeKeyframes(2, 1.2).map(point => point.value), [0, 1.2, 1.2, 0], 'narration gain above 100% must survive fade keyframes');
+assert.deepEqual(getAudioFadeKeyframes(2, 1.5).map(point => point.value), [0, 1.5, 1.5, 0], 'maximum supported narration gain must survive fade keyframes');
 assert.ok(getAudioFadeKeyframes(0.01, 0.5).every(point => Number.isFinite(point.time)));
 console.log('音频淡入淡出关键帧测试通过');
