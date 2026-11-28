@@ -27,6 +27,7 @@ import { shouldWarnBeforeProjectExit } from './local-save-guard.js';
 import { getLocalStorageFailureMessage } from './local-storage-diagnostics.js';
 import { revokeProxy } from './proxy.js';
 import { assertProjectMediaComplete } from './project-media-integrity.js';
+import { buildProjectMediaRestorePlan } from './project-media-restore-plan.js';
 
 // --- Global State ---
 let composition = null;
@@ -969,10 +970,15 @@ async function applyLocalProjectRecord(record, notify = true) {
     await composition.fromJSON(safeProject, async () => null);
     let restored = 0;
     let missing = 0;
-    const mediaByClip = new Map((record.media || []).map(item => [item.clipId, item]));
+    const restorePlan = buildProjectMediaRestorePlan(composition.clips, record.media || []);
+    const mediaByClip = restorePlan.mediaByClip;
     for (const clip of composition.clips) {
+      if (!['video', 'image', 'audio'].includes(clip.type)) continue;
       const item = mediaByClip.get(clip.id);
-      if (!item?.blob || !['video', 'image', 'audio'].includes(clip.type)) continue;
+      if (restorePlan.missingClipIds.includes(clip.id)) {
+        missing++;
+        continue;
+      }
       const objectUrl = URL.createObjectURL(item.blob);
       try {
         let element;
