@@ -83,7 +83,7 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
     </section>`;
   document.body.appendChild(modal);
 
-  const $ = (id) => modal.querySelector('#' + id);
+  const $ = (id) => { const element = modal.querySelector('#' + id); if (!element) throw new Error('字幕实验室缺少页面元素 #' + id); return element; };
   const state = { segments: [], busy: false, transcriber: null };
 
   const fmt = (seconds) => {
