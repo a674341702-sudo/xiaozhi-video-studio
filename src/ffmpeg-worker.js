@@ -409,17 +409,25 @@ export function validateCompositionMedia(composition) {
   }
   // Audio-only or empty timelines otherwise produce a valid-looking black MP4.
   // A text card is a legitimate visual composition, so include text clips here.
-  const hasVisibleVisualClip = composition.clips.some(clip => {
-    if (!['video', 'image', 'text'].includes(clip.type)) return false;
-    const track = typeof composition.getTrack === 'function'
-      ? composition.getTrack(clip.trackId)
-      : composition.tracks?.find(item => item.id === clip.trackId);
-    return !track || track.visible !== false;
-  });
+  const getClipTrack = clip => typeof composition.getTrack === 'function'
+    ? composition.getTrack(clip.trackId)
+    : composition.tracks?.find(item => item.id === clip.trackId);
+  const isClipExported = clip => {
+    const track = getClipTrack(clip);
+    if (!track) return true;
+    if (track.visible === false) return false;
+    if (clip.type === 'audio' && track.muted) return false;
+    return true;
+  };
+  const hasVisibleVisualClip = composition.clips.some(clip =>
+    ['video', 'image', 'text'].includes(clip.type) && isClipExported(clip)
+  );
   if (!hasVisibleVisualClip) {
     throw new Error('时间线上还没有可见的画面内容，请检查照片、视频或字幕轨道是否被隐藏。');
   }
-  const mediaClips = composition.clips.filter(clip => ['video', 'image', 'audio'].includes(clip.type));
+  const mediaClips = composition.clips.filter(clip =>
+    ['video', 'image', 'audio'].includes(clip.type) && isClipExported(clip)
+  );
   for (const clip of mediaClips) {
     const label = clip.name || '未命名素材';
     if (!Number.isFinite(clip.startTime) || clip.startTime < 0 ||
