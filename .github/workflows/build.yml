@@ -24,5 +24,12 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Run regression tests
+        run: |
+          set -e
+          for test_file in scripts/test-*.mjs; do
+            echo "Running $test_file"
+            node "$test_file"
+          done
       - name: Build production bundle
         run: npm run build
