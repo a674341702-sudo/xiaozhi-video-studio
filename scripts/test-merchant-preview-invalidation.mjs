@@ -52,6 +52,27 @@ assert.ok(syncMappingStart >= 0 && syncMappingEnd > syncMappingStart);
 assert.match(source.slice(syncMappingStart, syncMappingEnd), /mediaRoleByFile\.set\(file, null\)/,
   'reordering media must preserve explicit automatic assignments');
 
+
+const generateStart = source.indexOf("$('xzw-generate').addEventListener('click', async () => {");
+const generateCatch = source.indexOf('} catch (error) {', generateStart);
+const generateFinally = source.indexOf('} finally {', generateCatch);
+const generateEnd = source.indexOf("$('xzw-export').addEventListener('click'", generateFinally);
+assert.ok(generateStart >= 0 && generateCatch > generateStart && generateFinally > generateCatch && generateEnd > generateFinally,
+  'automatic arrangement must have a complete failure and retry lifecycle');
+const generateFailureBlock = source.slice(generateCatch, generateFinally);
+assert.match(generateFailureBlock, /if \(releaseMediaUrls\) releaseMediaUrls\(\)/,
+  'failed arrangement must release temporary media URLs');
+assert.match(generateFailureBlock, /composition\.clear\(\)/,
+  'failed arrangement must remove partial clips instead of presenting a broken timeline as complete');
+assert.match(generateFailureBlock, /getMerchantWorkflowErrorMessage\(error\)/,
+  'failed arrangement must explain the failure in merchant-friendly language');
+const generateRetryBlock = source.slice(generateFinally, generateEnd);
+assert.match(generateRetryBlock, /productionPreviewReady = false/);
+assert.match(generateRetryBlock, /\$\('xzw-generate'\)\.disabled = false/,
+  'the generate button must be re-enabled so the merchant can retry');
+assert.ok(source.includes('const files = orderedMediaFiles;'),
+  'the original merchant uploads must remain available as retry inputs after a failed arrangement');
+
 console.log('Merchant production preview invalidation tests passed.');
 
 assert.match(source, /let productionGeneration = 0/);
