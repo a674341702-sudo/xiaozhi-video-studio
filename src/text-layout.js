@@ -51,3 +51,20 @@ export function getSubtitleSafeLayout(width, height, { bottomSafe = 0.18, sideMa
     height: boxHeight
   };
 }
+
+
+/**
+ * Return a subtitle-safe rectangle at a selectable vertical position.
+ * The bottom preset preserves the original default safe-zone behavior.
+ */
+export function getSubtitlePositionLayout(width, height, position = 'bottom', options = {}) {
+  const layout = getSubtitleSafeLayout(width, height, options);
+  const h = Math.max(1, Number(height) || 1);
+  if (position === 'top') {
+    layout.y = Math.round(h * 0.12);
+  } else if (position === 'middle') {
+    layout.y = Math.round((h - layout.height) / 2);
+  }
+  layout.y = Math.max(0, Math.min(h - layout.height, layout.y));
+  return layout;
+}

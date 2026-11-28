@@ -1,4 +1,4 @@
-import { getSubtitleSafeLayout } from './text-layout.js';
+import { getSubtitlePositionLayout } from './text-layout.js';
 /**
  * 小智中文自动字幕实验室
  * 采用 browser-whisper 开源项目的浏览器端识别能力。
@@ -64,6 +64,12 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
           <option value="yellow">醒目黄字 · 深色底</option>
           <option value="clean">简洁白字 · 无底色</option>
         </select></label>
+        <label>字幕位置<select id="xzs-position">
+          <option value="bottom">底部安全区 · 默认</option>
+          <option value="top">顶部安全区 · 避开底部主体</option>
+          <option value="middle">画面居中 · 适合纯背景镜头</option>
+        </select></label>
+        <p class="xzs-note">如果商品、菜品或招牌在画面下方，可改选顶部；位置仍可在导入后于预览画面中拖动微调。</p>
         <p class="xzs-note">可直接修改每句文字和起止时间，也可以删除不需要的句子。时间单位为秒。</p>
         <div class="xzs-list" id="xzs-results"><p class="xzs-note">识别完成后，字幕会显示在这里。</p></div>
         <div class="xzs-actions">
@@ -281,7 +287,7 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
         text,
         startTime: start,
         duration,
-        ...getSubtitleSafeLayout(composition.width, composition.height),
+        ...getSubtitlePositionLayout(composition.width, composition.height, $('xzs-position').value),
         fontSize: Math.max(30, Math.round(composition.width * 0.034)),
         fontFamily: 'Noto Sans CJK SC',
         fontWeight: 'bold',
