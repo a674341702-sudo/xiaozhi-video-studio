@@ -475,7 +475,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     // Encode mixed audio now, then release its large AudioBuffer before the
     // JPEG frame sequence accumulates in FFmpeg's virtual filesystem.
     if (hasAudio) {
-      let wavBlob = audioBufferToWav(audioBuffer);
+      let wavBlob = await audioBufferToWav(audioBuffer, abortSignal);
       let wavData = await fetchFile(wavBlob);
       await ffmpeg.writeFile('audio.wav', wavData);
       inputFiles.push('audio.wav');
