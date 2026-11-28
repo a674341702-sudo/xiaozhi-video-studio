@@ -148,6 +148,8 @@ assert.ok(!autoWorkflowSource.includes("if (briefText && !requirements.length) i
 assert.ok(!autoWorkflowSource.includes("requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)"), 'optional checklist confirmations must not block the simple photo-plus-copy workflow');
 assert.match(autoWorkflowSource, /String\(profile\.copy \|\| ''\)\.split/, 'merchant copy must be split into usable caption points');
 assert.ok(autoWorkflowSource.includes('copyByShot.get(index)'), 'merchant copy points must be distributed across generated shot captions');
+assert.ok(autoWorkflowSource.includes('没有明显线索时按上传顺序自动安排，不需要逐张确认'), 'unknown media filenames must be assigned automatically by upload order without forcing manual confirmation');
+assert.ok(autoWorkflowSource.includes('当前共 ' + ' + orderedMediaFiles.length + ' + ' 个，系统已自动安排镜头，可直接生成'), 'upload feedback must tell merchants that automatic shot assignment is ready');
 const captionFallbackIndex = autoWorkflowSource.indexOf("if (!$('xzw-captions').value.trim())");
 const narrationSplitIndex = autoWorkflowSource.indexOf("const script = $('xzw-narration').value.trim().split");
 assert.ok(captionFallbackIndex > 0 && captionFallbackIndex < narrationSplitIndex, 'missing画面字幕时必须独立根据商家文案生成字幕，不能依赖配音稿是否为空');
