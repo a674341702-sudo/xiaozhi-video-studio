@@ -25,6 +25,7 @@ export class MultiTimeline {
     this.currentTime = 0;
 
     this.isScrubbing = false;
+    this.scrubPointerId = null;
     this.dragTarget = null;
 
     // Virtualization viewport
@@ -273,25 +274,37 @@ export class MultiTimeline {
       if (this.onSeek) this.onSeek(targetTime);
     };
 
-    this.rulerWrapper.addEventListener('mousedown', (e) => {
+    this.rulerWrapper.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || this.isScrubbing || this.dragTarget) return;
       this.isScrubbing = true;
+      this.scrubPointerId = e.pointerId;
+      e.preventDefault();
       handleRulerSeek(e);
     });
 
-    window.addEventListener('mousemove', (e) => {
-      if (this.isScrubbing) {
+    window.addEventListener('pointermove', (e) => {
+      if (this.isScrubbing && e.pointerId === this.scrubPointerId) {
         handleRulerSeek(e);
-      } else if (this.dragTarget) {
+      } else if (this.dragTarget && e.pointerId === this.dragTarget.pointerId) {
         this._onDragClipMove(e);
       }
     });
 
-    window.addEventListener('mouseup', () => {
-      if (this.isScrubbing) this.isScrubbing = false;
-      if (this.dragTarget) this._onDragClipEnd();
-    });
+    const finishPointerGesture = (e) => {
+      if (this.isScrubbing && (e.pointerId == null || e.pointerId === this.scrubPointerId)) {
+        this.isScrubbing = false;
+        this.scrubPointerId = null;
+      }
+      if (this.dragTarget && (e.pointerId == null || e.pointerId === this.dragTarget.pointerId)) {
+        this._onDragClipEnd();
+      }
+    };
 
-    this.tracksContent.addEventListener('mousedown', (e) => {
+    window.addEventListener('pointerup', finishPointerGesture);
+    window.addEventListener('pointercancel', finishPointerGesture);
+
+    this.tracksContent.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0 || this.dragTarget || this.isScrubbing) return;
       const handleEl = e.target.closest('.mt-clip-handle');
       const clipEl = e.target.closest('.mt-clip');
 
@@ -303,6 +316,7 @@ export class MultiTimeline {
 
         this.dragTarget = {
           clipId,
+          pointerId: e.pointerId,
           mode: handleType === 'left' ? 'trimLeft' : 'trimRight',
           startX: e.clientX,
           startY: e.clientY,
@@ -323,6 +337,7 @@ export class MultiTimeline {
 
         this.dragTarget = {
           clipId,
+          pointerId: e.pointerId,
           mode: 'move',
           startX: e.clientX,
           startY: e.clientY,
