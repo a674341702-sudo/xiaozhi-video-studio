@@ -182,7 +182,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
   const $ = (id) => modal.querySelector('#' + id);
   const setStatus = (message) => { $('xzw-status').textContent = message; };
+  $('xzw-captions').addEventListener('input', () => { captionsManuallyEdited = true; });
   let productionPreviewReady = false;
+  let captionsManuallyEdited = false;
   let orderedMediaFiles = [];
   const mediaRoleByFile = new Map();
   const mediaPreviewUrls = new Map();
@@ -392,6 +394,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const shotCount = Math.max(1, orderedMediaFiles.length || 6);
     $('xzw-narration').value = makeScript(profile).join('\n');
     $('xzw-captions').value = makeCaptions(profile, shotCount).join('\n');
+    captionsManuallyEdited = false;
     setStatus('已根据商家资料和文档要求生成配音稿、逐镜字幕。请核对每一条信息，尤其价格、优惠和地址；限制类要求不会被写进字幕。' + (narrationDraftOmittedLines || narrationDraftTruncated ? '\n配音稿已控制在480字以内，较长内容可能未全部进入旁白；完整要求仍保留在商家文档和镜头清单中，请检查字幕。' : '') + (narrationDraftMissingPoints.length ? '\n以下商家重点未完整进入配音稿，请检查并补入字幕或手动精简：' + narrationDraftMissingPoints.join('；') : ''));
   });
     $('xzw-send-tts').addEventListener('click', () => {
@@ -680,7 +683,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     // Captions are generated independently from the narration field: a merchant
     // may paste their own voiceover while still expecting on-screen copy from
     // the shop brief. Never leave the timeline with generic captions by default.
-    if (!$('xzw-captions').value.trim()) {
+    if (!captionsManuallyEdited) {
+      // Refresh auto-generated captions from the current merchant profile and copy.
+      // Preserve the textarea only when the merchant has deliberately edited it.
       $('xzw-captions').value = makeCaptions(profile, files.length).join('\n');
     }
     const script = $('xzw-narration').value.trim().split(/[。！？!?；;\n]+/).map(s=>s.trim()).filter(Boolean);
