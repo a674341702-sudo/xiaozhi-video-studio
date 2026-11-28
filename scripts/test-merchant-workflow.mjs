@@ -176,3 +176,8 @@ assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 10
 assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 0, isVideo: true, mediaDuration: 2 }), 0, '目标时长用尽后不再生成镜头');
 assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 10, isVideo: true, mediaDuration: 0 }), 0, '无效视频时长必须被拒绝');
 console.log('视频镜头真实时长边界测试通过');
+
+const restrictionUiSource = readFileSync(new URL('../src/auto-workflow.js', import.meta.url), 'utf8');
+assert.ok(restrictionUiSource.includes('系统不会自动审查画面'), '禁止项确认必须明确说明画面由人工核查');
+assert.ok(restrictionUiSource.includes('系统不会自动识别画面是否违规'), '制作预览必须提醒限制项不会自动进行画面审查');
+console.log('商家限制项人工画面核查提示测试通过');
