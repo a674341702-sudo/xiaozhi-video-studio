@@ -74,13 +74,8 @@ async function generateProxyWithFFmpeg(file, targetHeight, onProgress) {
       const wasmURL = await toBlobURL(resolveCoreUrl('ffmpeg-core.wasm'), 'application/wasm');
       await ffmpeg.load({ coreURL, wasmURL });
     } catch (localError) {
-      console.warn('Local proxy FFmpeg core unavailable, trying CDN fallback:', localError);
-      const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js';
-      const wasmURL = await toBlobURL(
-        'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm',
-        'application/wasm'
-      );
-      await ffmpeg.load({ coreURL, wasmURL });
+      console.warn('本地代理 FFmpeg 组件不可用；已禁用境外 CDN 备用下载，继续使用原始视频。', localError);
+      throw new Error('本地代理组件不可用，已跳过代理处理。');
     }
 
     await ffmpeg.writeFile(inputName, await fetchFile(file));
