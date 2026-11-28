@@ -109,6 +109,7 @@ export class Composition {
       color: clipData.color || '#ffffff',
       bgColor: clipData.bgColor || 'transparent',
       textAlign: clipData.textAlign || 'center',
+      maxLines: Number.isInteger(clipData.maxLines) && clipData.maxLines > 0 ? clipData.maxLines : null,
       keyframes: clipData.keyframes || null,
       proxySrc: clipData.proxySrc || null,
       proxyState: clipData.proxyState || 'none'
