@@ -571,7 +571,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       byShot.set(shot, current);
     });
     const copyPoints = [...new Set([
-      ...String(profile.copy || '').split(/[\\n。！？!?；;]+/),
+      ...String(profile.copy || '').split(/[\n。！？!?；;]+/),
       ...splitMerchantRequirements(profile.brief || '', 16)
     ].map(item => item.trim()).filter(item => item && !isRestrictionRequirement(item)))];
     const copyByShot = new Map();
