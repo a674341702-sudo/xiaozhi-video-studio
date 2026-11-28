@@ -307,6 +307,22 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
 /**
  * Converts an AudioBuffer to a standard 16-bit stereo PCM WAV Blob.
  */
+export function getAudioWavByteLength(buffer) {
+  const channels = Number(buffer?.numberOfChannels);
+  const length = Number(buffer?.length);
+  if (!Number.isSafeInteger(channels) || channels < 1 || channels > 2 ||
+      !Number.isSafeInteger(length) || length <= 0) {
+    throw new Error('音频数据尺寸无效，无法安全生成 WAV 文件。');
+  }
+  const dataBytes = length * channels * 2;
+  const totalBytes = 44 + dataBytes;
+  if (!Number.isSafeInteger(dataBytes) || !Number.isSafeInteger(totalBytes) ||
+      dataBytes > 0xffffffff - 36) {
+    throw new Error('音频过长，WAV 文件超过安全尺寸限制，请缩短视频或分段导出。');
+  }
+  return totalBytes;
+}
+
 export async function audioBufferToWav(buffer, abortSignal, chunkFrames = 8192) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
@@ -315,7 +331,7 @@ export async function audioBufferToWav(buffer, abortSignal, chunkFrames = 8192) 
   const bytesPerSample = bitDepth / 8;
   const blockAlign = numChannels * bytesPerSample;
   const dataByteCount = buffer.length * blockAlign;
-  const bufferByteCount = 44 + dataByteCount;
+  const bufferByteCount = getAudioWavByteLength(buffer);
 
   const arrayBuffer = new ArrayBuffer(bufferByteCount);
   const view = new DataView(arrayBuffer);
@@ -539,8 +555,14 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     // Encode mixed audio now, then release its large AudioBuffer before the
     // JPEG frame sequence accumulates in FFmpeg's virtual filesystem.
     if (hasAudio) {
+      // Reject an oversized WAV before allocating its full ArrayBuffer/Blob.
+      const expectedWavBytes = getAudioWavByteLength(audioBuffer);
+      assertFrameMemoryBudget(0, expectedWavBytes, maxFrameBytes);
       let wavBlob = await audioBufferToWav(audioBuffer, abortSignal);
       let wavData = await fetchFile(wavBlob);
+      if (wavData.byteLength !== expectedWavBytes) {
+        throw new Error('音频转换结果尺寸异常，已停止导出以保护手机内存。');
+      }
       totalFrameBytes = assertFrameMemoryBudget(totalFrameBytes, wavData.byteLength, maxFrameBytes);
       trackExportFile(inputFiles, 'audio.wav');
       await ffmpeg.writeFile('audio.wav', wavData);
