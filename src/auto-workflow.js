@@ -386,7 +386,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   $('xzw-media-map').addEventListener('change', event => {
     if (event.target?.classList?.contains('xzw-media-role')) invalidateProductionPreview();
   });
-  ['xzw-ratio', 'xzw-subtitle', 'xzw-branded-outro', 'xzw-cta'].forEach(id => {
+  // Audio choices and mix levels also affect the final render, so they must
+  // invalidate the approval just like copy, captions, and visual settings.
+  ['xzw-ratio', 'xzw-subtitle', 'xzw-branded-outro', 'xzw-cta',
+    'xzw-music', 'xzw-voice', 'xzw-original-audio',
+    'xzw-music-volume', 'xzw-voice-volume', 'xzw-video-volume'].forEach(id => {
     $(id)?.addEventListener('change', invalidateProductionPreview);
     $(id)?.addEventListener('input', invalidateProductionPreview);
   });
