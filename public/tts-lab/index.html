@@ -13,7 +13,7 @@ header{padding:10px 2px 18px}h1{font-size:23px;margin:0 0 8px}.muted{color:#9fb0
 .status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #304055;font-size:14px}.status:last-child{border:0}
 .pill{font-size:12px;border-radius:99px;padding:4px 9px;background:#334155;color:#dbeafe;white-space:nowrap}.ok{background:#14532d;color:#dcfce7}.warn{background:#713f12;color:#fef3c7}.bad{background:#7f1d1d;color:#fee2e2}
 button,label.file{display:inline-block;border:0;border-radius:10px;padding:12px 15px;background:#2563eb;color:white;font-size:15px;font-weight:600;margin:6px 6px 0 0}
-button:disabled{opacity:.45}input[type=file]{max-width:100%;margin-top:10px}audio{width:100%;margin-top:12px}
+button.secondary{background:#334155}button:disabled{opacity:.45}input[type=file]{max-width:100%;margin-top:10px}audio{width:100%;margin-top:12px}
 .small{font-size:12px;color:#9fb0c5;line-height:1.6}pre{white-space:pre-wrap;word-break:break-word;font-size:12px;color:#cbd5e1}
 </style>
 </head>
@@ -21,48 +21,75 @@ button:disabled{opacity:.45}input[type=file]{max-width:100%;margin-top:10px}audi
 <header><h1>小智视频 · 中文配音实验室</h1><div class="muted">第一阶段：检查手机浏览器是否具备端侧语音合成所需能力。此页面尚未加载 AI 模型，也不会联网下载模型或调用任何收费接口。</div></header>
 <section class="panel">
 <strong>设备能力检测</strong><div id="checks" aria-live="polite"></div>
-<button id="run">重新检测</button>
+<button id="run" type="button">重新检测</button>
 </section>
 <section class="panel">
-<strong>现阶段音频导入测试</strong>
-<p class="muted">可选择手机已有的 WAV 音频，检查浏览器播放能力。这里不是 AI 生成；生成的 WAV 接入小智视频配音轨仍需后续集成。</p>
-<input id="audioFile" type="file" accept=".wav,audio/wav,audio/*">
-<audio id="player" controls hidden></audio>
-<div id="audioInfo" class="small" aria-live="polite"></div>
+<strong>本地音频导入测试</strong>
+<p class="muted">选择手机已有的 WAV、MP3、M4A 或 WebM 音频，检查浏览器解码与播放能力。仅在本机试听，不会上传。单个文件最大 40MB。</p>
+<input id="audioFile" type="file" accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,audio/*">
+<audio id="player" controls preload="metadata" hidden></audio>
+<div id="audioInfo" class="small" aria-live="polite">尚未选择音频。</div>
+<button id="clearAudio" class="secondary" type="button" disabled>清除音频</button>
 </section>
 <section class="panel">
-<strong>实验状态</strong>
-<p class="muted">Matcha 中文模型、WASM 运行时、音素化资源尚未打包；大陆网络资源地址和 SHA-256 也尚未全部核实。因此本实验页不会假装已经具备 AI 配音能力。</p>
-<div class="small">隐私说明：本页不上传所选音频、不发起模型下载、不访问麦克风。检测结果只显示在本机页面。</div>
+<strong>模型接入状态</strong>
+<div class="status"><span>中文 TTS 推理模型</span><span class="pill warn">尚未接入</span></div>
+<div class="status"><span>WASM 运行时与 Worker</span><span class="pill warn">尚未构建</span></div>
+<div class="status"><span>国内模型资源与 SHA-256</span><span class="pill warn">待核验</span></div>
+<div class="status"><span>Android 真机语音质量</span><span class="pill warn">待测试</span></div>
+<p class="muted">这些项目全部通过后，才会开放 AI 生成按钮。当前页面不会假装已经具备 AI 配音能力。</p>
+<div class="small">隐私说明：本页不上传所选音频、不发起模型下载、不访问麦克风。关闭页面时会释放本地音频临时地址。</div>
 </section>
 <script>
 const checks=document.getElementById('checks');
-function row(name,ok,detail,level){return '<div class="status"><span>'+name+'<br><span class="small">'+detail+'</span></span><span class="pill '+(level|| (ok?'ok':'warn'))+'">'+(ok?'支持':'待确认')+'</span></div>'}
+function row(name,ok,detail,level){return '<div class="status"><span>'+name+'<br><span class="small">'+detail+'</span></span><span class="pill '+(level||(ok?'ok':'warn'))+'">'+(ok?'支持':'待确认')+'</span></div>'}
 function detect(){
  const secure=window.isSecureContext===true;
+ const wasm=typeof WebAssembly==='object'&&WebAssembly.validate(new Uint8Array([0,97,115,109,1,0,0,0]));
  const items=[
  ['安全上下文（HTTPS）',secure,secure?'可使用受限浏览器能力':'当前页面不是安全上下文'],
- ['WebAssembly',typeof WebAssembly==='object','浏览器 WASM 运行基础'],
- ['Web Worker',typeof Worker==='function','可将语音推理放到后台线程'],
- ['AudioContext',!!(window.AudioContext||window.webkitAudioContext),'可试听和处理生成音频'],
- ['IndexedDB',!!window.indexedDB,'可用于模型缓存管理'],
- ['OPFS 持久化',!!(navigator.storage&&navigator.storage.getDirectory),'可选的较大模型文件存储能力'],
+ ['WebAssembly',wasm,wasm?'最小 WASM 模块验证通过':'浏览器不支持或验证失败'],
+ ['Web Worker',typeof Worker==='function','可创建后台线程；实际模型兼容性仍需测试'],
+ ['AudioContext',!!(window.AudioContext||window.webkitAudioContext),'可用于后续音频处理与混音'],
+ ['IndexedDB',!!window.indexedDB,'可用于模型缓存元数据'],
+ ['OPFS 持久化',!!(navigator.storage&&typeof navigator.storage.getDirectory==='function'),'可选的大文件持久化存储能力'],
  ['跨源隔离',window.crossOriginIsolated===true,'部分 WASM 线程优化需要；当前不是硬性通过条件'],
- ['录音 API',!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia),'当前实验页不申请麦克风权限']
+ ['录音 API',!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia),'当前实验页不会申请麦克风权限']
  ];
  checks.innerHTML=items.map(x=>row(x[0],x[1],x[2],x[0]==='安全上下文（HTTPS）'&&!x[1]?'bad':undefined)).join('');
 }
 document.getElementById('run').addEventListener('click',detect);
 detect();
 let currentUrl='';
-document.getElementById('audioFile').addEventListener('change',e=>{
- const file=e.target.files&&e.target.files[0];const player=document.getElementById('player');const info=document.getElementById('audioInfo');
- if(currentUrl)URL.revokeObjectURL(currentUrl);currentUrl='';
- if(!file){player.hidden=true;info.textContent='';return}
- if(file.size>40*1024*1024){player.hidden=true;info.textContent='文件超过 40MB，本轮测试不加载。';return}
- currentUrl=URL.createObjectURL(file);player.src=currentUrl;player.hidden=false;
- info.textContent='已在本机选择：'+file.name+'（'+(file.size/1024/1024).toFixed(2)+' MB）。文件未上传。';
+const fileInput=document.getElementById('audioFile');
+const player=document.getElementById('player');
+const info=document.getElementById('audioInfo');
+const clearButton=document.getElementById('clearAudio');
+function clearAudio(message='尚未选择音频。'){
+ if(currentUrl){URL.revokeObjectURL(currentUrl);currentUrl=''}
+ player.pause();player.removeAttribute('src');player.load();player.hidden=true;
+ clearButton.disabled=true;info.textContent=message;fileInput.value='';
+}
+fileInput.addEventListener('change',()=>{
+ const file=fileInput.files&&fileInput.files[0];
+ clearAudio();
+ if(!file)return;
+ if(file.size===0){info.textContent='这个文件是空的，请重新选择有效音频。';return}
+ if(file.size>40*1024*1024){info.textContent='文件超过 40MB，本轮测试不加载。请压缩或选择较短音频。';return}
+ const allowed=/\.(wav|mp3|m4a|aac|ogg|webm)$/i.test(file.name)||/^audio\//i.test(file.type);
+ if(!allowed){info.textContent='暂不支持这个文件类型，请选择 WAV、MP3、M4A、AAC、OGG 或 WebM。';return}
+ currentUrl=URL.createObjectURL(file);player.src=currentUrl;player.hidden=false;clearButton.disabled=false;
+ info.textContent='已在本机选择：'+file.name+'（'+(file.size/1024/1024).toFixed(2)+' MB）。文件未上传，正在等待浏览器读取音频信息。';
 });
-window.addEventListener('pagehide',()=>{if(currentUrl)URL.revokeObjectURL(currentUrl)});
+player.addEventListener('loadedmetadata',()=>{
+ if(!currentUrl)return;
+ const duration=Number.isFinite(player.duration)?Math.round(player.duration)+' 秒':'时长暂不可读';
+ info.textContent='本地音频已读取：'+duration+'。点击播放器试听；文件未上传。';
+});
+player.addEventListener('error',()=>{
+ if(currentUrl)info.textContent='浏览器无法解码此音频。请尝试转换为标准 WAV 或 MP3 后重新选择。';
+});
+clearButton.addEventListener('click',()=>clearAudio());
+window.addEventListener('pagehide',()=>{if(currentUrl){URL.revokeObjectURL(currentUrl);currentUrl=''}});
 </script>
 </body></html>
