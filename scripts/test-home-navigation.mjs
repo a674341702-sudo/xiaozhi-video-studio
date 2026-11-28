@@ -13,13 +13,14 @@ for (const action of ['viral', 'smart', 'materials', 'document', 'projects', 'ed
   assert.ok(actions.includes(action), `主页缺少入口：${action}`);
 }
 
-for (const targetId of ['xzw-reference-studio', 'xzw-files', 'xzw-brief-file']) {
+for (const targetId of ['xzw-shop', 'xzw-files', 'xzw-brief-file']) {
   const hasStaticId = (workflow + referenceStudio).includes(`id="${targetId}"`);
   const hasDynamicId = referenceStudio.includes(`section.id = '${targetId}'`);
   assert.ok(hasStaticId || hasDynamicId, `工作台缺少目标控件：${targetId}`);
-  assert.ok(main.includes(`'${targetId}'`), `主页入口没有关联目标控件：${targetId}`);
+  assert.ok(main.includes('HOME_ACTION_TARGETS[action]'), `主页入口没有使用集中路由配置：${targetId}`);
 }
 
+assert.match(main, /import \{ HOME_ACTION_TARGETS \} from '\.\/home-action-targets\.js';/, '主页入口必须使用可测试的路由配置');
 assert.match(main, /const modal = document\.getElementById\('xiaozhi-workflow'\)/,
   '主页入口必须直接查找工作台弹层');
 assert.match(main, /modal\.classList\.add\('open'\)/,
@@ -35,4 +36,4 @@ assert.match(handler, /else if \(action === 'document'\)[\s\S]*?target\.click\(\
 
 assert.match(workflow, /initReferenceVideoStudio\(modal\)/, '参考视频研究室必须在工作台初始化时挂载');
 
-console.log('主页入口回归测试通过：6个入口、工作台目标控件、直接打开弹层和手机文件选择器链路均已核对。');
+console.log('主页入口回归测试通过：6个入口、商家资料/素材/文档目标控件、直接打开弹层和手机文件选择器链路均已核对。');
