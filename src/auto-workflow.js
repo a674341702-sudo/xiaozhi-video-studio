@@ -372,10 +372,17 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   const profileKeys = ['shop','industry','product','address','offer','copy','brief','style','length','cta'];
   // Any change to information used by the production check makes its previous
   // approval stale. Require a fresh check before arranging the updated video.
+  const captionSourceKeys = new Set(['shop', 'industry', 'product', 'address', 'offer', 'copy', 'brief']);
   profileKeys.forEach(key => {
     const field = $('xzw-' + key);
-    field?.addEventListener('input', invalidateProductionPreview);
-    field?.addEventListener('change', invalidateProductionPreview);
+    const handleProfileChange = () => {
+      // A deliberate caption edit belongs to the old merchant facts once the
+      // source copy changes. Rebuild captions from the current brief on arrange.
+      if (captionSourceKeys.has(key)) captionsManuallyEdited = false;
+      invalidateProductionPreview();
+    };
+    field?.addEventListener('input', handleProfileChange);
+    field?.addEventListener('change', handleProfileChange);
   });
   $('xzw-captions').addEventListener('input', () => {
     captionsManuallyEdited = true;
