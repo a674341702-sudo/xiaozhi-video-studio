@@ -115,3 +115,8 @@ export function getMediaElementVolume(gain) {
   const value = Number(gain);
   return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
 }
+
+/** Match export audio eligibility: muted or hidden tracks must be silent in preview. */
+export function isTrackAudioEnabled(track) {
+  return !track || (track.muted !== true && track.visible !== false);
+}
