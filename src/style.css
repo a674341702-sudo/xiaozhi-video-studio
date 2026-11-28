@@ -1317,3 +1317,32 @@ button, input, select {
 .mt-clip-handle {
   touch-action: none;
 }
+
+/* Compact phone landscape: keep preview and timeline usable above the fold. */
+@media (max-width: 700px) and (orientation: landscape) and (max-height: 520px) {
+  .app-header { height:38px; }
+  .editor-layout { height:calc(100% - 38px); }
+  .media-add-bar { min-height:46px; padding:4px 8px; }
+  .add-media-btn { min-height:38px; }
+  .panel-header { min-height:34px; padding:3px 8px; }
+  .panel-header-right { flex-wrap:nowrap; }
+  .preview-badge { display:none; }
+  .video-wrapper { padding:2px 0; }
+  .preview-touch-hint { display:none; }
+  .transport-bar { height:44px; min-height:44px; }
+  .transport-btn { width:38px; height:38px; flex-basis:38px; }
+  .timeline-panel { height:clamp(82px,23dvh,112px); min-height:82px; max-height:112px; }
+  .editor-sidebar { height:min(86dvh,420px); max-height:calc(100dvh - 42px); }
+}
+
+/* Very narrow phones: avoid crowding the preview controls. */
+@media (max-width: 380px) {
+  .media-bar-buttons { grid-template-columns:repeat(2,minmax(0,1fr)); }
+  .add-media-btn { min-height:42px; }
+  .panel-header-right { gap:4px; }
+  .aspect-ratio-select { max-width:98px; font-size:11px; }
+  .preview-time-display { max-width:94px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .transport-center { font-size:12px; }
+  .zoom-controls { gap:3px; }
+  .mini-btn { width:34px; height:34px; min-width:34px; }
+}
