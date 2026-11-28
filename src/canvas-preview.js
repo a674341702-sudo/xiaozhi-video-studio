@@ -419,8 +419,11 @@ export class CanvasPreview {
     this.canvas.style.webkitUserSelect = 'none';
     this.activePointerId = null;
     this.canvas.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'touch') e.preventDefault();
+      // Only the primary pointer may own a canvas transform gesture. Without
+      // this guard, a second finger can replace activePointerId mid-drag.
+      if (e.isPrimary === false) return;
       if (e.button !== undefined && e.button !== 0) return;
+      if (e.pointerType === 'touch' && e.cancelable) e.preventDefault();
       this.activePointerId = e.pointerId;
       try { this.canvas.setPointerCapture?.(e.pointerId); } catch (_) {}
       this._onMouseDown(e);
