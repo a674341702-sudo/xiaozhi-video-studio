@@ -1,6 +1,6 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { main } = require('./index.js');
+const { main } = require('../index.js');
 
 function bodyOf(response) {
   return JSON.parse(response.body);
