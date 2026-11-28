@@ -154,3 +154,47 @@ MOSS-TTS-Nano 暂不进入商家主流程；它的参考音频/声音克隆能�
 - HTTPS 来源、许可证说明和大陆可用性核验标记。
 
 当前 manifest 保持 `status: not-ready` 且资源列表为空，因此构建只确认“尚无获批模型资源”，不会下载模型或启用 AI 生成。只有资源文件、哈希、许可证和大陆网络验证都齐全，才允许把 manifest 改为 ready。该校验不会联网访问 source_url，也不会替代人工大陆网络验收。
+
+
+## 2026-11-28：按当前上游源码重新核对 WASM TTS 构建
+
+本节以 sherpa-onnx 上游提交 `4ef1e51d7f177e426bf5e72243604b1249ec315c`（2026-11-28）及其当前 `wasm/tts` 代码为准；若与前文早期调查描述冲突，以本节为准。
+
+### 重要修正：Matcha 中文不需要把 piper/espeak 当作必需依赖
+
+当前上游 `wasm/tts/assets/README.md` 明确提供两类文本前端：piper-phonemize 或 lexicon。Matcha 中文模型自带 `lexicon.txt`，`sherpa-onnx-tts.js` 对 Matcha 中文使用 lexicon，因此本实验选择 lexicon 路线：
+- 将 `modelType` 设置为 `2`（Matcha Chinese）；
+- 使用模型包内的 `model-steps-3.onnx`、`tokens.txt`、`lexicon.txt`、`phone.fst`、`date.fst`、`number.fst`；
+- 另配 `vocos-22khz-univ.onnx`；
+- 不需要下载 piper-phonemize 浏览器包，也不需要 espeak-ng-data。
+  
+因此，前面早期记录中把 piper-phonemize/espeak-ng-data 描述成 Matcha 中文必需依赖的说法已过时。piper 是上游其他模型/前端的可选路径，不是当前 Matcha 中文配置的必要条件。
+
+### 当前上游构建参数与内存风险
+
+- 官方构建脚本为 `build-wasm-simd-tts.sh`，上游提示 Emscripten 4.0.23 已知可用。
+- 当前 TTS CMake 目标会把 `assets/` 预加载进 `sherpa-onnx-wasm-main-tts.data`（`--preload-file assets@.`），并生成 JS glue、WASM、data 文件和浏览器 Worker/UI。
+- 当前 CMake flags 设置初始 WASM 内存为 `512MB`，并允许增长。这对部分 Android 手机可能是明显的内存压力；不能只看下载文件大小，必须真机测内存峰值、页面是否被系统回收和连续生成稳定性。
+- 浏览器 demo 的 Worker 会初始化模型，完成后才返回 ready；生成结果是 Float32Array 与采样率，可封装为 WAV 后接入小智视频配音轨。
+
+### 资源体积重新核对
+
+官方 Matcha Baker 页面显示声学模型解压后约 72MB，vocoder 约 51MB。当前 GitHub Release API 对应资源记录为：
+- `matcha-icefall-zh-baker.tar.bz2`：75,455,267 bytes（压缩包，官方 release asset SHA-256：`ae70096b19c6e283ea351a26b8a718ce6427c8bde8c1da22eb46a5478d39a69b`）；
+- `vocos-22khz-univ.onnx`：53,884,024 bytes；
+- 解压模型包还包含 lexicon、tokens 和 FST 规则文件；
+- 构建产物还包含 WASM runtime 和预加载的模型 data，最终体积必须以真实构建输出为准。
+
+以上是上游 GitHub 资源的体积，不代表这些资源在中国大陆普通网络已可访问。模型文件许可证及商用范围也尚未完成逐项核验。
+
+### 新增：手动触发的实验构建流程
+
+新增 `.github/workflows/tts-wasm-experiment.yml`：
+- 只允许 `workflow_dispatch` 手动触发，不会随每次普通 push 自动下载模型；
+- 固定 sherpa-onnx 上游 commit 和 Emscripten 版本；
+- 下载 Matcha 中文模型包并校验上游 SHA-256；vocoder 使用上游 checksum 文件校验；
+- 将官方 demo 配置为 `modelType=2`，移除无需使用的 piper 脚本引用；
+- 构建后检查 JS/WASM/data/Worker/UI 文件齐全；
+- 仅上传 7 天保留期的实验 artifact，不部署 GitHub Pages、不修改生产入口、不发布模型到商家工作台。
+
+此流程使用 GitHub 上游下载源，仅用于验证“能否按官方源码构建出完整浏览器 TTS 包”。它不能证明中国大陆网络下载可用，也不能证明模型可商用，更不能代替 Android Chrome/微信浏览器实测。正式接入仍须先解决大陆可用资源镜像、许可证、体积和 512MB 初始内存风险。
