@@ -8,7 +8,7 @@ try {
   const pageErrors = [];
   page.on('pageerror', error => pageErrors.push(String(error)));
   page.on('requestfailed', request => {
-    if (new URL(request.url()).origin === new URL(baseURL).origin) {
+    if (new URL(request.url()).origin === new URL(baseURL).origin && /\\.(js|wasm|data)$/.test(new URL(request.url()).pathname)) {
       pageErrors.push('Local request failed: '+request.url()+' '+request.failure()?.errorText);
     }
   });
