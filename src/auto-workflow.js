@@ -580,13 +580,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (!files.length) issues.push('还没有选择照片或视频素材');
     if (files.length > 8) issues.push('素材超过手机首版每次8个的限制');
     const briefText = $('xzw-brief').value.trim();
-    if (briefText && !requirements.length) issues.push('已填写商家文档/要求，但还没有拆解成制作清单');
-    if (Number($('xzw-requirements').dataset.omittedCount || 0) > 0) issues.push('商家文档共识别出更多要求，但当前清单只显示前16条；请拆分文档分批制作，避免遗漏');
-    if (briefText && $('xzw-requirements').dataset.sourceText !== briefText) issues.push('商家要求文字有改动，请重新拆解制作清单，避免遗漏新要求');
-    if (requirements.some(card => !card.querySelector('.xzw-requirement-text')?.value.trim())) issues.push('有商家要求内容为空');
-    if (requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)) issues.push('有商家要求或禁止项尚未人工核对');
+    // The merchant's pasted copy is sufficient to produce a first draft.
+    // Requirement extraction is an optional review aid, never a mandatory setup step.
     const assignments = getMediaAssignments();
-    if (assignments.length !== files.length || assignments.some(item => !Number.isInteger(item.shotIndex) || item.shotIndex < 0)) issues.push('有素材尚未确认镜头用途，请在每个素材下方选择对应镜头');
+    if (assignments.length !== files.length || assignments.some(item => !Number.isInteger(item.shotIndex) || item.shotIndex < 0)) issues.push('有素材未能自动安排镜头，请检查素材列表');
     const plans = roleOptions();
     const requirementLines = requirements.map((card, index) => {
       const text = card.querySelector('.xzw-requirement-text')?.value.trim() || '';
@@ -617,7 +614,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     });
     const facts = document.createElement('p');
     facts.className = 'xzw-note';
-    facts.textContent = '请核对店名、地址、价格、优惠有效期等事实；限制项只会从字幕中排除，系统不会自动识别画面是否违规，请人工检查每段素材。本预览也不会替商家证明宣传信息真实。';
+    facts.textContent = '请核对店名、地址、价格、优惠有效期等事实；商家要求清单属于可选辅助核对，不填写也能制作。限制项不会自动识别画面是否违规，请人工检查素材。本预览不替商家证明宣传信息真实。';
     panel.append(heading, status, list, facts);
     box.appendChild(panel);
     productionPreviewReady = issues.length === 0;
@@ -628,7 +625,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const files = orderedMediaFiles;
     const profile = readProfile();
     if (!productionPreviewReady) {
-      setStatus('请先点击“先生成制作预览 / 检查遗漏”，处理所有待核对项目后再编排。');
+      setStatus('请先点击“先生成制作预览 / 检查遗漏”，确认素材可以正常使用后再编排。');
       return;
     }
     if (!files.length) { setStatus('请先上传至少一张照片或一段视频。'); return; }
