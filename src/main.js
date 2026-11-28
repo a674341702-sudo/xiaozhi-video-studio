@@ -91,6 +91,7 @@ const exportQualityEl = document.getElementById('export-quality');
 
 let exportAbortController = null;
 let isExporting = false;
+let exportDownloadFallbackTimer = null;
 let localRestoreComplete = false;
 let localAutosaveTimer = null;
 let localAutosaveInProgress = false;
@@ -772,7 +773,24 @@ async function handleExport() {
       downloadFallback.download = filename;
       downloadFallback.hidden = false;
       downloadFallback.textContent = '如果没有自动保存，点这里下载视频';
-      setTimeout(() => {
+      downloadFallback.onclick = event => {
+        // Re-create the object URL when the user explicitly retries. This
+        // gives Android browsers a fresh five-minute window to start reading
+        // the Blob even if the original fallback link was tapped much later.
+        event.preventDefault();
+        const retryUrl = downloadBlob(blob, filename);
+        downloadFallback.href = retryUrl;
+        downloadFallback.download = filename;
+        downloadFallback.hidden = false;
+        if (exportDownloadFallbackTimer) clearTimeout(exportDownloadFallbackTimer);
+        exportDownloadFallbackTimer = setTimeout(() => {
+          downloadFallback.hidden = true;
+          downloadFallback.removeAttribute('href');
+          downloadFallback.removeAttribute('download');
+        }, 5 * 60 * 1000);
+      };
+      if (exportDownloadFallbackTimer) clearTimeout(exportDownloadFallbackTimer);
+      exportDownloadFallbackTimer = setTimeout(() => {
         downloadFallback.hidden = true;
         downloadFallback.removeAttribute('href');
         downloadFallback.removeAttribute('download');
