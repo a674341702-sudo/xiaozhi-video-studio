@@ -87,11 +87,15 @@ class TestOfflineAudioContext {
     };
   }
   async startRendering() {
+    const channels = [
+      new Float32Array([0, 0.1]),
+      new Float32Array([0, -0.1])
+    ];
     return {
       numberOfChannels: 2,
       length: 2,
       sampleRate: DEFAULT_MUSIC_SAMPLE_RATE,
-      getChannelData: channel => new Float32Array(channel === 0 ? [0, 0.1] : [0, -0.1])
+      getChannelData: channel => channels[channel]
     };
   }
 }
