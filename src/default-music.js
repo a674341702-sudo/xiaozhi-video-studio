@@ -53,6 +53,35 @@ export function encodeAudioBufferAsWav(buffer) {
   return new Blob([output], { type: 'audio/wav' });
 }
 
+/** Normalize generated music before the timeline's user-controlled music gain is applied. */
+export function normalizeAudioBufferPeak(buffer, targetPeak = 0.85) {
+  if (!buffer || !Number.isInteger(buffer.numberOfChannels) || buffer.numberOfChannels < 1 ||
+      !Number.isInteger(buffer.length) || buffer.length < 1) {
+    throw new TypeError('无效的音频缓冲区');
+  }
+  const target = Number.isFinite(Number(targetPeak))
+    ? Math.max(0.1, Math.min(0.95, Number(targetPeak)))
+    : 0.85;
+  const channels = Array.from({ length: buffer.numberOfChannels }, (_, index) => buffer.getChannelData(index));
+  let peak = 0;
+  for (const samples of channels) {
+    for (let i = 0; i < samples.length; i++) {
+      const sample = Number(samples[i]);
+      if (Number.isFinite(sample)) peak = Math.max(peak, Math.abs(sample));
+    }
+  }
+  if (peak > 0) {
+    const gain = target / peak;
+    for (const samples of channels) {
+      for (let i = 0; i < samples.length; i++) {
+        const sample = Number(samples[i]);
+        samples[i] = Number.isFinite(sample) ? Math.max(-target, Math.min(target, sample * gain)) : 0;
+      }
+    }
+  }
+  return { peak, targetPeak: peak > 0 ? target : 0, gain: peak > 0 ? target / peak : 1 };
+}
+
 export async function createDefaultMusicFile() {
   const OfflineContext = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
   if (!OfflineContext || typeof globalThis.File !== 'function') return null;
@@ -84,6 +113,7 @@ export async function createDefaultMusicFile() {
   }
 
   const rendered = await context.startRendering();
+  normalizeAudioBufferPeak(rendered, 0.85);
   const wav = encodeAudioBufferAsWav(rendered);
   return new File([wav], 'xiaozhi-original-ambient-bed.wav', {
     type: 'audio/wav',
