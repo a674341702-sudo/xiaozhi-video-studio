@@ -1,6 +1,6 @@
 /** Validate the top-level ISO-BMFF boxes before presenting bytes as a playable MP4. */
 export function validateMp4Output(data) {
-  if (!data || !ArrayBuffer.isView(data) || data.byteLength < 32) {
+  if (!data || !ArrayBuffer.isView(data) || data.byteLength < 16) {
     throw new Error('导出文件不完整：MP4 数据长度不足，请重新导出。');
   }
 
