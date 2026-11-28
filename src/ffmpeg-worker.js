@@ -11,6 +11,7 @@ import { appendBoundedExportLog } from './export-log-buffer.js';
 import { captureCanvasBlob } from './abortable-canvas-blob.js';
 import { waitForSharedTask } from './wait-for-shared-task.js';
 import { getExportableVideoClips } from './export-video-clips.js';
+import { releaseRenderedAudioNodes } from './audio-node-cleanup.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -294,13 +295,7 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
   if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
   // The rendered mix is now independent of its source nodes. Release decoded
   // source AudioBuffers promptly before video-frame rendering allocates memory.
-  for (const node of audioNodes) {
-    try { node.source.stop(); } catch (_) {}
-    try { node.source.disconnect(); } catch (_) {}
-    try { node.gain.disconnect(); } catch (_) {}
-    try { node.source.buffer = null; } catch (_) {}
-  }
-  audioNodes.length = 0;
+  releaseRenderedAudioNodes(audioNodes);
   return mixed;
 }
 
