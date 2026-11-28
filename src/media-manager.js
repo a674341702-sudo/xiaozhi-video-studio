@@ -257,8 +257,16 @@ export class MediaManager {
 
     const objectUrl = URL.createObjectURL(file);
     const img = new Image();
+    // Register load/error listeners before assigning src. On fast mobile devices,
+    // a cached image can finish (or fail) before listeners added afterward observe it.
+    const imageReadyPromise = waitForMediaReady(
+      img,
+      () => img.complete && img.naturalWidth > 0,
+      'load',
+      isMobileMediaDevice() ? 30000 : 15000
+    );
     img.src = objectUrl;
-    const imageReady = await waitForMediaReady(img, () => img.complete && img.naturalWidth > 0, 'load');
+    const imageReady = await imageReadyPromise;
     if (!this.importGeneration.isCurrent(generation)) {
       cleanupFailedMediaElement(img, objectUrl, 'image');
       return null;
