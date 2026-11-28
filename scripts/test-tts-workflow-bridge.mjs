@@ -19,6 +19,16 @@ assert.match(workflow, /id="xzw-record-stop"/,
   '工作台必须提供停止录音并使用的入口');
 assert.match(workflow, /navigator\.mediaDevices\?\.getUserMedia/,
   '录音必须使用浏览器本机麦克风能力');
+assert.match(workflow, /let voiceRequestToken = 0/,
+  '必须跟踪尚未完成的麦克风权限请求');
+assert.match(workflow, /const requestToken = \+\+voiceRequestToken/,
+  '每次录音请求必须拥有独立令牌');
+assert.match(workflow, /requestToken !== voiceRequestToken \|\| !modal\.classList\.contains\('open'\)/,
+  '工作台关闭或请求过期后不得启动录音');
+assert.match(workflow, /stream\.getTracks\(\)\.forEach\(track => track\.stop\(\)\)/,
+  '过期权限请求成功时必须释放刚授权的麦克风轨道');
+assert.match(workflow, /voiceRequestToken \+= 1/,
+  '关闭工作台必须使待处理的麦克风权限请求失效');
 assert.match(workflow, /echoCancellation: true, noiseSuppression: true, autoGainControl: true/,
   '录音应请求浏览器基础回声与噪声抑制');
 assert.match(workflow, /new File\(\[blob\], '小智手机录音\.'/,
