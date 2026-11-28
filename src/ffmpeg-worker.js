@@ -102,19 +102,8 @@ async function loadFFmpegInternal(onProgress, abortSignal) {
         terminateOnAbort();
         throw new DOMException('Export aborted', 'AbortError');
       }
-      console.warn('Self-hosted FFmpeg core failed, trying CDN fallback:', err);
-      checkAborted();
-      const coreURL = 'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.js';
-      const wasmURL = await toBlobURL(
-        'https://unpkg.com/@ffmpeg/core@0.12.10/dist/esm/ffmpeg-core.wasm',
-        'application/wasm'
-      );
-      checkAborted();
-      await instance.load({ coreURL, wasmURL });
-      checkAborted();
-      ffmpegLoaded = true;
-      if (onProgress) onProgress(100);
-      return instance;
+      console.error('本地 FFmpeg 核心文件加载失败；已禁用境外 CDN 备用下载。', err);
+      throw new Error('本地视频导出组件加载失败。请刷新页面后重试；如果仍失败，请联系小智检查站点资源部署。');
     }
   } catch (err) {
     if (abortSignal?.aborted || err?.name === 'AbortError') {
