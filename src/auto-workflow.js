@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, getMerchantRequirementStats, getNarrationContentCoverage, isRestrictionRequirement, getMerchantCaptionForShot, mergeCaptionRequirements, limitMerchantCaption, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, getNarrationContentCoverage, isRestrictionRequirement, getMerchantCaptionForShot, mergeCaptionRequirements, limitMerchantCaption, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, resolveMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -318,16 +318,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     invalidateProductionPreview();
     setStatus('已移除素材：' + removed.name + '。其他素材的镜头用途和顺序已保留。');
   };
-  const getMediaAssignments = () => {
-    const plans = roleOptions();
-    const fallbackPlanCount = Math.max(1, plans.length);
-    return Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role')).map((select, index) => ({
+  const getMediaAssignments = () => resolveMerchantMediaAssignments(
+    Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role')).map((select, index) => ({
       fileIndex: index,
-      // Blank means automatic assignment, not an unassigned file. Keep the
-      // upload order as the deterministic fallback for unknown filenames.
-      shotIndex: select.value === '' ? index % fallbackPlanCount : Number(select.value)
-    }));
-  };
+      shotIndex: select.value === '' ? null : Number(select.value)
+    })),
+    roleOptions().length
+  );
 
   // 中文配音实验室通过同源 BroadcastChannel 回传 WAV。
   // 若主工作台尚未编排时间线，先暂存文件，等自动编排时再加入配音轨。
