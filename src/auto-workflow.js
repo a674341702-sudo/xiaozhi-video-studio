@@ -5,6 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { getMerchantExportReadiness } from './merchant-export-readiness.js';
+import { getMerchantWorkflowErrorMessage } from './merchant-workflow-error.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
 import { getSubtitleSafeLayout } from './text-layout.js';
 import { getSubtitleFontSize } from './subtitle-sizing.js';
@@ -901,7 +902,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       onCompositionChanged();
       canvasPreview.setCurrentTime(0);
       $('xzw-shots').innerHTML = '';
-      setStatus('编排失败，已清理本次未完成的时间线，没有生成半成品。原因：' + (error?.message || '未知错误') + '。请检查文件后重新编排。');
+      setStatus(getMerchantWorkflowErrorMessage(error));
     } finally {
       productionPreviewReady = false;
       $('xzw-generate').disabled = false;
