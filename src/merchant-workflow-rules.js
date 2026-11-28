@@ -114,6 +114,7 @@ export function getMerchantAudioMix({
   videoVolume = null
 } = {}) {
   const clampVolume = (value, fallback, maximum = 1) => {
+    if (value === null || value === undefined || value === '') return fallback;
     const numeric = Number(value);
     return Number.isFinite(numeric) ? Math.min(maximum, Math.max(0, numeric)) : fallback;
   };
