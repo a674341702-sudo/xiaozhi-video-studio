@@ -17,3 +17,9 @@ assert.match(worker, /5 \* 60 \* 1000/);
 assert.match(css, /\.export-download-fallback\s*\{/);
 assert.match(css, /env\(safe-area-inset-bottom\)/);
 console.log('Mobile export download fallback tests passed.');
+
+assert.match(main, /let exportDownloadFallbackTimer = null/);
+assert.match(main, /downloadFallback\.onclick = event =>/);
+assert.match(main, /event\.preventDefault\(\)/);
+assert.match(main, /const retryUrl = downloadBlob\(blob, filename\)/);
+assert.match(main, /if \(exportDownloadFallbackTimer\) clearTimeout\(exportDownloadFallbackTimer\)/);
