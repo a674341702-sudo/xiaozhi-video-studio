@@ -122,3 +122,31 @@ test('oversized request bodies are rejected', async () => {
   assert.equal(bodyOf(response).code, 'BODY_TOO_LARGE');
 });
 
+test('unknown subdomains that merely end in a platform domain are rejected', async () => {
+  for (const url of [
+    'https://attacker.douyin.com/video/1',
+    'https://fake.xiaohongshu.com/explore/1',
+    'https://douyin.com.attacker.example/video/1'
+  ]) {
+    const response = await main({
+      httpMethod: 'POST',
+      path: '/reference/inspect',
+      body: { url }
+    });
+    assert.equal(response.statusCode, 400, url);
+    assert.equal(bodyOf(response).code, 'INVALID_URL', url);
+  }
+});
+
+test('CORS preflight returns configured origin headers', async () => {
+  process.env.CORS_ALLOWED_ORIGINS = 'https://a674341702-sudo.github.io';
+  const response = await main({
+    httpMethod: 'OPTIONS',
+    path: '/reference/inspect',
+    headers: { origin: 'https://a674341702-sudo.github.io' }
+  });
+  assert.equal(response.statusCode, 204);
+  assert.equal(response.headers['access-control-allow-origin'], 'https://a674341702-sudo.github.io');
+  assert.equal(response.headers['access-control-allow-methods'], 'GET,POST,OPTIONS');
+});
+
