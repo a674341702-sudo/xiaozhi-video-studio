@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -388,7 +388,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const shotCount = Math.max(1, orderedMediaFiles.length || 6);
     $('xzw-narration').value = makeScript(profile).join('\n');
     $('xzw-captions').value = makeCaptions(profile, shotCount).join('\n');
-    setStatus('已根据商家资料和文档要求生成配音稿、逐镜字幕。请核对每一条信息，尤其价格、优惠和地址；限制类要求不会被写进字幕。');
+    setStatus('已根据商家资料和文档要求生成配音稿、逐镜字幕。请核对每一条信息，尤其价格、优惠和地址；限制类要求不会被写进字幕。' + (narrationDraftOmittedLines || narrationDraftTruncated ? '\\n配音稿已控制在480字以内，较长内容可能未全部进入旁白；完整要求仍保留在商家文档和镜头清单中，请检查字幕。' : ''));
   });
     $('xzw-send-tts').addEventListener('click', () => {
     const script = $('xzw-narration').value.trim();
@@ -521,7 +521,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       .filter(item => !isRestrictionRequirement(item)).slice(0, 16);
   }
 
-  function makeScript(profile) {
+  let narrationDraftOmittedLines = 0;\n  let narrationDraftTruncated = false;\n\n  function makeScript(profile) {
     const shop = String(profile.shop || '').trim();
     const product = String(profile.product || '').trim();
     const offer = String(profile.offer || '').trim();
@@ -618,7 +618,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const perShot = Math.max(2.5, targetSeconds / files.length);
     if (!$('xzw-narration').value.trim()) {
       const draft = makeScript(profile);
-      $('xzw-narration').value = draft.join('。') + '。';
+      $('xzw-narration').value = draft.join('\\n');
       if (!$('xzw-captions').value.trim()) {
         $('xzw-captions').value = makeCaptions(profile, files.length).join('\n');
       }
@@ -796,7 +796,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         ? '\\n说明：当前素材实际可用时长约 ' + cursor.toFixed(1) + ' 秒，短于目标 ' + targetSeconds + ' 秒。视频素材保持原速，不会为了凑时长而强行慢放或重复画面。'
         : '';
       const voiceDurationNote = voiceFile ? getVoiceCoverageNote(voiceSourceDuration, narrationDuration) : '';
-      setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (voiceDurationNote ? '\\n配音检查：' + voiceDurationNote : '') + (missingAudio.length ? '\\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
+      setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (voiceDurationNote ? '\\n配音检查：' + voiceDurationNote : '') + (narrationDraftOmittedLines || narrationDraftTruncated ? '\\n提醒：配音稿为适配手机合成长度已精简，请核对旁白；完整商家要求仍保留在镜头清单。' : '') + (missingAudio.length ? '\\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
 
       const restrictions = requirementCards.map(card => card.querySelector('.xzw-requirement-text')?.value.trim() || '').filter(isRestrictionRequirement);
       $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">镜头清单 · 已落实商家要求</h3>' +
