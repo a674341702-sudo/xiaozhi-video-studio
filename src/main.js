@@ -141,9 +141,10 @@ function bindHomeDashboard() {
 
     const section = target.closest('.xzw-section') || target;
     section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    if (action === 'materials') {
-      // The card means "upload merchant media", so open the native picker
-      // directly from the user's tap instead of merely focusing a hidden input.
+    if (action === 'smart' || action === 'materials') {
+      // Both primary entry points mean "start by selecting merchant media".
+      // Open the native picker directly from the user's tap; focusing the input
+      // alone is not enough on mobile browsers.
       target.click();
     } else if (action === 'document') {
       target.click();

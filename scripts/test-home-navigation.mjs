@@ -28,8 +28,8 @@ assert.doesNotMatch(main, /launcher\.click\(\)/,
   '主页入口不能依赖隐藏的悬浮按钮模拟点击');
 
 const handler = main.slice(main.indexOf('function bindHomeDashboard'), main.indexOf('// --- Initialization ---'));
-assert.match(handler, /if \(action === 'materials'\)[\s\S]*?target\.click\(\)/,
-  '商家素材入口必须在用户点击时调起文件选择器');
+assert.match(handler, /if \(action === 'smart' \|\| action === 'materials'\)[\s\S]*?target\.click\(\)/,
+  '素材智能成片和商家素材入口必须在用户点击时调起文件选择器');
 assert.match(handler, /else if \(action === 'document'\)[\s\S]*?target\.click\(\)/,
   '商家文档入口必须在用户点击时调起文件选择器');
 
