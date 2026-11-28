@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import { releaseRenderedAudioNodes } from '../src/audio-node-cleanup.js';
+const calls=[];
+const nodes=[{source:{buffer:{decoded:true},stop(){calls.push('stop')},disconnect(){calls.push('source-disconnect')}},gain:{disconnect(){calls.push('gain-disconnect')}}}];
+releaseRenderedAudioNodes(nodes);
+assert.deepEqual(calls,['stop','source-disconnect','gain-disconnect']);
+assert.equal(nodes.length,0);
+assert.equal(nodes[0],undefined);
+const partial=[{source:{buffer:{decoded:true},disconnect(){throw new Error('already disconnected')}},gain:{disconnect(){calls.push('gain-after-error')}}}];
+releaseRenderedAudioNodes(partial);
+assert.equal(partial.length,0,'cleanup continues after an individual node fails');
+assert.ok(calls.includes('gain-after-error'));
+releaseRenderedAudioNodes(null);
+console.log('Offline audio node cleanup tests passed.');
