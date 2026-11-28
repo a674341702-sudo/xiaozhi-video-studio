@@ -111,7 +111,7 @@ exports.main = async function main(event = {}) {
 
   if (method === 'OPTIONS') return json(204, {}, origin);
 
-  const path = String(event.path || event.rawPath || '/').replace(/\/+$/, '') || '/';
+  const path = requestPath(event);
   if (method === 'GET' && (path.endsWith('/health') || path === '/')) {
     return json(200, {
       success: true,
