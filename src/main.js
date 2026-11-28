@@ -15,7 +15,7 @@ import { createDefaultStore } from './state.js';
 import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js';
 import { formatTime, showToast } from './utils.js';
 import { getExportErrorMessage } from './export-error-message.js';
-import { getClipPlaybackState } from './keyframes.js';
+import { getClipPlaybackState, getMediaElementVolume } from './keyframes.js';
 import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
 import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
@@ -421,7 +421,8 @@ function syncActiveMedia(time, playing) {
       Number.isFinite(element.duration) && element.duration > 0 ? element.duration : Infinity
     );
 
-    element.volume = state.volume;
+    // Native media element volume is limited to 0..1; export mixing can amplify separately.
+    element.volume = getMediaElementVolume(state.volume);
     element.muted = Boolean(track?.muted);
     // Native looping is safe only when the selected source range is the
     // complete media file. Trimmed loops are wrapped against sourceTime above.
