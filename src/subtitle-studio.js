@@ -1,4 +1,5 @@
 import { getSubtitlePositionLayout } from './text-layout.js';
+import { prepareSubtitleImportSegments } from './subtitle-import-rules.js';
 /**
  * 小智中文自动字幕实验室
  * 采用 browser-whisper 开源项目的浏览器端识别能力。
@@ -269,24 +270,17 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
       setStatus('当前项目没有文字轨道，暂时无法导入字幕。');
       return;
     }
-    let imported = 0;
     const projectDuration = Math.max(0, Number(composition.duration) || 0);
-    for (const segment of state.segments) {
-      const text = String(segment.text || '').trim();
-      if (!text || projectDuration < 0.35) continue;
-      const rawStart = Math.max(0, Number(segment.start) || 0);
-      const start = Math.min(rawStart, Math.max(0, projectDuration - 0.35));
-      const rawEnd = Math.max(start + 0.35, Number(segment.end) || start + 2);
-      const end = Math.min(projectDuration, rawEnd);
-      const duration = Math.min(12, end - start);
-      if (duration < 0.2) continue;
+    const prepared = prepareSubtitleImportSegments(state.segments, projectDuration);
+    let imported = 0;
+    for (const segment of prepared.segments) {
       const clip = composition.addClip({
         trackId: track.id,
         type: 'text',
-        name: text.slice(0, 18),
-        text,
-        startTime: start,
-        duration,
+        name: segment.text.slice(0, 18),
+        text: segment.text,
+        startTime: segment.startTime,
+        duration: segment.duration,
         ...getSubtitlePositionLayout(composition.width, composition.height, $('xzs-position').value),
         fontSize: Math.max(30, Math.round(composition.width * 0.034)),
         fontFamily: 'Noto Sans CJK SC',
@@ -296,11 +290,20 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
         bgColor: $('xzs-style').value === 'clean' ? 'transparent' : '#202020',
         textAlign: 'center'
       });
-      // addClip shifts overlapping clips to avoid collisions; restore the ASR timestamp.
-      clip.startTime = start;
+      // Preserve recognized timestamps even when clips overlap on the text track.
+      clip.startTime = segment.startTime;
       imported += 1;
     }
     onCompositionChanged();
-    setStatus(imported ? `已把 ${imported} 条字幕导入文字轨道。请在预览画面中检查位置、字号和时间。` : '没有可导入的字幕时间段，请检查识别结果是否落在当前视频时长内。', imported ? 1 : 0);
-  });
-}
+    const notes = [];
+    if (prepared.clippedToTimeline) notes.push(prepared.clippedToTimeline + ' 条字幕已按视频时长截取');
+    if (prepared.cappedLong) notes.push(prepared.cappedLong + ' 条字幕超过 12 秒，已缩短');
+    if (prepared.skippedEmpty + prepared.skippedInvalid + prepared.skippedOutOfRange) {
+      notes.push('跳过 ' + (prepared.skippedEmpty + prepared.skippedInvalid + prepared.skippedOutOfRange) + ' 条空白、无效或超出视频时长的字幕');
+    }
+    if (prepared.overlaps) notes.push('检测到 ' + prepared.overlaps + ' 处字幕时间重叠，请在时间轴核对');
+    const summary = imported
+      ? '已导入 ' + imported + ' 条字幕。' + (notes.length ? '\n' + notes.join('；') + '。' : '时间范围检查通过。') + '\n请检查字幕位置和配音节奏。'
+      : '没有可导入的有效字幕。请检查字幕时间是否落在当前视频时长内。';
+    setStatus(summary, imported ? 1 : 0);
+  });}
