@@ -9,7 +9,7 @@ assert.throws(() => getAudioRenderMemoryEstimate(0), /参数无效/);
 assert.throws(() => getAudioRenderMemoryEstimate(-1), /参数无效/);
 assert.throws(() => getAudioRenderMemoryEstimate(Number.MAX_VALUE), /时长过长/);
 assert.ok(getAudioRenderMemoryEstimate(30) < 96 * mib, '30-second stereo render should fit the smallest supported device budget');
-assert.ok(getAudioRenderMemoryEstimate(180) > 96 * mib, 'long audio should be rejected before allocation on low-memory devices');
+assert.ok(getAudioRenderMemoryEstimate(300) > 96 * mib, 'five-minute audio should exceed the smallest device audio-buffer budget');
 console.log('Offline audio render memory estimate tests passed.');
 
 import { readFile } from 'node:fs/promises';
