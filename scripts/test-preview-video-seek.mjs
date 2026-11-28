@@ -4,15 +4,14 @@ import { readFile } from 'node:fs/promises';
 const source = await readFile(new URL('../src/canvas-preview.js', import.meta.url), 'utf8');
 assert.match(source, /if \(!this\.isPlaying\)\s*\{/,
   'preview renderer must not seek on every animation frame during playback');
-assert.match(source, /video\\.addEventListener\\('seeked', repaintWhenFrameReady\\)/,
+assert.match(source, /video\.addEventListener\('seeked', repaintWhenFrameReady\)/,
   'paused scrubbing must repaint after asynchronous media seek');
 assert.match(source, /if \(Math\.abs\(video\.currentTime - clipOffset\) > 0\.04\) return;/,
   'preview must not draw a stale frame while seek is pending');
-assert.match(source, /typeof video\\.readyState === 'number' && video\\.readyState < 2/,
+assert.match(source, /typeof video\.readyState === 'number' && video\.readyState < 2/,
   'preview must wait until a decoded frame is available');
-console.log('Preview video seek and stale-frame regression tests passed.');
-
 assert.match(source, /video\.addEventListener\('loadeddata', repaintWhenFrameReady\)/,
   'preview must repaint when media data becomes available without a seek event');
 assert.match(source, /video\.addEventListener\('canplay', repaintWhenFrameReady\)/,
   'preview must repaint when the browser can provide a frame after loading');
+console.log('Preview video seek and stale-frame regression tests passed.');
