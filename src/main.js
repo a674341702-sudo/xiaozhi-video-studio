@@ -1265,4 +1265,4 @@ window.loadProject = async function loadProject(file) {
 };
 
 // Start app
-document.addEventListener('DOMContentLoaded', () => { initApp().catch(error => { console.error(error); showToast('工作台初始化失败：' + (error?.message || '未知错误'), 'error', 9000); }); });
+document.addEventListener('DOMContentLoaded', () => { initApp().catch(error => { console.error('小智工作台初始化失败', error); const location = String(error?.stack || '').split('\n').slice(1, 3).join(' ').trim(); showToast('工作台初始化失败：' + (error?.message || '未知错误') + (location ? ' · ' + location : ''), 'error', 12000); }); });
