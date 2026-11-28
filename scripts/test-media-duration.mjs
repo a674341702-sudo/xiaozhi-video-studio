@@ -17,3 +17,19 @@ assert.equal(isUsableMediaDuration(0), false, 'reject zero duration');
 assert.equal(isUsableMediaDuration(NaN), false, 'reject unknown duration');
 assert.equal(isUsableMediaDuration(Infinity), false, 'reject infinite duration');
 assert.equal(isUsableMediaDuration(-1), false, 'reject negative duration');
+
+import { readFileSync } from 'node:fs';
+
+const mediaManagerSource = readFileSync(new URL('../src/media-manager.js', import.meta.url), 'utf8');
+for (const mediaType of ['video', 'audio']) {
+  assert.ok(mediaManagerSource.includes(`if (!isUsableMediaDuration(${mediaType}.duration))`),
+    `${mediaType} imports must reject missing or invalid real duration`);
+  assert.ok(mediaManagerSource.includes(`cleanupFailedMediaElement(${mediaType}, objectUrl, '${mediaType}')`),
+    `${mediaType} imports must release failed elements and object URLs`);
+}
+assert.ok(mediaManagerSource.includes('getPreciseMediaDuration(audio.duration)'),
+  'audio imports must use the verified duration rather than a guessed fallback');
+assert.ok(!mediaManagerSource.includes('getPreciseMediaDuration(audio.duration, 10)'),
+  'audio imports must not silently substitute a guessed ten-second duration');
+
+console.log('video/audio import duration guard contract tests passed');
