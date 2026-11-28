@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { getClipPlaybackState } from '../src/keyframes.js';
+import { getClipPlaybackState, getMediaElementVolume } from '../src/keyframes.js';
 
 const music = {
   startTime: 0, duration: 30, trimStart: 0, trimEnd: 30,
@@ -38,3 +38,9 @@ assert.equal(getClipPlaybackState(excessiveVoice, 2, 4).volume, 1.5, 'preview ga
 const silentVoice = { ...boostedVoice, volume: -1 };
 assert.equal(getClipPlaybackState(silentVoice, 2, 4).volume, 0, 'negative preview gain must be clamped to silence');
 console.log('Preview/export narration gain parity tests passed.');
+
+assert.equal(getMediaElementVolume(1.5), 1, 'native preview element volume must not exceed browser-supported maximum');
+assert.equal(getMediaElementVolume(0.4), 0.4);
+assert.equal(getMediaElementVolume(-2), 0);
+assert.equal(getMediaElementVolume(Number.NaN), 1);
+console.log('Native media element volume safety tests passed.');
