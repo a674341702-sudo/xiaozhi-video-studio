@@ -122,3 +122,16 @@ MOSS-TTS-Nano 暂不进入商家主流程；它的参考音频/声音克隆能�
 - https://github.com/OpenMOSS/MOSS-TTS-Nano
 - https://github.com/OpenMOSS/MOSS-TTS-Nano-Reader
 - https://www.modelscope.cn/models/openmoss/MOSS-TTS-Nano/summary
+
+
+## 独立实验页进展（2026-11-28）
+
+已新增静态设备兼容性实验页：`public/tts-lab/index.html`，构建后访问路径为：
+
+`/xiaozhi-video-studio/tts-lab/`
+
+页面目前只检测安全上下文、WebAssembly、Worker、AudioContext、IndexedDB、OPFS 和录音 API，并允许用户本地选择音频试听。页面不申请麦克风权限、不上传音频、不请求远程模型、不自动下载资源。它是端侧能力探针，不是 TTS 模型演示或 AI 配音功能。
+
+新增 `scripts/test-tts-lab.mjs`，并已加入 `npm run build`，检查页面隐私边界、WAV 选择入口和设备能力探针。该测试通过仅表示实验页静态约束成立，不代表模型推理或大陆网络验收通过。
+
+正式集成前仍需完成：WASM runtime 构建、音素化依赖打包、完整模型资源国内镜像与哈希校验、Android 真机推理试听。
