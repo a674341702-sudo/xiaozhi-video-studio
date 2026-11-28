@@ -614,7 +614,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     });
     const facts = document.createElement('p');
     facts.className = 'xzw-note';
-    facts.textContent = '请核对店名、地址、价格、优惠有效期等事实；商家要求清单属于可选辅助核对，不填写也能制作。限制项不会自动识别画面是否违规，请人工检查素材。本预览不替商家证明宣传信息真实。';
+    facts.textContent = '请核对店名、地址、价格、优惠有效期等事实；商家要求清单属于可选辅助核对，不填写也能制作。系统不会自动识别画面是否违规，请人工检查素材。本预览不替商家证明宣传信息真实。';
     panel.append(heading, status, list, facts);
     box.appendChild(panel);
     productionPreviewReady = issues.length === 0;
