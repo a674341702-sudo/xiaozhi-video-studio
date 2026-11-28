@@ -275,7 +275,7 @@ export class MultiTimeline {
     };
 
     this.rulerWrapper.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || this.isScrubbing || this.dragTarget) return;
+      if (e.button !== 0 || e.isPrimary === false || this.isScrubbing || this.dragTarget) return;
       this.isScrubbing = true;
       this.scrubPointerId = e.pointerId;
       e.preventDefault();
@@ -304,11 +304,12 @@ export class MultiTimeline {
     window.addEventListener('pointercancel', finishPointerGesture);
 
     this.tracksContent.addEventListener('pointerdown', (e) => {
-      if (e.button !== 0 || this.dragTarget || this.isScrubbing) return;
+      if (e.button !== 0 || e.isPrimary === false || this.dragTarget || this.isScrubbing) return;
       const handleEl = e.target.closest('.mt-clip-handle');
       const clipEl = e.target.closest('.mt-clip');
 
       if (handleEl && clipEl) {
+        if (e.cancelable) e.preventDefault();
         const clipId = clipEl.dataset.clipId;
         const handleType = handleEl.dataset.handle;
         const clip = this.comp.getClip(clipId);
@@ -331,6 +332,7 @@ export class MultiTimeline {
         this.comp.startBatch(handleType === 'left' ? 'trim clip start' : 'trim clip end');
         e.stopPropagation();
       } else if (clipEl) {
+        if (e.cancelable) e.preventDefault();
         const clipId = clipEl.dataset.clipId;
         const clip = this.comp.getClip(clipId);
         if (!clip) return;
