@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 
 const workflow = readFileSync(new URL('../.github/workflows/tts-wasm-experiment.yml', import.meta.url), 'utf8');
 const doc = readFileSync(new URL('../docs/TTS_ON_DEVICE_SPIKE.md', import.meta.url), 'utf8');
+const browserSmoke = readFileSync(new URL('./smoke-sherpa-tts-browser.mjs', import.meta.url), 'utf8');
 
 for (const token of [
   'workflow_dispatch:',
@@ -19,6 +20,12 @@ for (const token of [
   'OUT="build-wasm-simd-tts/install/bin/wasm/tts"',
   'assets && sha256sum -c',
   'timeout-minutes: 90',
+  'for asset in model-steps-3.onnx tokens.txt lexicon.txt phone.fst date.fst number.fst; do',
+  'find . -type f -print0 | sort -z | xargs -0 sha256sum',
+  'Install headless browser for real TTS smoke test',
+  'playwright@1.52.0',
+  'npx playwright install --with-deps chromium',
+  'node scripts/smoke-sherpa-tts-browser.mjs',
   'actions/upload-artifact@v4',
   'retention-days: 7',
   'does NOT prove availability on mainland China networks',
