@@ -23,6 +23,13 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - name: Run regression tests
+        run: |
+          set -e
+          for test_file in scripts/test-*.mjs; do
+            echo "Running $test_file"
+            node "$test_file"
+          done
       - run: npm run build
         env:
           BASE_PATH: /xiaozhi-video-studio/
