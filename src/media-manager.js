@@ -263,7 +263,7 @@ export class MediaManager {
       img,
       () => img.complete && img.naturalWidth > 0,
       'load',
-      isMobileMediaDevice() ? 30000 : 15000
+      isMobileMediaDevice() ? 60000 : 20000
     );
     img.src = objectUrl;
     const imageReady = await imageReadyPromise;
@@ -273,8 +273,9 @@ export class MediaManager {
     }
     if (!imageReady) {
       cleanupFailedMediaElement(img, objectUrl, 'image');
-      showToast('手机读取图片失败或等待超时，请换成 JPG、PNG 图片后重试。', 'error');
-      return null;
+      const message = '照片读取失败或等待超时：' + file.name + '。请尝试单独上传这张照片；如果单独上传也失败，请将照片另存为 JPG 后重试。';
+      showToast(message, 'error');
+      throw new Error(message);
     }
 
     // Very large source images can consume hundreds of megabytes when decoded.
