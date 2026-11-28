@@ -5,6 +5,8 @@ const source = await readFile(new URL('../src/multi-timeline.js', import.meta.ur
 const styles = await readFile(new URL('../src/style.css', import.meta.url), 'utf8');
 
 assert.match(source, /rulerWrapper\.addEventListener\('pointerdown'/, 'ruler scrubbing must use Pointer Events');
+assert.match(source, /e\.isPrimary === false/, 'secondary touch pointers must not start timeline gestures');
+assert.equal((source.match(/if \(e\.cancelable\) e\.preventDefault\(\);/g) || []).length, 2, 'clip move and trim gestures must suppress native browser drag/selection');
 assert.match(source, /tracksContent\.addEventListener\('pointerdown'/, 'clip drag and trim must use Pointer Events');
 assert.match(source, /window\.addEventListener\('pointermove'/, 'active gestures must continue outside the original element');
 assert.match(source, /window\.addEventListener\('pointerup'/, 'active gestures must finish on pointer up');
