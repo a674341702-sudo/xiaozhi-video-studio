@@ -47,131 +47,89 @@
 </head>
 <body>
   <style>
-    body.home-mode{overflow:auto;background:#f4f6fb;color:#182235}
-    body.home-mode #app{display:none}
-    body.home-mode #xiaozhi-workflow-launcher{display:none}
-    #xiaozhi-home{display:none;min-height:100dvh;padding:24px 16px 40px;background:linear-gradient(180deg,#eef4ff 0,#f7f8fc 320px,#f7f8fc 100%);color:#182235;font-family:system-ui,-apple-system,"PingFang SC",sans-serif}
+    body.home-mode{margin:0;overflow:auto;background:#f4f6fb;color:#17243a}
+    body.home-mode #app,body.home-mode #xiaozhi-workflow-launcher{display:none}
+    #xiaozhi-home{display:none;min-height:100dvh;width:100%;box-sizing:border-box;padding:calc(18px + env(safe-area-inset-top)) 16px calc(34px + env(safe-area-inset-bottom));background:linear-gradient(180deg,#edf4ff 0,#f6f8fc 300px,#f6f8fc 100%);font-family:system-ui,-apple-system,"PingFang SC",sans-serif;color:#17243a}
     body.home-mode #xiaozhi-home{display:block}
-    .xh-wrap{width:min(760px,100%);margin:0 auto}
-    .xh-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:24px}
-    .xh-brand{font-size:24px;font-weight:900;letter-spacing:.3px;color:#193d75}
-    .xh-tag{font-size:12px;color:#3565a7;background:#dceaff;border-radius:99px;padding:6px 10px}
-    .xh-hero{padding:22px;border-radius:22px;background:linear-gradient(130deg,#214f91,#397fe0);color:white;box-shadow:0 12px 30px #2f65b326}
-    .xh-hero h1{font-size:25px;line-height:1.3;margin:0 0 8px}
-    .xh-hero p{margin:0;color:#e4efff;font-size:14px}
-    .xh-section-title{font-size:16px;font-weight:800;margin:24px 2px 12px;color:#26364e}
-    .xh-card{width:100%;text-align:left;border:1px solid #e4eaf3;border-radius:17px;background:#fff;color:#182235;padding:17px;margin:0 0 11px;display:flex;align-items:center;gap:14px;box-shadow:0 4px 14px #1d35570a;cursor:pointer;min-height:86px}
-    .xh-card:active{transform:scale(.99)}
+    #xiaozhi-home *{box-sizing:border-box}
+    .xh-wrap{width:100%;max-width:760px;margin:0 auto}
+    .xh-top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:0 2px 18px}
+    .xh-brand{font-size:23px;font-weight:900;letter-spacing:.2px;color:#193d75}
+    .xh-tag{font-size:11px;color:#3565a7;background:#dceaff;border-radius:99px;padding:7px 10px;white-space:nowrap}
+    .xh-hero{padding:23px 21px;border-radius:22px;background:linear-gradient(130deg,#214f91,#397fe0);color:#fff;box-shadow:0 12px 30px #2f65b326}
+    .xh-hero h1{font-size:clamp(23px,5.5vw,29px);line-height:1.3;margin:0 0 8px}
+    .xh-hero p{margin:0;color:#e4efff;font-size:14px;line-height:1.65}
+    .xh-section-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:24px 2px 12px}
+    .xh-section-title{font-size:17px;font-weight:850;margin:0;color:#26364e}
+    .xh-section-note{font-size:11px;color:#8491a5}
+    .xh-card{width:100%;min-width:0;text-align:left;border:1px solid #e4eaf3;border-radius:17px;background:#fff;color:#182235;padding:15px;margin:0 0 10px;display:flex;align-items:center;gap:13px;box-shadow:0 4px 14px #1d35570a;cursor:pointer;min-height:78px;font:inherit}
+    .xh-card:active,.xh-case:active{transform:scale(.99)}
     .xh-card.primary{border:0;background:linear-gradient(110deg,#fff,#f1f6ff)}
-    .xh-icon{width:48px;height:48px;flex:0 0 48px;border-radius:14px;background:#e8f1ff;display:grid;place-items:center;font-size:24px}
-    .xh-card strong{display:block;font-size:16px;margin-bottom:4px}
+    .xh-icon{width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:#e8f1ff;display:grid;place-items:center;font-size:22px}
+    .xh-card strong{display:block;font-size:15px;margin-bottom:4px}
     .xh-card small{display:block;color:#718096;font-size:12px;line-height:1.5}
     .xh-arrow{margin-left:auto;color:#8a9bb2;font-size:22px}
-    .xh-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-    .xh-grid .xh-card{margin:0;min-height:100px;align-items:flex-start;flex-direction:column;gap:8px}
-    .xh-grid .xh-icon{width:38px;height:38px;flex-basis:38px;font-size:20px}
-    .xh-foot{margin:22px 4px 0;color:#8793a5;font-size:11px;line-height:1.6;text-align:center}
-    /* 手机主页：优先保证可读性与触控面积 */
-    #xiaozhi-home{box-sizing:border-box;width:100%;padding:clamp(18px,4vw,28px) clamp(14px,4vw,22px) 36px}
-    #xiaozhi-home *{box-sizing:border-box}
-    .xh-wrap{width:100%;max-width:680px}
-    .xh-brand{font-size:clamp(20px,5vw,25px)}
-    .xh-tag{font-size:12px;padding:7px 11px;white-space:nowrap}
-    .xh-hero{padding:clamp(20px,5vw,26px);border-radius:20px}
-    .xh-hero h1{font-size:clamp(22px,5.6vw,27px);line-height:1.35}
-    .xh-hero p{font-size:clamp(13px,3.5vw,15px);line-height:1.65}
-    .xh-section-title{font-size:17px;margin-top:26px}
-    .xh-card{min-height:94px;padding:16px;gap:13px;border-radius:16px;touch-action:manipulation}
-    .xh-card strong{font-size:clamp(16px,4.1vw,18px);line-height:1.4}
-    .xh-card small{font-size:13px;line-height:1.55}
-    .xh-icon{width:48px;height:48px;flex-basis:48px;font-size:24px}
-    .xh-grid .xh-card{min-height:116px;padding:16px}
-    .xh-grid .xh-icon{width:42px;height:42px;flex-basis:42px;font-size:21px}
-    .xh-foot{font-size:12px;margin-top:24px}
-    @media(max-width:420px){
-      #xiaozhi-home{padding:16px 14px 30px}
-      .xh-top{margin-bottom:18px}
-      .xh-hero{padding:20px 18px}
-      .xh-grid{grid-template-columns:1fr;gap:10px}
-      .xh-grid .xh-card{min-height:82px;flex-direction:row;align-items:center;gap:13px}
-      .xh-grid .xh-card strong{margin-bottom:3px}
-      .xh-grid .xh-card small{font-size:12px}
-      .xh-grid .xh-icon{width:42px;height:42px;flex:0 0 42px}
-      .xh-card.primary{min-height:100px}
-    }
-    @media(min-width:421px) and (max-width:700px){
-      .xh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-      .xh-grid .xh-card{min-height:116px}
-    }
-    /* 手机 App 风格主页：单列大卡片、舒适留白、底部安全区 */
-    @media(max-width:600px){
-      body.home-mode{background:#f4f6fb}
-      #xiaozhi-home{min-height:100svh;padding:calc(18px + env(safe-area-inset-top)) 18px calc(28px + env(safe-area-inset-bottom));}
-      .xh-wrap{max-width:480px;min-height:calc(100svh - 46px);display:flex;flex-direction:column}
-      .xh-top{margin-bottom:22px;min-height:36px}
-      .xh-brand{font-size:23px;letter-spacing:.2px}
-      .xh-tag{font-size:11px;padding:7px 10px}
-      .xh-hero{padding:24px 21px;border-radius:22px;min-height:132px;display:flex;flex-direction:column;justify-content:center}
-      .xh-hero h1{font-size:24px;line-height:1.35;margin-bottom:10px}
-      .xh-hero p{font-size:14px;line-height:1.7}
-      .xh-section-title{font-size:17px;margin:28px 2px 14px}
-      .xh-card{min-height:96px;padding:18px 17px;border-radius:18px;gap:15px;margin-bottom:12px}
-      .xh-card.primary{min-height:108px}
-      .xh-card strong{font-size:16px;line-height:1.45}
-      .xh-card small{font-size:13px;line-height:1.6}
-      .xh-icon{width:50px;height:50px;flex-basis:50px;border-radius:15px;font-size:25px}
-      .xh-grid{grid-template-columns:1fr;gap:11px}
-      .xh-grid .xh-card{min-height:82px;padding:15px 17px;flex-direction:row;align-items:center;gap:14px}
-      .xh-grid .xh-icon{width:44px;height:44px;flex:0 0 44px}
-      .xh-foot{margin:24px 4px 10px;font-size:12px;line-height:1.7}
-    }
-    @media(min-width:601px) and (max-width:900px){
-      #xiaozhi-home{padding:24px 24px 40px}
-      .xh-wrap{max-width:620px}
-      .xh-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
-    }
-
-    /* 真正触屏手机布局：不依赖屏幕宽度判断，避免手机被当成平板/桌面 */
-    @media (hover: none) and (pointer: coarse) {
-      body.home-mode { min-width: 0; }
-      body.home-mode #xiaozhi-home { width: 100%; min-height: 100svh; padding: calc(16px + env(safe-area-inset-top)) 16px calc(104px + env(safe-area-inset-bottom)); }
-      body.home-mode .xh-wrap { width: 100%; max-width: none; min-height: calc(100svh - 120px); }
-      body.home-mode .xh-top { margin-bottom: 18px; }
-      body.home-mode .xh-brand { font-size: 24px; }
-      body.home-mode .xh-hero { min-height: 118px; padding: 22px 19px; }
-      body.home-mode .xh-hero h1 { font-size: clamp(23px, 5vw, 28px); }
-      body.home-mode .xh-hero p { font-size: 14px; }
-      body.home-mode .xh-section-title { margin: 22px 2px 12px; font-size: 17px; }
-      body.home-mode .xh-card { min-height: 86px; padding: 15px; }
-      body.home-mode .xh-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-      body.home-mode .xh-grid .xh-card { min-height: 112px; padding: 13px 12px; flex-direction: column; align-items: flex-start; justify-content: center; gap: 8px; }
-      body.home-mode .xh-grid .xh-icon { width: 38px; height: 38px; flex: 0 0 38px; font-size: 20px; }
-      body.home-mode .xh-grid .xh-card strong { font-size: 14px; line-height: 1.35; }
-      body.home-mode .xh-grid .xh-card small { font-size: 11px; line-height: 1.4; }
-      body.home-mode .xh-foot { margin: 18px 4px 8px; }
-      .xh-mobile-nav { position: fixed; z-index: 1000; left: 12px; right: 12px; bottom: calc(8px + env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr 1.35fr 1fr; gap: 8px; padding: 8px; border: 1px solid #e3e9f3; border-radius: 20px; background: rgba(255,255,255,.96); box-shadow: 0 8px 28px #172b4d20; backdrop-filter: blur(14px); }
-      .xh-mobile-nav button { min-height: 48px; border: 0; border-radius: 14px; background: #f0f4fa; color: #34445c; font: 700 14px system-ui,sans-serif; }
-      .xh-mobile-nav button.primary { background: linear-gradient(110deg,#245da8,#1677dc); color: #fff; }
-    }
+    .xh-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .xh-grid .xh-card{margin:0;min-height:96px;align-items:flex-start;padding:13px;gap:10px}
+    .xh-grid .xh-icon{width:38px;height:38px;flex-basis:38px;font-size:19px}
+    .xh-grid .xh-card strong{font-size:14px}
+    .xh-grid .xh-card small{font-size:11px}
+    .xh-case-search{width:100%;height:46px;border:1px solid #e0e7f1;border-radius:14px;background:#fff;padding:0 14px;font:inherit;font-size:14px;color:#17243a;outline:none;box-shadow:0 3px 12px #1d355708}
+    .xh-case-search:focus{border-color:#6d9fe5;box-shadow:0 0 0 3px #397fe020}
+    .xh-case-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:11px;margin-top:12px}
+    .xh-case{min-width:0;overflow:hidden;text-align:left;border:1px solid #e3eaf4;border-radius:17px;background:#fff;padding:0;box-shadow:0 4px 14px #1d35570a;cursor:pointer;color:#182235;font:inherit}
+    .xh-case-art{height:105px;display:flex;align-items:flex-end;padding:12px;color:#fff;font-size:27px;font-weight:800;position:relative;isolation:isolate}
+    .xh-case-art:after{content:"";position:absolute;inset:0;z-index:-1;background:linear-gradient(135deg,#173d70,#5596d9)}
+    .xh-case[data-industry="餐饮探店"] .xh-case-art:after{background:linear-gradient(135deg,#813d25,#e49a4c)}
+    .xh-case[data-industry="美容美发"] .xh-case-art:after{background:linear-gradient(135deg,#70436f,#d49ac7)}
+    .xh-case[data-industry="商品宣传"] .xh-case-art:after{background:linear-gradient(135deg,#28645e,#62b7a4)}
+    .xh-case-copy{padding:11px 12px 13px}
+    .xh-case-copy strong{display:block;font-size:14px;line-height:1.4}
+    .xh-case-copy small{display:block;margin-top:4px;color:#7c899c;font-size:11px;line-height:1.45}
+    .xh-case-use{display:inline-flex;margin-top:9px;color:#2468bd;font-size:12px;font-weight:800}
+    .xh-empty{display:none;padding:18px;text-align:center;color:#7c899c;font-size:13px;background:#fff;border:1px dashed #d7e0ed;border-radius:14px;margin-top:10px}
+    .xh-foot{margin:22px 4px 8px;color:#8793a5;font-size:11px;line-height:1.7;text-align:center}
+    @media(min-width:700px){#xiaozhi-home{padding:28px 24px 48px}.xh-wrap{max-width:760px}.xh-case-art{height:130px}}
+    @media(max-width:380px){.xh-case-art{height:88px}.xh-case-copy{padding:10px}.xh-case-copy strong{font-size:13px}}
   </style>
   <section id="xiaozhi-home" aria-label="小智视频主页">
     <div class="xh-wrap">
-      <header class="xh-top"><div class="xh-brand">✦ 小智视频</div><span class="xh-tag">商家短视频工作台</span></header>
-      <div class="xh-hero"><h1>让好生意，被更多人看见</h1><p>上传商家素材和要求，选择制作方式，小智帮你整理成片。</p></div>
-      <h2 class="xh-section-title">开始制作</h2>
-      <button class="xh-card primary" type="button" data-home-action="viral"><span class="xh-icon">🎬</span><span><strong>爆款风格视频制作</strong><small>上传商家照片和文案，自动编排成短视频；参考视频分析是可选项</small></span><span class="xh-arrow">›</span></button>
-      <button class="xh-card primary" type="button" data-home-action="smart"><span class="xh-icon">✨</span><span><strong>素材智能成片</strong><small>上传照片、视频和商家文档，自动整理脚本、镜头与字幕</small></span><span class="xh-arrow">›</span></button>
-      <h2 class="xh-section-title">素材与作品</h2>
+      <header class="xh-top"><div class="xh-brand">✦ 小智视频</div><span class="xh-tag">商家宣传助手</span></header>
+      <div class="xh-hero"><h1>让宣传视频，制作更简单</h1><p>有想法，自己创作；没灵感，挑个案例。上传店铺素材，开始制作属于你的宣传视频。</p></div>
+
+      <div class="xh-section-head"><h2 class="xh-section-title">开始创作</h2><span class="xh-section-note">选择适合你的方式</span></div>
+      <button class="xh-card primary" type="button" data-home-action="smart"><span class="xh-icon">✨</span><span><strong>开始制作视频</strong><small>上传店铺照片或视频，进入制作流程</small></span><span class="xh-arrow">›</span></button>
+      <button class="xh-card" type="button" data-home-action="viral"><span class="xh-icon">✍️</span><span><strong>我有自己的文案和想法</strong><small>填写宣传重点，按自己的思路制作</small></span><span class="xh-arrow">›</span></button>
+
+      <div class="xh-section-head"><h2 class="xh-section-title">我的工具</h2></div>
       <div class="xh-grid">
         <button class="xh-card" type="button" data-home-action="materials"><span class="xh-icon">🖼️</span><span><strong>商家素材</strong><small>添加照片和视频</small></span></button>
-        <button class="xh-card" type="button" data-home-action="document"><span class="xh-icon">📄</span><span><strong>商家需求文档</strong><small>上传 Word 或粘贴要求</small></span></button>
         <button class="xh-card" type="button" data-home-action="projects"><span class="xh-icon">📁</span><span><strong>我的作品</strong><small>打开本机项目库</small></span></button>
-        <button class="xh-card" type="button" data-home-action="editor"><span class="xh-icon">🛠️</span><span><strong>专业编辑</strong><small>进入原有完整剪辑工作台</small></span></button>
+        <button class="xh-card" type="button" data-home-action="document"><span class="xh-icon">📄</span><span><strong>商家需求文档</strong><small>导入 Word 或粘贴要求</small></span></button>
+        <button class="xh-card" type="button" data-home-action="editor"><span class="xh-icon">🛠️</span><span><strong>专业编辑</strong><small>进入完整剪辑工作台</small></span></button>
       </div>
-      <p class="xh-foot">提示：项目和素材目前保存在当前手机浏览器中。请定期导出项目备份。</p>
+
+      <div class="xh-section-head"><h2 class="xh-section-title">灵感案例库</h2><span class="xh-section-note">选一个喜欢的，套用制作方案</span></div>
+      <input class="xh-case-search" id="xh-case-search" type="search" placeholder="搜索案例：酒店、餐饮、美容、零售……" aria-label="搜索案例库">
+      <div class="xh-case-grid" id="xh-case-grid">
+        <button class="xh-case" type="button" data-home-case="hotel" data-industry="酒店民宿" data-style="高级质感">
+          <div class="xh-case-art">🏨</div><div class="xh-case-copy"><strong>酒店民宿 · 高级感展示</strong><small>客房环境、配套设施、入住体验</small><span class="xh-case-use">使用这个案例 →</span></div>
+        </button>
+        <button class="xh-case" type="button" data-home-case="food" data-industry="餐饮探店" data-style="真实探店">
+          <div class="xh-case-art">🍜</div><div class="xh-case-copy"><strong>餐饮美食 · 探店种草</strong><small>招牌菜品、用餐氛围、到店理由</small><span class="xh-case-use">使用这个案例 →</span></div>
+        </button>
+        <button class="xh-case" type="button" data-home-case="beauty" data-industry="美容美发" data-style="活泼种草">
+          <div class="xh-case-art">💇</div><div class="xh-case-copy"><strong>美容美发 · 门店引流</strong><small>门店环境、服务项目、体验亮点</small><span class="xh-case-use">使用这个案例 →</span></div>
+        </button>
+        <button class="xh-case" type="button" data-home-case="retail" data-industry="商品宣传" data-style="促销转化">
+          <div class="xh-case-art">🛍️</div><div class="xh-case-copy"><strong>实体零售 · 商品促销</strong><small>商品特色、活动信息、购买引导</small><span class="xh-case-use">使用这个案例 →</span></div>
+        </button>
+      </div>
+      <div class="xh-empty" id="xh-case-empty">暂时没有匹配的案例，换个关键词试试。</div>
+      <p class="xh-foot">案例库首批为可套用的制作方案，后续将逐步增加 AI 案例分析与搜索能力。素材和项目目前保存在当前浏览器中，请定期导出备份。</p>
     </div>
   </section>
-\n  <div id="app">
+  <div id="app">
     <!-- Header -->
     <header class="app-header">
       <div class="app-logo">
