@@ -19,7 +19,7 @@ try {
   await page.waitForFunction(() => {
     const button = document.querySelector('#generateBtn');
     return button && !button.disabled;
-  }, { timeout: 8 * 60 * 1000 });
+  }, undefined, { timeout: 8 * 60 * 1000 });
 
   await page.locator('#text').fill('你好，欢迎来到小智视频。让每一家好店都被更多人看见。');
   await generate.click();
@@ -27,8 +27,8 @@ try {
   await audio.waitFor({ state: 'attached', timeout: 5 * 60 * 1000 });
   await page.waitForFunction(() => {
     const element = document.querySelector('#sound-clips audio');
-    return element && element.src.startsWith('blob:');
-  }, { timeout: 30000 });
+    return element && element.src.startsWith('blob:') && Number.isFinite(element.duration) && element.duration > 0;
+  }, undefined, { timeout: 30000 });
 
   const audioCheck = await page.evaluate(async () => {
     const element = document.querySelector('#sound-clips audio');
