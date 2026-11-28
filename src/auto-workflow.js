@@ -511,7 +511,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     });
     container.dataset.sourceText = source;
     container.dataset.omittedCount = String(stats.omitted);
-    setStatus('已拆出 ' + unique.length + ' 条商家要求。请检查每条要求并确认对应镜头，再点击自动编排。' + (stats.omitted ? '\\n注意：文档还有 ' + stats.omitted + ' 条未显示，当前预览会阻止直接编排。请拆分文档分批制作，避免遗漏。' : ''));
+    setStatus('已拆出 ' + unique.length + ' 条商家要求。制作清单是可选辅助项；你可以核对并调整镜头，也可以直接继续自动编排。' + (stats.omitted ? '\\n注意：文档还有 ' + stats.omitted + ' 条未显示，建议分批核对，避免遗漏。' : ''));
   });
   $('xzw-industry').addEventListener('change', () => {
     renderTemplateGuide();
