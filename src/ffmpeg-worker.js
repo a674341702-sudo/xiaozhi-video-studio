@@ -577,18 +577,29 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
       canvasPreview.renderOffline(offCtx, time, width, height);
 
-      const frameBlob = await captureCanvasBlob(offscreenCanvas, 'image/jpeg', jpegQuality, abortSignal);
-      checkAborted();
+      let frameBlob = null;
+      let frameBuffer = null;
+      try {
+        frameBlob = await captureCanvasBlob(offscreenCanvas, 'image/jpeg', jpegQuality, abortSignal);
+        checkAborted();
 
-      if (!frameBlob) {
-        throw new Error(`Failed to capture canvas frame ${f}`);
+        if (!frameBlob) {
+          throw new Error(`Failed to capture canvas frame ${f}`);
+        }
+
+        totalFrameBytes = assertFrameMemoryBudget(totalFrameBytes, frameBlob.size, maxFrameBytes);
+        const frameName = `frame_${String(f).padStart(5, '0')}.jpg`;
+        frameBuffer = await fetchFile(frameBlob);
+        // fetchFile materializes a second copy; release the Blob before writing
+        // into FFmpeg's WASM filesystem to reduce the mobile peak-memory spike.
+        frameBlob = null;
+        trackExportFile(inputFiles, frameName);
+        await ffmpeg.writeFile(frameName, frameBuffer);
+      } finally {
+        // Drop JS references immediately, including on write/abort failures.
+        frameBlob = null;
+        frameBuffer = null;
       }
-
-      totalFrameBytes = assertFrameMemoryBudget(totalFrameBytes, frameBlob.size, maxFrameBytes);
-      const frameName = `frame_${String(f).padStart(5, '0')}.jpg`;
-      const frameBuffer = await fetchFile(frameBlob);
-      trackExportFile(inputFiles, frameName);
-      await ffmpeg.writeFile(frameName, frameBuffer);
 
       const progressPct = 20 + Math.round((f / totalFrames) * 60);
       if (onProgress) onProgress(progressPct, 'Rendering video frames');
