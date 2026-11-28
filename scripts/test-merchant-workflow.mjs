@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -142,3 +142,12 @@ assert.deepEqual(
 );
 assert.deepEqual(orderMerchantMediaAssignments([{fileIndex:0,shotIndex:null},{fileIndex:1,shotIndex:-1},{fileIndex:2,shotIndex:2}]), [{fileIndex:2,shotIndex:2}], '忽略未确认或无效的镜头分配');
 console.log('商家素材按镜头脚本排序测试通过');
+
+
+assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 10, isVideo: true, mediaDuration: 0.35 }), 0.35, '不足1秒的视频必须保留真实时长，不得强行延长');
+assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 2, isVideo: true, mediaDuration: 8 }), 2, '视频镜头不得超过剩余目标时长');
+assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 10, isVideo: true, mediaDuration: 2.5 }), 2.5, '视频镜头不得超过素材实际时长');
+assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 10, isVideo: false, mediaDuration: 0 }), 4, '照片按计划镜头时长展示');
+assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 0, isVideo: true, mediaDuration: 2 }), 0, '目标时长用尽后不再生成镜头');
+assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 10, isVideo: true, mediaDuration: 0 }), 0, '无效视频时长必须被拒绝');
+console.log('视频镜头真实时长边界测试通过');
