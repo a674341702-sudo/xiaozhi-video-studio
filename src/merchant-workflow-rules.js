@@ -191,9 +191,11 @@ export function suggestMerchantShotIndex(fileName, planRoles = []) {
     [/价格|菜单|优惠|活动|套餐/, /活动信息|消费信息|规格展示/],
     [/地址|定位|地图|交通|电话/, /到店引导|预约引导|购买引导|预订引导/]
   ];
-  const matches = rules.filter(([filePattern]) => filePattern.test(name)).map(([, rolePattern]) => rolePattern);
-  if (!matches.length) return null;
   const roles = Array.from(planRoles || []).map(role => typeof role === 'string' ? role : String(role?.role || ''));
-  const index = roles.findIndex(role => matches.some(pattern => pattern.test(role)));
-  return index >= 0 ? index : null;
+  for (const [filePattern, rolePattern] of rules) {
+    if (!filePattern.test(name)) continue;
+    const index = roles.findIndex(role => rolePattern.test(role));
+    if (index >= 0) return index;
+  }
+  return null;
 }
