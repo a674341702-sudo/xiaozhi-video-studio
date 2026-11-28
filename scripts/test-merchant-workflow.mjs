@@ -30,6 +30,8 @@ assert.equal(validateMerchantMediaFiles([fakeFile('安卓照片.jpg', 'applicati
 assert.equal(validateMerchantMediaFiles([fakeFile('安卓视频.mp4', '')]).valid, true);
 assert.equal(validateMerchantMediaFiles([fakeFile('大视频.mp4', 'video/mp4', 41 * 1024 * 1024)]).valid, false);
 assert.equal(validateMerchantMediaFiles([fakeFile('未知.heic', 'image/heic')]).valid, false);
+assert.equal(validateMerchantMediaFiles([fakeFile('空照片.jpg', 'image/jpeg', 0)]).valid, false, 'empty files must be rejected before preview or export');
+assert.equal(validateMerchantMediaFiles([fakeFile('异常照片.jpg', 'image/jpeg', -1)]).valid, false, 'negative file sizes must be rejected');
 assert.equal(validateMerchantMediaFiles(Array.from({ length: 9 }, (_, i) => fakeFile(i + '.jpg', 'image/jpeg'))).valid, false);
 assert.equal(validateMerchantMediaFiles([
   fakeFile('一.mp4', 'video/mp4', 40 * 1024 * 1024),
