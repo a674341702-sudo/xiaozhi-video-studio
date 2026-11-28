@@ -4,6 +4,7 @@
  * 当前不冒充云端 AI：脚本由本地模板辅助；配乐与配音通过用户上传的合法音频文件混入成片。
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
+import { getMerchantExportReadiness } from './merchant-export-readiness.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
 import { getSubtitleSafeLayout } from './text-layout.js';
 import { getSubtitleFontSize } from './subtitle-sizing.js';
@@ -903,6 +904,12 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   });
 
   $('xzw-export').addEventListener('click', () => {
+    const readiness = getMerchantExportReadiness(composition);
+    if (!readiness.ready) {
+      setStatus(readiness.reason);
+      $('xzw-generate').scrollIntoView?.({ behavior: 'smooth', block: 'center' });
+      return;
+    }
     const preset = $('xzw-export-preset').value;
     const fps = document.getElementById('export-fps');
     const quality = document.getElementById('export-quality');
