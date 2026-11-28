@@ -34,6 +34,26 @@
 - 目前尚未确认官方 ONNX TTS 模型与 Audio Tokenizer ONNX 模型在 ModelScope 或其他国内仓库存在完整、官方、可校验的镜像。
 - 因此目前不能承诺用户在中国大陆可以顺利下载完整浏览器模型包，也不能将 Hugging Face 自动下载接入生产。
 
+## 第二候选：sherpa-onnx Matcha 中文 WASM
+
+官方项目：https://github.com/k2-fsa/sherpa-onnx
+中文模型说明：https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese/matcha-icefall-zh-baker.html
+中文浏览器演示源码：https://github.com/k2-fsa/sherpa-onnx/tree/master/wasm/tts
+
+- sherpa-onnx 官方文档列出 Matcha 中文（Baker）WebAssembly 浏览器演示，也提供 Android TTS Engine APK 的下载入口；这比 MOSS 的 760MB 级双模型堆栈更值得优先做轻量手机验证。
+- sherpa-onnx 文档中的中文 Matcha 浏览器演示示例标注模型包约 125 MB；该体积是示例页面标注值，正式集成前仍须按实际资源清单重新计算。
+- 该方案使用固定音色的中文合成路线，不应宣传为 MOSS 那样的参考音频声音克隆；是否足够自然、是否适合商家探店营销，需要实际试听。
+- 官方示例页面当前通过 Hugging Face 数据集 CDN 加载远程模型资源。虽然项目文档对部分其他 WASM 演示提供 ModelScope 镜像，但本次未确认中文 Matcha WASM 模型本身有完整、可校验的国内镜像。
+- 因此它目前只是更轻量的实验候选，不能直接接入正式商家流程，也不能宣称中国大陆网络可用。
+
+## 候选对比与当前优先级
+
+| 方案 | 已确认能力 | 主要阻塞 | 当前定位 |
+|---|---|---|---|
+| sherpa-onnx Matcha 中文 WASM | 有中文浏览器 WASM 演示；有 Android TTS Engine 路线 | 中文模型国内镜像未核实；音质和手机性能未测 | **优先做轻量验证** |
+| MOSS-TTS-Nano ONNX | 浏览器 ONNX 路线；支持中文和参考音频工作流 | TTS + 音频 tokenizer 双模型约 760MB 级；国内完整镜像未核实 | 后续高质量/声音克隆候选 |
+| Kokoro 中文 ONNX 浏览器方案 | 有第三方中文前端和浏览器运行封装 | WebGPU 优先；模型与 voice 资源国内来源未验证；第三方实现需审许可证 | 观察，不优先接入 |
+
 ## 集成前必须通过的门槛
 
 1. 找到完整模型清单的国内可访问来源；逐个记录文件大小、SHA-256、许可与来源。缺一项都不能开始生产接入。
@@ -47,7 +67,10 @@
 
 ## 当前决定
 
-暂不把 MOSS-TTS-Nano 接入商家主流程，不添加“AI 配音已可用”的按钮或宣传文案。下一阶段优先完成国内 ONNX 模型镜像核验与文件清单/校验和验证；确认资源完整后，再建立独立实验页验证 Android 浏览器端推理。若国内镜像无法满足条件，则继续保留手机录音/上传配音作为可靠方案，另行评估合规的国内离线 TTS 备选。
+下一步优先建立独立的 sherpa-onnx Matcha 中文 WASM 实验页，验证其真实资源清单、下载来源、安卓 Chrome/微信浏览器兼容性、CPU 推理速度和成品音质。只有在完整模型资源能从中国大陆普通网络稳定获取且许可清晰时，才考虑与现有配音轨对接。
+
+MOSS-TTS-Nano 暂不进入商家主流程；它的参考音频/声音克隆能力有价值，但双模型包体明显更大。Kokoro 方案暂列观察项，不在当前版本引入 WebGPU 等额外运行条件。
+
 
 ## 参考
 
