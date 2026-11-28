@@ -97,7 +97,8 @@ export function getClipPlaybackState(clip, timelineTime, mediaDuration = Infinit
   const sourceEnded = !loop && localTime >= sourceLength;
   const animatedVolume = evaluateKeyframes(clip?.keyframes, 'volume', timelineTime);
   const rawVolume = animatedVolume === null ? (clip?.volume ?? 1) : animatedVolume;
-  const volume = Math.max(0, Math.min(1, Number(rawVolume) || 0));
+  // Keep live preview gain consistent with export, which supports narration up to 150%.
+  const volume = Math.max(0, Math.min(1.5, Number(rawVolume) || 0));
 
   return {
     active,
