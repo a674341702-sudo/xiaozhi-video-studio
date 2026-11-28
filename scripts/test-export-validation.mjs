@@ -1,9 +1,20 @@
 import assert from 'node:assert/strict';
 import { validateCompositionMedia } from '../src/ffmpeg-worker.js';
 
-assert.throws(() => validateCompositionMedia({ clips: [] }), /还没有画面内容/);
+assert.throws(() => validateCompositionMedia({ clips: [] }), /还没有可见的画面内容/);
 assert.throws(() => validateCompositionMedia({ clips: [{ type: 'audio', startTime: 0, duration: 5, file: new Blob(['audio']) }] }), /还没有画面内容/);
 assert.equal(validateCompositionMedia({ clips: [{ type: 'text', startTime: 0, duration: 3 }] }), true);
+assert.throws(() => validateCompositionMedia({
+  tracks: [{ id: 'v1', visible: false }],
+  clips: [{ type: 'video', trackId: 'v1', startTime: 0, duration: 3 }]
+}), /轨道是否被隐藏/);
+assert.equal(validateCompositionMedia({
+  tracks: [{ id: 'v1', visible: false }, { id: 'txt1', visible: true }],
+  clips: [
+    { type: 'video', trackId: 'v1', startTime: 0, duration: 3 },
+    { type: 'text', trackId: 'txt1', startTime: 0, duration: 3 }
+  ]
+}), true);
 
 assert.equal(validateCompositionMedia({ clips: [{
   type: 'video', name: '门店视频', startTime: 0, duration: 5,
