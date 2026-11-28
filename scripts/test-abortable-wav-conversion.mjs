@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { audioBufferToWav } from '../src/ffmpeg-worker.js';
+import { audioBufferToWav, getAudioWavByteLength } from '../src/ffmpeg-worker.js';
 
 function makeBuffer(length) {
   const left = new Float32Array(length);
@@ -13,6 +13,10 @@ function makeBuffer(length) {
     getChannelData(channel) { return channel === 0 ? left : right; }
   };
 }
+
+assert.equal(getAudioWavByteLength(makeBuffer(16)), 44 + 16 * 4);
+assert.throws(() => getAudioWavByteLength({ numberOfChannels: 2, length: Number.MAX_SAFE_INTEGER }), /超过安全尺寸限制/);
+assert.throws(() => getAudioWavByteLength({ numberOfChannels: 0, length: 16 }), /尺寸无效/);
 
 const wav = await audioBufferToWav(makeBuffer(16), undefined, 4);
 assert.equal(wav.type, 'audio/wav');
