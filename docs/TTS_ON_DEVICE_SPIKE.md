@@ -79,6 +79,18 @@ Matcha Baker 中文模型并非“单个 125 MB 模型文件”。官方清单�
 
 官方文档列出的 WASM 在线演示仍托管在 Hugging Face Space；不能作为大陆生产环境的默认加载入口。官方文档还列有 Android APK 的 hf-mirror 下载项，但它不是我们已经完成可用性、完整性和稳定性验收的大陆资源托管方案。
 
+### WASM 运行时依赖补充
+
+进一步检查 sherpa-onnx 官方 `wasm/tts` 源码后，确认浏览器端不只是两个 ONNX 模型：
+- 需要从源码构建 sherpa-onnx TTS 的 Emscripten/WASM 运行时（JS glue、WASM 二进制及 Worker）；
+- 官方当前演示还加载独立的 `piper-phonemize` Emscripten bundle，并需要其 `.data`/espeak-ng 资源；
+- 主线程脚本创建 Worker，Worker 加载 sherpa-onnx 的 WASM glue 与 JS wrapper；
+- 模型初始化后才开放文本生成，生成结果通过 Worker transferable Float32Array 返回，适合后续封装为 WAV Blob 再交给现有配音轨。
+
+因此，约 123 MB 只是 Matcha Baker 模型与声码器的核心文件估算，不是完整浏览器首次下载总量。运行时、音素化数据、词典/规则文件和临时缓存都必须计入。当前不能发布一个只显示“125 MB”的下载提示，也不能仅复制 `wasm/tts` 的 JS 文件就认为 TTS 可运行。
+
+sherpa-onnx 主仓库许可证为 Apache-2.0；集成时仍需保留许可证/NOTICE（如适用），并单独核实模型、声码器、piper-phonemize 及其 espeak 数据各自的许可证。
+
 ### 当前工程决策
 
 1. 继续把 sherpa-onnx Matcha 作为候选，但暂停将其标记为“国内可用”。
