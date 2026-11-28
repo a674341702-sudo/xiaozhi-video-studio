@@ -66,10 +66,11 @@ const ttsImportEnd = source.indexOf("const profileKeys", ttsImportStart);
 assert.ok(ttsImportStart >= 0 && ttsImportEnd > ttsImportStart,
   'direct TTS voice import must capture a generation token');
 const ttsImportBlock = source.slice(ttsImportStart, ttsImportEnd);
-assert.match(ttsImportBlock, /await mediaManager\\.importFile\\(file, \\{ startTime: 0, trackIndex: 5 \\}\\);/);
-assert.match(ttsImportBlock, /if \\(voiceGeneration !== productionGeneration\\)/,
+assert.ok(ttsImportBlock.includes("await mediaManager.importFile(file, { startTime: 0, trackIndex: 5 });"),
+  'direct TTS voice import must use the expected audio track');
+assert.ok(ttsImportBlock.includes("if (voiceGeneration !== productionGeneration)"),
   'a voice import completing after workflow invalidation must be rejected');
-assert.match(ttsImportBlock, /composition\\.removeClip\\(voice\\.id\\)/,
+assert.ok(ttsImportBlock.includes("composition.removeClip(voice.id)"),
   'a stale imported voice clip must be removed from the timeline');
-assert.match(ttsImportBlock, /pendingVoiceFile = file;/,
+assert.ok(ttsImportBlock.includes("pendingVoiceFile = file;"),
   'a stale voice import must remain queued for the next valid arrangement');
