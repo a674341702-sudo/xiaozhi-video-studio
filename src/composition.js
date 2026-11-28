@@ -161,7 +161,7 @@ export class Composition {
       const track = this.getTrack(c.trackId);
       if (track && !track.visible) return false;
       const endTime = c.startTime + c.duration;
-      return time + EPS >= c.startTime && time <= endTime + endOverlap + EPS;
+      return time + EPS >= c.startTime && time < endTime + endOverlap;
     });
   }
 

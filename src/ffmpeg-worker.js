@@ -549,7 +549,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
       const seekPromises = [];
       for (const vClip of videoClips) {
-        if (time >= vClip.startTime && time <= vClip.startTime + vClip.duration) {
+        if (time >= vClip.startTime && time < vClip.startTime + vClip.duration) {
           const offset = time - vClip.startTime + vClip.trimStart;
           seekPromises.push(seekVideoToOffset(vClip.element, offset, abortSignal));
         }
