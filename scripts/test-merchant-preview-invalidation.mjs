@@ -60,3 +60,16 @@ assert.ok(musicFallbackStart >= 0 && musicFallbackEnd > musicFallbackStart,
 assert.match(source.slice(musicFallbackStart, musicFallbackEnd),
   /if \(generationVersion !== productionGeneration\) throw musicError/,
   'a stale generation error must not be swallowed as an optional background-music failure');
+
+const ttsImportStart = source.indexOf("const voiceGeneration = productionGeneration;");
+const ttsImportEnd = source.indexOf("const profileKeys", ttsImportStart);
+assert.ok(ttsImportStart >= 0 && ttsImportEnd > ttsImportStart,
+  'direct TTS voice import must capture a generation token');
+const ttsImportBlock = source.slice(ttsImportStart, ttsImportEnd);
+assert.match(ttsImportBlock, /await mediaManager\\.importFile\\(file, \\{ startTime: 0, trackIndex: 5 \\}\\);/);
+assert.match(ttsImportBlock, /if \\(voiceGeneration !== productionGeneration\\)/,
+  'a voice import completing after workflow invalidation must be rejected');
+assert.match(ttsImportBlock, /composition\\.removeClip\\(voice\\.id\\)/,
+  'a stale imported voice clip must be removed from the timeline');
+assert.match(ttsImportBlock, /pendingVoiceFile = file;/,
+  'a stale voice import must remain queued for the next valid arrangement');
