@@ -2,6 +2,10 @@
  * Chinese-friendly canvas text layout helpers.
  * Kept DOM-free so wrapping and subtitle-safe-zone rules can be unit tested.
  */
+export function hasRenderableText(text) {
+  return String(text ?? '').trim().length > 0;
+}
+
 export function wrapTextLines(ctx, text, maxWidth, maxLines = 3) {
   const limit = Math.max(1, Number(maxLines) || 1);
   const width = Math.max(1, Number(maxWidth) || 1);
