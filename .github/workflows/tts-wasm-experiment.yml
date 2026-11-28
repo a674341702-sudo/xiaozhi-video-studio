@@ -43,6 +43,9 @@ jobs:
           echo "ae70096b19c6e283ea351a26b8a718ce6427c8bde8c1da22eb46a5478d39a69b  ${RUNNER_TEMP}/matcha-icefall-zh-baker.tar.bz2" | sha256sum -c -
           tar -xjf "${RUNNER_TEMP}/matcha-icefall-zh-baker.tar.bz2" -C "${RUNNER_TEMP}"
           cp -a "${RUNNER_TEMP}/matcha-icefall-zh-baker/." sherpa-onnx/wasm/tts/assets/
+          for asset in model-steps-3.onnx tokens.txt lexicon.txt phone.fst date.fst number.fst; do
+            test -s "sherpa-onnx/wasm/tts/assets/$asset" || { echo "Missing Chinese Matcha asset: $asset"; exit 1; }
+          done
           curl -fL --retry 3 \
             https://github.com/k2-fsa/sherpa-onnx/releases/download/vocoder-models/vocos-22khz-univ.onnx \
             -o sherpa-onnx/wasm/tts/assets/vocos-22khz-univ.onnx
@@ -83,8 +86,8 @@ jobs:
           mkdir -p "${RUNNER_TEMP}/xiaozhi-matcha-zh-wasm"
           cp -a "$OUT/." "${RUNNER_TEMP}/xiaozhi-matcha-zh-wasm/"
           cd "${RUNNER_TEMP}/xiaozhi-matcha-zh-wasm"
-          sha256sum * > SHA256SUMS.txt
-          du -h * | sort -h > FILE_SIZES.txt
+          find . -type f -print0 | sort -z | xargs -0 sha256sum > SHA256SUMS.txt
+          find . -type f -printf '%P\t%s bytes\n' | sort > FILE_SIZES.txt
           cat > BUILD-NOTES.txt <<'EOF'
           EXPERIMENTAL BUILD ONLY - NOT APPROVED FOR PRODUCTION.
           Model: sherpa-onnx Matcha Chinese Baker (modelType=2).
@@ -95,6 +98,28 @@ jobs:
           Model commercial license and Android/WeChat performance still require review.
           Do not deploy this artifact to the production Pages site.
           EOF
+
+      - name: Install headless browser for real TTS smoke test
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm install --no-save --package-lock=false playwright@1.52.0
+          npx playwright install --with-deps chromium
+
+      - name: Generate a real Chinese WAV in headless Chromium
+        shell: bash
+        run: |
+          set -euo pipefail
+          OUT="$RUNNER_TEMP/xiaozhi-matcha-zh-wasm"
+          python3 -m http.server 4179 --bind 127.0.0.1 --directory "$OUT" > "$RUNNER_TEMP/tts-http.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in $(seq 1 30); do
+            if curl -fsS http://127.0.0.1:4179/index.html >/dev/null; then break; fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:4179/index.html >/dev/null
+          TTS_SMOKE_URL=http://127.0.0.1:4179/ node scripts/smoke-sherpa-tts-browser.mjs
 
       - name: Upload experimental build artifact
         uses: actions/upload-artifact@v4
