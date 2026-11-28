@@ -774,8 +774,9 @@ export function downloadBlob(blob, filename) {
     throw error;
   }
 
-  // The click has been dispatched; remove the temporary anchor, but do not
-  // revoke the Blob URL immediately or after an overly short 1-second delay.
+  // Keep the URL available briefly so mobile users can tap the visible
+  // fallback link if the browser does not start the automatic download.
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60_000);
+  setTimeout(() => URL.revokeObjectURL(url), 5 * 60 * 1000);
+  return url;
 }
