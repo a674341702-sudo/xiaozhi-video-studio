@@ -15,9 +15,10 @@ assert.equal(validateCompositionMedia({ clips: [{
   element: { naturalWidth: 1200, naturalHeight: 800 }
 }] }), true);
 
-assert.equal(validateCompositionMedia({ clips: [{
-  type: 'audio', name: '配乐', startTime: 0, duration: 5, file: new Blob(['audio'])
-}] }), true);
+assert.equal(validateCompositionMedia({ clips: [
+  { type: 'text', name: '片头标题', startTime: 0, duration: 5 },
+  { type: 'audio', name: '配乐', startTime: 0, duration: 5, file: new Blob(['audio']) }
+] }), true);
 
 assert.throws(() => validateCompositionMedia(null), /项目时间线数据无效/);
 assert.throws(() => validateCompositionMedia({ clips: [{
