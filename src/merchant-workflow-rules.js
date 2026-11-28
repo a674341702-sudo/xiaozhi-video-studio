@@ -199,3 +199,14 @@ export function suggestMerchantShotIndex(fileName, planRoles = []) {
   }
   return null;
 }
+
+
+/**
+ * Order confirmed media assignments by the shot plan, preserving upload order
+ * for multiple files assigned to the same shot.
+ */
+export function orderMerchantMediaAssignments(assignments = []) {
+  return Array.from(assignments || [])
+    .filter(item => item && Number.isInteger(item.fileIndex) && Number.isInteger(item.shotIndex) && item.shotIndex >= 0)
+    .sort((a, b) => a.shotIndex - b.shotIndex || a.fileIndex - b.fileIndex);
+}
