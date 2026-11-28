@@ -11,6 +11,7 @@ import { getPhotoMotionKeyframes } from './photo-motion.js';
 import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
+import { createDefaultMusicFile } from './default-music.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
 import { splitMerchantRequirements, getMerchantRequirementStats, getNarrationContentCoverage, isRestrictionRequirement, getMerchantCaptionForShot, mergeCaptionRequirements, limitMerchantCaption, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, resolveMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
 
@@ -123,7 +124,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
       <div class="xzw-section">
         <h3>04 · 配乐与配音</h3>
-        <label class="xzw-field"><span>背景音乐（上传已获授权的音乐文件）</span><input id="xzw-music" type="file" accept="audio/*"></label>
+        <label class="xzw-field"><span>背景音乐（可上传已获授权音乐；留空自动使用内置原创轻音乐）</span><input id="xzw-music" type="file" accept="audio/*"></label>
         <label class="xzw-field"><span>配音文件（手机录音或中文AI配音文件）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
         <p class="xzw-note"><a href="./tts-lab.html" target="_blank" rel="noopener">✦ 打开中文配音实验室（普通话）</a>：生成后会尝试自动传回当前工作台；若未成功，再下载 WAV 手动上传。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
@@ -133,7 +134,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
           <label class="xzw-field"><span>原视频现场声（0–50%）</span><input id="xzw-video-volume" type="number" min="0" max="50" step="1" value="12" inputmode="numeric"></label>
         </div>
         <p class="xzw-note">建议配音 100%、背景音乐 8–15%、现场声 0–12%。如果没有配音，背景音乐会自动使用更高的默认音量。</p>
-        <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室支持同源自动回传；如果主工作台未打开、浏览器不支持或导入失败，可下载 WAV 后手动上传。</p>
+        <p class="xzw-note">未上传配乐时会在本机生成一段原创轻音乐并循环铺底；上传自己的音乐时优先使用上传文件。配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室支持同源自动回传；如果主工作台未打开、浏览器不支持或导入失败，可下载 WAV 后手动上传。</p>
       </div>
 
       <label class="xzw-field"><span>手机导出方案</span><select id="xzw-export-preset"><option value="mobile">手机稳定优先 · 720p / 24fps / 中等画质</option><option value="clear">画面清晰优先 · 720p / 30fps / 高画质</option></select></label>
@@ -691,7 +692,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       requirementsByShot.set(shotIndex, list);
     });
     const textTrack = composition.tracks.find(t => t.type === 'text');
-    const musicFile = $('xzw-music').files?.[0];
+    let musicFile = $('xzw-music').files?.[0];
     const voiceFile = $('xzw-voice').files?.[0] || pendingVoiceFile;
     const audioFiles = [musicFile, voiceFile].filter(Boolean);
     const audioBytes = audioFiles.reduce((total, file) => total + file.size, 0);
@@ -827,6 +828,16 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         cursor += outroDuration;
       }
 
+      let usingDefaultMusic = false;
+      if (!musicFile) {
+        setStatus('正在本机生成原创轻音乐……');
+        try {
+          musicFile = await createDefaultMusicFile();
+          usingDefaultMusic = Boolean(musicFile);
+        } catch (musicError) {
+          console.warn('[小智商家短视频] 内置配乐生成失败，将保留无配乐成片能力', musicError);
+        }
+      }
       if (musicFile) {
         const music = await mediaManager.importFile(musicFile, { startTime: 0, trackIndex: 4 });
         if (!music) throw new Error('背景音乐导入失败：' + musicFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
@@ -859,7 +870,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         ? '\n说明：当前素材实际可用时长约 ' + cursor.toFixed(1) + ' 秒，短于目标 ' + targetSeconds + ' 秒。视频素材保持原速，不会为了凑时长而强行慢放或重复画面。'
         : '';
       const voiceDurationNote = voiceFile ? getVoiceCoverageNote(voiceSourceDuration, narrationDuration) : '';
-      setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? '、背景音乐' : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (voiceDurationNote ? '\n配音检查：' + voiceDurationNote : '') + (narrationDraftOmittedLines || narrationDraftTruncated ? '\n提醒：配音稿为适配手机合成长度已精简，请核对旁白；完整商家要求仍保留在镜头清单。' : '') + (missingAudio.length ? '\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
+      setStatus('完成：已编排 ' + shots.length + ' 个镜头' + (musicFile ? (usingDefaultMusic ? '、内置原创轻音乐' : '、背景音乐') : '') + (voiceFile ? '、配音' : '') + '。现在可以播放预览；如需修改，可在时间线上调整字幕和镜头。' + durationNote + (voiceDurationNote ? '\n配音检查：' + voiceDurationNote : '') + (narrationDraftOmittedLines || narrationDraftTruncated ? '\n提醒：配音稿为适配手机合成长度已精简，请核对旁白；完整商家要求仍保留在镜头清单。' : '') + (missingAudio.length ? '\n提醒：' + missingAudio.join('、') + '，导出前可返回上方补充音频。' : ''));
 
       const restrictions = requirementCards.map(card => card.querySelector('.xzw-requirement-text')?.value.trim() || '').filter(isRestrictionRequirement);
       $('xzw-shots').innerHTML = '<h3 style="font-size:14px;margin:14px 0 6px">镜头清单 · 已落实商家要求</h3>' +
