@@ -11,6 +11,7 @@ import { captureCanvasBlob } from './abortable-canvas-blob.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
+let ffmpegLoadPromise = null;
 
 /** Preserve cancellation semantics across nested audio/export error handlers. */
 export function rethrowExportAbort(error) {
@@ -29,6 +30,27 @@ function resolveCoreUrl(filename) {
  * Loads FFmpeg WASM instance, preferring self-hosted core files.
  */
 export async function loadFFmpeg(onProgress, abortSignal) {
+  if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
+  if (ffmpegLoaded && ffmpeg) return ffmpeg;
+
+  // Reuse the editor's background preload instead of creating a second WASM worker.
+  if (ffmpegLoadPromise) {
+    const instance = await ffmpegLoadPromise;
+    if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
+    if (onProgress) onProgress(100);
+    return instance;
+  }
+
+  const pending = loadFFmpegInternal(onProgress, abortSignal);
+  ffmpegLoadPromise = pending;
+  try {
+    return await pending;
+  } finally {
+    if (ffmpegLoadPromise === pending) ffmpegLoadPromise = null;
+  }
+}
+
+async function loadFFmpegInternal(onProgress, abortSignal) {
   if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
   if (ffmpegLoaded && ffmpeg) return ffmpeg;
 
