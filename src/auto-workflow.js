@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -187,23 +187,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     $('xzw-production-preview').innerHTML = '';
   };
   const roleOptions = () => getMerchantShotPlan($('xzw-industry').value, Math.max(1, orderedMediaFiles.length || 6));
-  const suggestShotForFile = (file, index, plans) => {
-    const name = file.name.toLowerCase();
-    const terms = [
-      /门头|招牌|外观|入口|店面|logo/.test(name) ? /开场|门店亮相|外观位置|空间展示|氛围开场/ : null,
-      /菜|餐|产品|商品|招牌|主打|特写/.test(name) ? /招牌展示|产品亮相|核心产品|核心细节|服务项目/ : null,
-      /环境|大厅|房间|装修|内景|店内/.test(name) ? /环境|空间|房间全景|公共空间/ : null,
-      /制作|过程|操作|服务|体验/.test(name) ? /制作过程|服务过程|操作细节|现场过程/ : null,
-      /价格|菜单|优惠|活动|套餐/.test(name) ? /活动信息|消费信息|规格展示/ : null,
-      /地址|定位|地图|交通|电话/.test(name) ? /到店引导|预约引导|购买引导|预订引导/ : null
-    ].filter(Boolean);
-    if (terms.length) {
-      const match = plans.findIndex(plan => terms.some(pattern => pattern.test(plan.role)));
-      if (match >= 0) return match;
-    }
-    if (isVideoMediaFile(file)) return Math.min(index, plans.length - 1);
-    return Math.min(index, plans.length - 1);
-  };
+  const suggestShotForFile = (file, plans) => suggestMerchantShotIndex(file.name, plans);
   const renderMediaMapping = () => {
     const files = orderedMediaFiles;
     const plans = roleOptions();
@@ -243,15 +227,21 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const select = document.createElement('select');
       select.className = 'xzw-media-role';
       select.setAttribute('aria-label', file.name + ' 的镜头用途');
+      const unassigned = document.createElement('option');
+      unassigned.value = '';
+      unassigned.textContent = '待确认 · 请选择镜头用途';
+      select.appendChild(unassigned);
       plans.forEach((plan, planIndex) => {
         const option = document.createElement('option');
         option.value = String(planIndex);
         option.textContent = '镜头 ' + (planIndex + 1) + ' · ' + plan.role;
         select.appendChild(option);
       });
-      select.value = String(mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : suggestShotForFile(file, index, plans));
+      const suggestedShot = mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : suggestShotForFile(file, plans);
+      select.value = suggestedShot === null || suggestedShot === undefined ? '' : String(suggestedShot);
       select.addEventListener('change', () => {
-        mediaRoleByFile.set(file, Number(select.value));
+        if (select.value === '') mediaRoleByFile.delete(file);
+        else mediaRoleByFile.set(file, Number(select.value));
         invalidateProductionPreview();
       });
       const order = document.createElement('div');
@@ -292,7 +282,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const selects = Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role'));
     selects.forEach((select, index) => {
       const file = orderedMediaFiles[index];
-      if (file) mediaRoleByFile.set(file, Number(select.value));
+      if (file && select.value === '') mediaRoleByFile.delete(file);
+      else if (file) mediaRoleByFile.set(file, Number(select.value));
     });
   };
   const moveMedia = (index, delta) => {
@@ -322,7 +313,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     setStatus('已移除素材：' + removed.name + '。其他素材的镜头用途和顺序已保留。');
   };
   const getMediaAssignments = () => Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role')).map((select, index) => ({
-    fileIndex: index, shotIndex: Number(select.value)
+    fileIndex: index, shotIndex: select.value === '' ? null : Number(select.value)
   }));
 
   // 中文配音实验室通过同源 BroadcastChannel 回传 WAV。
@@ -572,7 +563,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (requirements.some(card => !card.querySelector('.xzw-requirement-text')?.value.trim())) issues.push('有商家要求内容为空');
     if (requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)) issues.push('有商家要求尚未人工核对');
     const assignments = getMediaAssignments();
-    if (assignments.length !== files.length) issues.push('有素材尚未匹配镜头用途');
+    if (assignments.length !== files.length || assignments.some(item => !Number.isInteger(item.shotIndex) || item.shotIndex < 0)) issues.push('有素材尚未确认镜头用途，请在每个素材下方选择对应镜头');
     const plans = roleOptions();
     const requirementLines = requirements.map((card, index) => {
       const text = card.querySelector('.xzw-requirement-text')?.value.trim() || '';
@@ -580,8 +571,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       return { text, shot, index };
     });
     const mediaLines = files.map((file, index) => {
-      const shotIndex = assignments[index]?.shotIndex ?? index;
-      return file.name + ' → 镜头 ' + (shotIndex + 1) + ' · ' + (plans[shotIndex]?.role || '待确认');
+      const shotIndex = assignments[index]?.shotIndex;
+      return file.name + (Number.isInteger(shotIndex) ? ' → 镜头 ' + (shotIndex + 1) + ' · ' + (plans[shotIndex]?.role || '待确认') : ' → 待确认镜头用途');
     });
     const targetSeconds = Number($('xzw-length').value) || 30;
     const ratio = $('xzw-ratio').value;
