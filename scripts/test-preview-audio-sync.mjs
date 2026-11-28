@@ -30,3 +30,11 @@ assert.equal(getClipPlaybackState(trimmedLoop, 5, 10).sourceTime, 3);
 assert.equal(getClipPlaybackState(trimmedLoop, 8, 10).sourceTime, 2);
 
 console.log('Live preview audio sync tests passed.');
+
+const boostedVoice = { startTime: 0, duration: 4, trimStart: 0, trimEnd: 4, volume: 1.5 };
+assert.equal(getClipPlaybackState(boostedVoice, 2, 4).volume, 1.5, 'preview must preserve supported 150% narration gain');
+const excessiveVoice = { ...boostedVoice, volume: 3 };
+assert.equal(getClipPlaybackState(excessiveVoice, 2, 4).volume, 1.5, 'preview gain must use the same 150% safety cap as export');
+const silentVoice = { ...boostedVoice, volume: -1 };
+assert.equal(getClipPlaybackState(silentVoice, 2, 4).volume, 0, 'negative preview gain must be clamped to silence');
+console.log('Preview/export narration gain parity tests passed.');
