@@ -15,6 +15,7 @@ assert.equal(validateImageDimensions(100, 100, 0).valid, false);
 
 const source = readFileSync(new URL('../src/media-manager.js', import.meta.url), 'utf8');
 assert.ok(source.includes("validateImageDimensions(img.naturalWidth, img.naturalHeight)"));
-assert.ok(source.includes('URL.revokeObjectURL(objectUrl)'));
+assert.ok(source.includes("import { cleanupFailedMediaElement } from './media-element-cleanup.js'"));
+assert.ok(source.includes("cleanupFailedMediaElement(img, objectUrl, 'image')"));
 assert.ok(source.includes('图片分辨率过高'));
 console.log('Mobile image dimension and import cleanup tests passed.');
