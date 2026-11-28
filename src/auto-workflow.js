@@ -401,6 +401,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   let voiceRecordingTimer = null;
   let voiceRecordingStartedAt = 0;
   let discardVoiceRecording = false;
+  // Invalidates a pending microphone permission request when the workflow closes.
+  let voiceRequestToken = 0;
   const formatVoiceRecordingTime = elapsedMs => {
     const totalSeconds = Math.floor(Math.max(0, elapsedMs) / 1000);
     return String(Math.floor(totalSeconds / 60)).padStart(2, '0') + ':' + String(totalSeconds % 60).padStart(2, '0');
@@ -434,10 +436,18 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     }
     $('xzw-record-start').disabled = true;
     $('xzw-record-status').textContent = '正在申请麦克风权限……';
+    const requestToken = ++voiceRequestToken;
     try {
-      voiceStream = await navigator.mediaDevices.getUserMedia({
+      const stream = await navigator.mediaDevices.getUserMedia({
         audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
       });
+      // The user may close the workflow while the browser permission prompt is open.
+      // Never start a recorder for a hidden/stale session; release the granted stream.
+      if (requestToken !== voiceRequestToken || !modal.classList.contains('open')) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      voiceStream = stream;
       const mimeCandidates = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'];
       const mimeType = mimeCandidates.find(type => MediaRecorder.isTypeSupported?.(type));
       voiceRecorder = mimeType ? new MediaRecorder(voiceStream, { mimeType }) : new MediaRecorder(voiceStream);
@@ -499,12 +509,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       voiceRecordingTimer = setInterval(updateVoiceRecordingStatus, 500);
       $('xzw-record-stop').disabled = false;
     } catch (error) {
+      // A rejected permission prompt after closing the modal must not update stale UI.
+      if (requestToken !== voiceRequestToken) return;
       stopVoiceRecordingTimer();
       stopVoiceTracks();
       voiceRecorder = null;
       $('xzw-record-start').disabled = false;
       $('xzw-record-stop').disabled = true;
-      $('xzw-record-status').textContent = '无法开启麦克风：' + (error?.name === 'NotAllowedError' ? '请在浏览器设置中允许麦克风权限。' : (error?.message || '未知错误')) + '。也可以用手机系统录音后上传。';
+      $('xzw-record-status').textContent = '无法开启麦克风： + (error?.name === 'NotAllowedError' ? '请在浏览器设置中允许麦克风权限。' : (error?.message || '未知错误')) + '。也可以用手机系统录音后上传。';
     }
   });
   $('xzw-record-stop').addEventListener('click', () => {
@@ -658,6 +670,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     }
   });
   const closeWorkflow = () => {
+    // Closing also cancels any unresolved microphone permission request.
+    voiceRequestToken += 1;
+    $('xzw-record-start').disabled = false;
     // Closing the workflow means the merchant has left this production attempt.
     // Invalidate any async imports so they cannot finish into a hidden, stale session.
     invalidateProductionPreview();
