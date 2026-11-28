@@ -227,6 +227,7 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
 
   let decodedCount = 0;
   const audioNodes = [];
+  try {
   for (let i = 0; i < audioClips.length; i++) {
     if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
     const clip = audioClips[i];
@@ -293,10 +294,12 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
 
   const mixed = await offlineCtx.startRendering();
   if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
-  // The rendered mix is now independent of its source nodes. Release decoded
-  // source AudioBuffers promptly before video-frame rendering allocates memory.
-  releaseRenderedAudioNodes(audioNodes);
   return mixed;
+  } finally {
+    // Also runs when decoding, rendering, or cancellation fails midway.
+    releaseRenderedAudioNodes(audioNodes);
+    try { masterBus.node?.disconnect?.(); } catch (_) {}
+  }
 }
 
 /**
