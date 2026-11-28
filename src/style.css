@@ -1346,3 +1346,24 @@ button, input, select {
   .zoom-controls { gap:3px; }
   .mini-btn { width:34px; height:34px; min-width:34px; }
 }
+
+/* Manual save fallback for mobile browsers that suppress automatic downloads. */
+.export-download-fallback {
+  position:fixed;
+  z-index:1200;
+  left:50%;
+  bottom:calc(16px + env(safe-area-inset-bottom));
+  transform:translateX(-50%);
+  max-width:calc(100vw - 28px);
+  padding:13px 18px;
+  border-radius:14px;
+  background:#2563eb;
+  color:#fff;
+  font-size:14px;
+  font-weight:700;
+  line-height:1.35;
+  text-align:center;
+  text-decoration:none;
+  box-shadow:0 8px 28px rgba(0,0,0,.28);
+}
+.export-download-fallback[hidden] { display:none; }
