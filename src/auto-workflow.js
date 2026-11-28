@@ -570,7 +570,23 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       current.push(text);
       byShot.set(shot, current);
     });
-    return plans.map((plan, index) => (byShot.get(index) || []).join(' · ') || plan.caption);
+    const copyPoints = [...new Set([
+      ...String(profile.copy || '').split(/[\\n。！？!?；;]+/),
+      ...splitMerchantRequirements(profile.brief || '', 16)
+    ].map(item => item.trim()).filter(item => item && !isRestrictionRequirement(item)))];
+    const copyByShot = new Map();
+    copyPoints.forEach((point, pointIndex) => {
+      const shotIndex = Math.min(shotCount - 1, Math.floor(pointIndex * shotCount / Math.max(1, copyPoints.length)));
+      const current = copyByShot.get(shotIndex) || [];
+      current.push(point);
+      copyByShot.set(shotIndex, current);
+    });
+    return plans.map((plan, index) => {
+      const assigned = byShot.get(index) || copyByShot.get(index) || [];
+      const caption = assigned.join(' · ') || plan.caption;
+      const chars = Array.from(caption);
+      return chars.length > 48 ? chars.slice(0, 47).join('') + '…' : caption;
+    });
   }
 
   $('xzw-build-preview').addEventListener('click', () => {
