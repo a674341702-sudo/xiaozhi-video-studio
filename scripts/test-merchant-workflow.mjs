@@ -142,6 +142,7 @@ assert.ok(!autoWorkflowSource.includes("if (briefText && !requirements.length) i
 assert.ok(!autoWorkflowSource.includes("requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)"), 'optional checklist confirmations must not block the simple photo-plus-copy workflow');
 assert.match(autoWorkflowSource, /String\(profile\.copy \|\| ''\)\.split/, 'merchant copy must be split into usable caption points');
 assert.ok(autoWorkflowSource.includes('copyByShot.get(index)'), 'merchant copy points must be distributed across generated shot captions');
+assert.ok(autoWorkflowSource.includes("$('xzw-build-preview').click();") && autoWorkflowSource.includes('if (!productionPreviewReady) return;'), 'auto video generation must run preflight checks automatically instead of forcing a separate preview click');
 assert.ok(autoWorkflowSource.includes("split(/[\\n。！？!?；;]+/)"), 'merchant copy must split actual newline characters as well as sentence punctuation');
 assert.ok(!autoWorkflowSource.includes("split(/[\\\\n。！？!?；;]+/)"), 'merchant copy splitting must not treat the letter n as a separator');
 
