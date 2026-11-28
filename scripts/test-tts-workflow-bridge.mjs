@@ -13,6 +13,22 @@ assert.doesNotMatch(workflow, /tts-lab\.html|xzw-send-tts|Hugging Face|esm\.sh/i
   '商家工作台不能再暴露依赖境外下载的旧配音实验室');
 assert.match(workflow, /id="xzw-voice" type="file" accept="audio\/\*"/,
   '工作台必须保留本机录音或已有配音文件导入');
+assert.match(workflow, /id="xzw-record-start"/,
+  '工作台必须提供手机端直接录音入口');
+assert.match(workflow, /id="xzw-record-stop"/,
+  '工作台必须提供停止录音并使用的入口');
+assert.match(workflow, /navigator\.mediaDevices\?\.getUserMedia/,
+  '录音必须使用浏览器本机麦克风能力');
+assert.match(workflow, /echoCancellation: true, noiseSuppression: true, autoGainControl: true/,
+  '录音应请求浏览器基础回声与噪声抑制');
+assert.match(workflow, /new File\(\[blob\], '小智手机录音\.'/,
+  '录音结果必须进入现有配音文件导入流程');
+assert.match(workflow, /URL\.revokeObjectURL\(voicePreviewUrl\)/,
+  '录音试听 URL 必须在清理时释放，避免手机内存泄漏');
+assert.match(workflow, /window\.isSecureContext/,
+  '录音前必须检查 HTTPS 安全上下文');
+assert.match(workflow, /40 \* 1024 \* 1024/,
+  '录音文件必须限制在手机端40MB以内');
 assert.match(workflow, /已停用需要境外下载的旧配音引擎/,
   '工作台必须清楚说明旧境外配音引擎已停用');
 assert.doesNotMatch(worker, /unpkg\.com|jsdelivr\.net|Hugging Face|esm\.sh/i,
