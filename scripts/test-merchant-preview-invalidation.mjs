@@ -9,6 +9,7 @@ const profileBlock = source.slice(listeners, source.indexOf('const readProfile',
 assert.match(profileBlock, /addEventListener\('input', invalidateProductionPreview\)/);
 assert.match(profileBlock, /addEventListener\('change', invalidateProductionPreview\)/);
 assert.match(profileBlock, /xzw-captions/);
+assert.match(profileBlock, /xzw-narration/);
 assert.match(profileBlock, /captionsManuallyEdited = true/);
 assert.match(profileBlock, /xzw-requirements/);
 assert.match(profileBlock, /xzw-media-map/);
