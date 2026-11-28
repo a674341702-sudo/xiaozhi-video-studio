@@ -212,3 +212,17 @@ MOSS-TTS-Nano 暂不进入商家主流程；它的参考音频/声音克隆能�
 实验产物清单采用文件级 SHA-256 和字节数记录，排除清单自身，避免自引用校验。模型解压后会逐项检查 model-steps-3.onnx、tokens.txt、lexicon.txt、phone.fst、date.fst、number.fst；缺少任何文件即终止。
 
 此浏览器冒烟测试仍运行在 GitHub Actions 的 Linux Chromium 环境。它能验证构建包在标准桌面 Chromium 上的真实推理路径，但不能替代 Android 低内存手机、微信内置浏览器或中国大陆网络验收。实验工作流必须手动触发，不会自动部署。
+
+## 2026-11-29：现有配音轨的 WAV 接口适配器
+
+新增 `src/tts/wav-audio.js`，为后续接入 sherpa-onnx Worker 生成结果准备纯本地音频转换层：
+- 接收 Worker 返回的单声道 `Float32Array` 和采样率；
+- 编码成标准 PCM16 WAV Blob，并可包装成浏览器 `File`；
+- 校验输入类型、采样率范围和非有限数值；
+- 对样本限幅，避免超出 [-1, 1] 时 PCM 溢出；
+- 计算 RMS，拒绝静音/近静音输出，避免把无声文件送入现有配音轨；
+- 不调用网络、不写存储、不创建 AudioContext。
+
+新增 `scripts/test-tts-wav-audio.mjs`，覆盖 RIFF/WAVE 头、单声道、采样率、16-bit PCM、样本边界、无效输入、静音拒绝和 File 命名；已加入构建回归测试。
+
+**边界：** 这是已经测试的格式适配器，不是已完成的 TTS Worker 集成。尚未把实验模型结果自动注入商家工作台的 `pendingVoiceFile`，因为实验 WASM 尚未在真实运行环境生成并验证中文音频；等模型端到端测试通过后再接线，避免把未验证模型接入现有 MP4 导出流程。
