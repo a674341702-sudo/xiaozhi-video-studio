@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -112,3 +112,12 @@ console.log('商家活动与地址优先保留测试通过');
 const autoWorkflowSource = readFileSync(new URL('../src/auto-workflow.js', import.meta.url), 'utf8');
 assert.ok(autoWorkflowSource.includes('.xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}\n    .xzw-template-guide{'), '模板说明样式必须通过真实换行与前一条 CSS 规则分隔');
 console.log('商家工作流模板说明 CSS 分隔测试通过');
+
+
+assert.equal(suggestMerchantShotIndex('门头照片.jpg', ['开场门店亮相', '招牌展示']), 0);
+assert.equal(suggestMerchantShotIndex('招牌菜特写.png', ['开场门店亮相', '招牌展示']), 1);
+assert.equal(suggestMerchantShotIndex('环境大厅.jpg', ['产品亮相', '空间展示']), 1);
+assert.equal(suggestMerchantShotIndex('IMG_20261128_123456.jpg', ['开场门店亮相', '招牌展示']), null, '无语义文件名必须留待人工确认');
+assert.equal(suggestMerchantShotIndex('unknown.mp4', ['开场门店亮相', '招牌展示']), null, '不能仅因视频素材位置自动猜测镜头用途');
+assert.equal(suggestMerchantShotIndex('优惠菜单.png', ['产品亮相', '空间展示']), null, '没有匹配的镜头角色时不得强行分配');
+console.log('素材镜头用途建议与待确认状态测试通过');
