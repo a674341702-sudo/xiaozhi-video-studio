@@ -175,3 +175,27 @@ export function prioritizeMerchantNarrationLines({
     disclaimer
   ].map(line => String(line || '').trim()).filter(Boolean);
 }
+
+
+/**
+ * Suggest a shot only when the filename contains a recognizable hint.
+ * Unknown filenames must remain unassigned for explicit human confirmation.
+ */
+export function suggestMerchantShotIndex(fileName, planRoles = []) {
+  const name = String(fileName || '').toLowerCase();
+  const rules = [
+    [/菜品|招牌菜|餐饮|餐品|产品|商品|主打|特写/, /招牌展示|产品亮相|核心产品|核心细节|服务项目/],
+    [/门头|招牌|外观|入口|店面|logo/, /开场|门店亮相|外观位置|空间展示|氛围开场/],
+    [/环境|大厅|房间|装修|内景|店内/, /环境|空间|房间全景|公共空间/],
+    [/制作|过程|操作|服务|体验/, /制作过程|服务过程|操作细节|现场过程/],
+    [/价格|菜单|优惠|活动|套餐/, /活动信息|消费信息|规格展示/],
+    [/地址|定位|地图|交通|电话/, /到店引导|预约引导|购买引导|预订引导/]
+  ];
+  const roles = Array.from(planRoles || []).map(role => typeof role === 'string' ? role : String(role?.role || ''));
+  for (const [filePattern, rolePattern] of rules) {
+    if (!filePattern.test(name)) continue;
+    const index = roles.findIndex(role => rolePattern.test(role));
+    if (index >= 0) return index;
+  }
+  return null;
+}
