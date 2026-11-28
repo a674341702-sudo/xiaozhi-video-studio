@@ -407,6 +407,11 @@ export function validateCompositionMedia(composition) {
   if (!composition || !Array.isArray(composition.clips)) {
     throw new Error('项目时间线数据无效，请重新打开项目后重试。');
   }
+  // Audio-only or empty timelines otherwise produce a valid-looking black MP4.
+  // A text card is a legitimate visual composition, so include text clips here.
+  if (!composition.clips.some(clip => ['video', 'image', 'text'].includes(clip.type))) {
+    throw new Error('时间线上还没有画面内容，请先添加照片、视频或字幕片段后再导出。');
+  }
   const mediaClips = composition.clips.filter(clip => ['video', 'image', 'audio'].includes(clip.type));
   for (const clip of mediaClips) {
     const label = clip.name || '未命名素材';
