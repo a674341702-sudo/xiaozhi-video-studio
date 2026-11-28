@@ -59,3 +59,16 @@ export function prepareSubtitleImportSegments(segments, timelineDuration, option
   result.segments = prepared.map(({ text, startTime, duration }) => ({ text, startTime, duration }));
   return result;
 }
+
+
+/** Shift all subtitle timestamps without mutating the recognition results. */
+export function applySubtitleTimeOffset(segments, offsetSeconds = 0) {
+  const offset = Number(offsetSeconds);
+  const safeOffset = Number.isFinite(offset) ? offset : 0;
+  if (!Array.isArray(segments)) return [];
+  return segments.map(segment => ({
+    ...segment,
+    start: Number(segment?.start) + safeOffset,
+    end: Number(segment?.end) + safeOffset
+  }));
+}
