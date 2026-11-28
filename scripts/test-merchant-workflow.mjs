@@ -80,7 +80,7 @@ assert.equal(voiceMix.voice, 1);
 assert.equal(voiceMix.music, 0.12);
 assert.equal(voiceMix.video, 0.12);
 const musicOnlyMix = getMerchantAudioMix({ hasVoice: false, keepOriginalAudio: false });
-assert.equal(musicOnlyMix.music, 0.22);
+assert.equal(musicOnlyMix.music, 0.28);
 assert.equal(musicOnlyMix.video, 0);
 const cameraAudioMix = getMerchantAudioMix({ hasVoice: false, keepOriginalAudio: true });
 assert.equal(cameraAudioMix.video, 0.7);
