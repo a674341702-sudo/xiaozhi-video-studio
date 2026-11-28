@@ -14,4 +14,7 @@ assert.match(profileBlock, /xzw-requirements/);
 assert.match(profileBlock, /xzw-media-map/);
 assert.match(profileBlock, /xzw-ratio/);
 assert.match(profileBlock, /xzw-branded-outro/);
+for (const id of ['xzw-music', 'xzw-voice', 'xzw-original-audio', 'xzw-music-volume', 'xzw-voice-volume', 'xzw-video-volume']) {
+  assert.match(profileBlock, new RegExp(id), `${id} must invalidate the previous production preview`);
+}
 console.log('Merchant production preview invalidation tests passed.');
