@@ -25,7 +25,7 @@ export function initReferenceVideoStudio(workflowModal) {
   `;
   anchor.parentNode.insertBefore(section, anchor.nextSibling);
 
-  const $ = id => section.querySelector('#' + id);
+  const $ = id => { const element = section.querySelector('#' + id); if (!element) throw new Error('参考视频模块缺少页面元素 #' + id); return element; };
   const fileInput = $('xzw-reference-file');
   const player = $('xzw-reference-player');
   const meta = $('xzw-reference-meta');
