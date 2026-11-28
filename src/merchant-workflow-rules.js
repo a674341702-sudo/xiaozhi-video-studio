@@ -147,5 +147,5 @@ export function limitNarrationLines(lines = [], maxChars = 480) {
     break;
   }
 
-  return { lines: result, text: result.join('\\n'), truncated, omittedLines, totalLines: source.length };
+  return { lines: result, text: result.join('\n'), truncated, omittedLines, totalLines: source.length };
 }
