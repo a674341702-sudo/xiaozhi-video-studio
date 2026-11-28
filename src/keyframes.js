@@ -109,3 +109,9 @@ export function getClipPlaybackState(clip, timelineTime, mediaDuration = Infinit
     timelineEnd: start + duration
   };
 }
+
+/** HTMLMediaElement.volume is restricted by browsers to the inclusive 0..1 range. */
+export function getMediaElementVolume(gain) {
+  const value = Number(gain);
+  return Number.isFinite(value) ? Math.max(0, Math.min(1, value)) : 1;
+}
