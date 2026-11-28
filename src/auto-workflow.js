@@ -597,8 +597,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       copyByShot.set(shotIndex, current);
     });
     return plans.map((plan, index) => {
-      const assigned = byShot.get(index) || copyByShot.get(index) || [];
-      const caption = assigned.join(' · ') || plan.caption;
+      const assigned = [ ...(copyByShot.get(index) || []), ...(byShot.get(index) || []) ];
+      const caption = mergeCaptionRequirements('', assigned) || plan.caption;
       const chars = Array.from(caption);
       return chars.length > 48 ? chars.slice(0, 47).join('') + '…' : caption;
     });
