@@ -6,6 +6,7 @@
 import { FFmpeg } from '@ffmpeg/ffmpeg';
 import { fetchFile, toBlobURL } from '@ffmpeg/util';
 import { evaluateKeyframes } from './keyframes.js';
+import { appendBoundedExportLog } from './export-log-buffer.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -522,7 +523,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
     const logMessages = [];
     const logCb = ({ message }) => {
-      logMessages.push(message);
+      appendBoundedExportLog(logMessages, message);
       console.log('[ffmpeg]', message);
     };
     ffmpeg.on('log', logCb);
