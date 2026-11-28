@@ -1,3 +1,4 @@
+import { createAudioMasterBus } from './audio-master-bus.js';
 /**
  * High-Quality Offline FFmpeg Composition Exporter
  * Renders composition frames headlessly and mixes audio tracks via Web Audio,
@@ -220,6 +221,7 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
   if (audioClips.length === 0) return null;
 
   const offlineCtx = new OfflineAudioContext(channels, length, sampleRate);
+  const masterBus = createAudioMasterBus(offlineCtx);
 
   let decodedCount = 0;
   for (let i = 0; i < audioClips.length; i++) {
@@ -269,7 +271,7 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
       }
 
       source.connect(gain);
-      gain.connect(offlineCtx.destination);
+      gain.connect(masterBus.node || offlineCtx.destination);
 
       source.start(playback.start, playback.offset, playback.duration);
 

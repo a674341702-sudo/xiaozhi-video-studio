@@ -3,6 +3,8 @@
  * while a Web Audio GainNode can safely apply the editor's supported gain range.
  * If Web Audio is unavailable or routing fails, callers can use native volume fallback.
  */
+import { createAudioMasterBus } from './audio-master-bus.js';
+
 export class LiveAudioMixer {
   constructor({ audioContextFactory } = {}) {
     this.audioContextFactory = audioContextFactory || (() => {
@@ -10,6 +12,7 @@ export class LiveAudioMixer {
       return Context ? new Context() : null;
     });
     this.context = null;
+    this.masterBus = null;
     this.routes = new WeakMap();
   }
 
@@ -23,16 +26,22 @@ export class LiveAudioMixer {
     return this.context;
   }
 
+  _getMasterBus(context) {
+    if (!this.masterBus) this.masterBus = createAudioMasterBus(context);
+    return this.masterBus;
+  }
+
   connect(element) {
     if (!element || typeof element !== 'object') return false;
     if (this.routes.has(element)) return true;
     const context = this._getContext();
     if (!context?.createMediaElementSource || !context?.createGain || !context.destination) return false;
     let source = null;
+    const output = this._getMasterBus(context).node || context.destination;
     try {
-      // Prepare the output side before taking ownership of the media element.
+      // Prepare the shared protected output before taking ownership of the media element.
       const gain = context.createGain();
-      gain.connect(context.destination);
+      gain.connect(output);
       source = context.createMediaElementSource(element);
       source.connect(gain);
       this.routes.set(element, { source, gain });
@@ -42,7 +51,7 @@ export class LiveAudioMixer {
       // Web Audio. Preserve audible playback with a direct unity-gain path.
       if (source) {
         try {
-          source.connect(context.destination);
+          source.connect(output);
           this.routes.set(element, { source, gain: null });
           return true;
         } catch {

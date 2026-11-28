@@ -7,6 +7,11 @@ function createFakeContext() {
     state: 'suspended',
     currentTime: 4,
     destination: {},
+    createDynamicsCompressor() {
+      const node = { threshold: { value: 0 }, knee: { value: 0 }, ratio: { value: 0 }, attack: { value: 0 }, release: { value: 0 }, connect() { calls.connected++; } };
+      calls.masterBus = node;
+      return node;
+    },
     createMediaElementSource() {
       calls.sources++;
       return { connect() { calls.connected++; } };
@@ -29,6 +34,9 @@ const { context, calls } = createFakeContext();
 const mixer = new LiveAudioMixer({ audioContextFactory: () => context });
 const element = {};
 assert.equal(mixer.connect(element), true);
+assert.equal(mixer.masterBus.limited, true, 'live preview should route through a shared peak-control stage');
+assert.equal(calls.masterBus.threshold.value, -3);
+assert.equal(calls.masterBus.ratio.value, 12);
 assert.equal(mixer.connect(element), true, 'same media element must reuse its existing source node');
 assert.equal(calls.sources, 1, 'a media element source can only be created once');
 assert.equal(mixer.setGain(element, 1.5), true);
