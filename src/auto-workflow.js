@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -529,16 +529,19 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const product = String(profile.product || '').trim();
     const offer = String(profile.offer || '').trim();
     const address = String(profile.address || '').trim();
-    const lines = [];
-    if (profile.style === '高级质感') lines.push(shop ? '镜头慢慢展开，带你认识' + shop + '。' : '镜头慢慢展开，带你看看本次商家实拍。');
-    else if (profile.style === '活泼种草') lines.push(shop ? '今天来看看' + shop + '。' : '今天来看看这组商家实拍。');
-    else if (profile.style === '促销转化' && offer) lines.push('商家提供的活动信息：' + offer + '。');
-    else lines.push(shop ? '今天带你了解' + shop + '。' : '跟着镜头，了解商家现场。');
-    if (product) lines.push((shop ? shop + '主打' : '本次重点介绍') + product + '。');
-    for (const point of getMerchantContentPoints(profile)) lines.push(point.endsWith('。') ? point : point + '。');
-    if (offer && profile.style !== '促销转化') lines.push('商家提供的活动信息：' + offer + '。');
-    if (address) lines.push('门店地址：' + address + '。');
-    lines.push('具体产品信息、价格及活动规则，请以商家实际说明为准。');
+    let intro = '';
+    if (profile.style === '高级质感') intro = shop ? '镜头慢慢展开，带你认识' + shop + '。' : '镜头慢慢展开，带你看看本次商家实拍。';
+    else if (profile.style === '活泼种草') intro = shop ? '今天来看看' + shop + '。' : '今天来看看这组商家实拍。';
+    else if (profile.style === '促销转化' && offer) intro = '商家提供的活动信息：' + offer + '。';
+    else intro = shop ? '今天带你了解' + shop + '。' : '跟着镜头，了解商家现场。';
+    const lines = prioritizeMerchantNarrationLines({
+      intro,
+      product: product ? (shop ? shop + '主打' : '本次重点介绍') + product + '。' : '',
+      offer: offer && profile.style !== '促销转化' ? '商家提供的活动信息：' + offer + '。' : '',
+      address: address ? '门店地址：' + address + '。' : '',
+      contentPoints: getMerchantContentPoints(profile),
+      disclaimer: '具体产品信息、价格及活动规则，请以商家实际说明为准。'
+    });
     const limited = limitNarrationLines(lines, 480);
     narrationDraftOmittedLines = limited.omittedLines;
     narrationDraftTruncated = limited.truncated;
