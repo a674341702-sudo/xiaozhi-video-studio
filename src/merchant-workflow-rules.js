@@ -98,10 +98,17 @@ export function validateMerchantMediaFiles(files, options = {}) {
     if (!isImage && !isVideo) {
       return { valid: false, message: '“' + (file.name || '未命名文件') + '”格式暂不支持。请使用 JPG、PNG、WEBP 图片或 MP4、WEBM、MOV 视频。' };
     }
-    if (isVideo && file.size > maxVideoBytes) {
+    const fileBytes = Number(file.size);
+    if (!Number.isSafeInteger(fileBytes) || fileBytes <= 0) {
+      return { valid: false, message: '“' + (file.name || '未命名文件') + '”文件为空或大小异常，请重新选择原始素材。' };
+    }
+    if (isVideo && fileBytes > maxVideoBytes) {
       return { valid: false, message: '视频“' + file.name + '”超过40MB。请先压缩视频，或换一段较短的视频。' };
     }
-    totalBytes += Number(file.size) || 0;
+    totalBytes += fileBytes;
+    if (!Number.isSafeInteger(totalBytes)) {
+      return { valid: false, message: '素材总大小异常，请减少素材数量或重新选择文件。' };
+    }
   }
   if (totalBytes > maxTotalBytes) {
     return { valid: false, message: '本次素材总量超过160MB。请减少素材数量或压缩较大的文件，避免手机内存不足。' };
