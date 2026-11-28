@@ -68,3 +68,17 @@ export function getSubtitlePositionLayout(width, height, position = 'bottom', op
   layout.y = Math.max(0, Math.min(h - layout.height, layout.y));
   return layout;
 }
+
+
+/**
+ * Limit wrapped text to the space available in its clip, with an optional
+ * per-clip line cap (used by generated subtitles to keep captions concise).
+ */
+export function getTextClipLineLimit(height, fontSize, configuredMaxLines = null) {
+  const h = Math.max(1, Number(height) || 1);
+  const size = Math.max(12, Number(fontSize) || 36);
+  const verticalPadding = Math.max(4, Math.round(size * 0.18));
+  const fit = Math.max(1, Math.floor((h - verticalPadding * 2) / (size * 1.2)));
+  const configured = Number(configuredMaxLines);
+  return Number.isInteger(configured) && configured > 0 ? Math.min(fit, configured) : fit;
+}
