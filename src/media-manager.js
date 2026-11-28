@@ -330,7 +330,12 @@ export class MediaManager {
       return null;
     }
 
-    const dur = getPreciseMediaDuration(audio.duration, 10);
+    if (!isUsableMediaDuration(audio.duration)) {
+      cleanupFailedMediaElement(audio, objectUrl, 'audio');
+      showToast('无法读取这段音频的真实时长。请换成可正常播放的 MP3 或 WAV 文件后重试。', 'error');
+      return null;
+    }
+    const dur = getPreciseMediaDuration(audio.duration);
 
     let audioTrack = this.comp.tracks.find(t => t.type === 'audio');
     if (trackIndex !== null) {
