@@ -114,12 +114,17 @@ function bindHomeDashboard() {
       document.getElementById('btn-project-library')?.click();
       return;
     }
-    const launcher = document.getElementById('xiaozhi-workflow-launcher');
-    if (!launcher) {
-      showToast('制作工作台正在加载，请稍后再试。', 'warning');
+
+    // Open the workflow modal directly. The floating launcher is deliberately
+    // hidden on the home screen, so relying on its synthetic click is fragile
+    // on mobile browsers and can leave the upload cards appearing unresponsive.
+    const modal = document.getElementById('xiaozhi-workflow');
+    if (!modal) {
+      showToast('商家制作工作台正在加载，请稍后再试。', 'warning');
       return;
     }
-    launcher.click();
+    modal.classList.add('open');
+
     const targets = {
       viral: 'xzw-reference-studio',
       smart: 'xzw-files',
@@ -127,9 +132,21 @@ function bindHomeDashboard() {
       document: 'xzw-brief-file'
     };
     const target = document.getElementById(targets[action]);
-    if (target) {
-      target.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      if (action === 'materials' || action === 'document') target.focus({ preventScroll: true });
+    if (!target) {
+      showToast('对应的上传区域还没有准备好，请稍后再试。', 'warning');
+      return;
+    }
+
+    const section = target.closest('.xzw-section') || target;
+    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    if (action === 'materials') {
+      // The card means "upload merchant media", so open the native picker
+      // directly from the user's tap instead of merely focusing a hidden input.
+      target.click();
+    } else if (action === 'document') {
+      target.click();
+    } else {
+      target.focus({ preventScroll: true });
     }
   });
 }
