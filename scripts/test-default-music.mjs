@@ -4,10 +4,27 @@ import {
   DEFAULT_MUSIC_SAMPLE_RATE,
   getDefaultMusicChordPlan,
   encodeAudioBufferAsWav,
-  createDefaultMusicFile
+  createDefaultMusicFile,
+  normalizeAudioBufferPeak
 } from '../src/default-music.js';
 
 const plan = getDefaultMusicChordPlan();
+const normalizationChannels = [
+  Float32Array.from([0.1, -0.05, 0.025]),
+  Float32Array.from([0.02, -0.08, 0.04])
+];
+const normalization = normalizeAudioBufferPeak({
+  numberOfChannels: 2,
+  length: 3,
+  getChannelData: index => normalizationChannels[index]
+}, 0.85);
+assert.ok(Math.abs(normalizationChannels[0][0] - 0.85) < 1e-6,
+  'generated music should be normalized before the timeline gain is applied');
+assert.ok(Math.abs(Math.max(...normalizationChannels.flatMap(channel => Array.from(channel, Math.abs))) - 0.85) < 1e-6,
+  'normalization must target a safe peak without clipping');
+assert.equal(normalizeAudioBufferPeak({
+  numberOfChannels: 1, length: 2, getChannelData: () => new Float32Array(2)
+}).gain, 1, 'silence must remain silence');
 assert.equal(plan.length, 4, 'the original ambient bed should use a four-chord loop');
 assert.equal(plan[0].start, 0);
 assert.equal(plan.at(-1).end, DEFAULT_MUSIC_LOOP_SECONDS);
@@ -92,6 +109,14 @@ try {
   assert.equal(generated.name, 'xiaozhi-original-ambient-bed.wav');
   assert.equal(generated.type, 'audio/wav');
   assert.ok(generated.size > 44, 'generated file must contain PCM audio data');
+  const generatedWav = new DataView(await generated.arrayBuffer());
+  const generatedPcmPeak = Math.max(
+    Math.abs(generatedWav.getInt16(44, true) / 32768),
+    Math.abs(generatedWav.getInt16(46, true) / 32768),
+    Math.abs(generatedWav.getInt16(48, true) / 32768),
+    Math.abs(generatedWav.getInt16(50, true) / 32768)
+  );
+  assert.ok(generatedPcmPeak > 0.8, 'generated background music must not be nearly silent before timeline volume control');
 } finally {
   if (originalOffline === undefined) delete globalThis.OfflineAudioContext;
   else globalThis.OfflineAudioContext = originalOffline;
