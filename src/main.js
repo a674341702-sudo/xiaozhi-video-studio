@@ -28,6 +28,7 @@ import { getLocalStorageFailureMessage } from './local-storage-diagnostics.js';
 import { revokeProxy } from './proxy.js';
 import { assertProjectMediaComplete } from './project-media-integrity.js';
 import { buildProjectMediaRestorePlan } from './project-media-restore-plan.js';
+import { HOME_ACTION_TARGETS } from './home-action-targets.js';
 
 // --- Global State ---
 let composition = null;
@@ -129,13 +130,7 @@ function bindHomeDashboard() {
     }
     modal.classList.add('open');
 
-    const targets = {
-      viral: 'xzw-reference-studio',
-      smart: 'xzw-files',
-      materials: 'xzw-files',
-      document: 'xzw-brief-file'
-    };
-    const target = document.getElementById(targets[action]);
+    const target = document.getElementById(HOME_ACTION_TARGETS[action]);
     if (!target) {
       showToast('对应的上传区域还没有准备好，请稍后再试。', 'warning');
       return;
