@@ -182,6 +182,7 @@ console.log('视频镜头真实时长边界测试通过');
 const restrictionUiSource = readFileSync(new URL('../src/auto-workflow.js', import.meta.url), 'utf8');
 assert.ok(restrictionUiSource.includes('系统不会自动审查画面'), '禁止项确认必须明确说明画面由人工核查');
 assert.ok(restrictionUiSource.includes('系统不会自动识别画面是否违规'), '制作预览必须提醒限制项不会自动进行画面审查');
+assert.match(restrictionUiSource, /textarea\.addEventListener\('input', \(\) => \{[\s\S]*?confirmed\.checked = false;[\s\S]*?invalidateProductionPreview\(\);[\s\S]*?\}\);/, 'editing a confirmed merchant requirement must revoke its previous approval');
 console.log('商家限制项人工画面核查提示测试通过');
 
 

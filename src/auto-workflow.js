@@ -483,7 +483,12 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         ? '已核对这条限制；系统不会自动审查画面，请人工确保素材不违反（不会作为字幕）'
         : '已核对这条要求，内容准确且可以用于宣传';
       confirmation.append(confirmed, confirmationText);
-      textarea.addEventListener('input', invalidateProductionPreview);
+      textarea.addEventListener('input', () => {
+        // Editing a previously confirmed merchant fact invalidates that approval.
+        // Require a fresh human check before the changed wording can enter a video.
+        confirmed.checked = false;
+        invalidateProductionPreview();
+      });
       select.addEventListener('change', invalidateProductionPreview);
       confirmed.addEventListener('change', invalidateProductionPreview);
       card.append(label, textarea, select, confirmation);
