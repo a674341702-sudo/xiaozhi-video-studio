@@ -381,6 +381,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     captionsManuallyEdited = true;
     invalidateProductionPreview();
   });
+  // The narration is separate from on-screen captions and may be edited after
+  // the preview, so changing it must also invalidate the approved snapshot.
+  $('xzw-narration').addEventListener('input', invalidateProductionPreview);
+  $('xzw-narration').addEventListener('change', invalidateProductionPreview);
   $('xzw-requirements').addEventListener('input', invalidateProductionPreview);
   $('xzw-requirements').addEventListener('change', invalidateProductionPreview);
   $('xzw-media-map').addEventListener('change', event => {
