@@ -276,6 +276,21 @@ export function suggestMerchantShotIndex(fileName, planRoles = []) {
  * Order confirmed media assignments by the shot plan, preserving upload order
  * for multiple files assigned to the same shot.
  */
+/**
+ * Fill blank merchant shot selections with a deterministic upload-order fallback.
+ * Explicit valid shot choices are preserved; invalid file indexes are discarded.
+ */
+export function resolveMerchantMediaAssignments(assignments = [], shotCount = 1) {
+  const count = Math.max(1, Math.floor(Number(shotCount) || 1));
+  return Array.from(assignments || []).filter(item => item && Number.isInteger(item.fileIndex) && item.fileIndex >= 0)
+    .map(item => ({
+      fileIndex: item.fileIndex,
+      shotIndex: Number.isInteger(item.shotIndex) && item.shotIndex >= 0
+        ? item.shotIndex
+        : item.fileIndex % count
+    }));
+}
+
 export function orderMerchantMediaAssignments(assignments = []) {
   return Array.from(assignments || [])
     .filter(item => item && Number.isInteger(item.fileIndex) && Number.isInteger(item.shotIndex) && item.shotIndex >= 0)
