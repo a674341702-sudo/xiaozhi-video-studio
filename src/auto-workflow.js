@@ -641,8 +641,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const files = orderedMediaFiles;
     const profile = readProfile();
     if (!productionPreviewReady) {
-      setStatus('请先点击“先生成制作预览 / 检查遗漏”，确认素材可以正常使用后再编排。');
-      return;
+      // Run the same safety checks automatically so the merchant's normal path
+      // is one click: upload materials, add copy, then make the video.
+      $('xzw-build-preview').click();
+      if (!productionPreviewReady) return;
     }
     if (!files.length) { setStatus('请先上传至少一张照片或一段视频。'); return; }
     if (files.length > 8) { setStatus('首版手机模式每次最多8个素材，建议先挑最能展示门店的素材。'); return; }
