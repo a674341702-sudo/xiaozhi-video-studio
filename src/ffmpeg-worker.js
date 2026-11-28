@@ -552,6 +552,12 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     offscreenCanvas.width = width;
     offscreenCanvas.height = height;
     const offCtx = offscreenCanvas.getContext('2d');
+    if (!offCtx) {
+      offscreenCanvas.width = 0;
+      offscreenCanvas.height = 0;
+      offscreenCanvas = null;
+      throw new Error('手机浏览器无法创建视频渲染画布。请关闭其他占用内存的页面后重试，或降低导出分辨率。');
+    }
 
     const totalFrames = Math.ceil(duration * fps);
     const frameDuration = 1 / fps;
