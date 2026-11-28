@@ -26,8 +26,8 @@ for (const token of [
   'modelType=2',
   '512MB',
   'piper-phonemize',
-  'mainland',
-  'commercial license',
+  '中国大陆',
+  '商用范围',
   'workflow_dispatch'
 ]) assert.ok(doc.toLowerCase().includes(token.toLowerCase()), 'technical record missing: '+token);
 
