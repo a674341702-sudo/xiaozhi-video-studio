@@ -1,6 +1,7 @@
 /**
- * Creates a short, original ambient music bed locally in the browser.
- * No third-party track, network request, or external music license is involved.
+ * Creates a short, original instrumental bed locally in the browser.
+ * The arrangement uses a warm filtered pad, soft bass and a repeating plucked
+ * arpeggio. It makes no network request and uses no third-party music sample.
  */
 export const DEFAULT_MUSIC_SAMPLE_RATE = 22050;
 export const DEFAULT_MUSIC_LOOP_SECONDS = 12;
@@ -82,6 +83,69 @@ export function normalizeAudioBufferPeak(buffer, targetPeak = 0.85) {
   return { peak, targetPeak: peak > 0 ? target : 0, gain: peak > 0 ? target / peak : 1 };
 }
 
+function schedulePad(context, destination, chord) {
+  for (const [index, frequency] of chord.notes.entries()) {
+    const oscillator = context.createOscillator();
+    const filter = context.createBiquadFilter();
+    const envelope = context.createGain();
+    oscillator.type = 'triangle';
+    oscillator.frequency.value = frequency;
+    filter.type = 'lowpass';
+    filter.frequency.value = 720;
+    filter.Q.value = 0.55;
+    const level = index === 0 ? 0.045 : 0.032;
+    envelope.gain.setValueAtTime(0.0001, chord.start);
+    envelope.gain.linearRampToValueAtTime(level, chord.start + 0.65);
+    envelope.gain.setValueAtTime(level, chord.end - 0.55);
+    envelope.gain.linearRampToValueAtTime(0.0001, chord.end);
+    oscillator.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(destination);
+    oscillator.start(chord.start);
+    oscillator.stop(chord.end + 0.01);
+  }
+}
+
+function scheduleBass(context, destination, chord) {
+  const oscillator = context.createOscillator();
+  const envelope = context.createGain();
+  oscillator.type = 'sine';
+  oscillator.frequency.value = chord.notes[0] / 2;
+  envelope.gain.setValueAtTime(0.0001, chord.start);
+  envelope.gain.linearRampToValueAtTime(0.055, chord.start + 0.12);
+  envelope.gain.setValueAtTime(0.055, chord.end - 0.2);
+  envelope.gain.linearRampToValueAtTime(0.0001, chord.end);
+  oscillator.connect(envelope);
+  envelope.connect(destination);
+  oscillator.start(chord.start);
+  oscillator.stop(chord.end + 0.01);
+}
+
+function schedulePluck(context, destination, chord, chordIndex) {
+  // A gentle four-note pattern adds movement without a harsh drum transient.
+  const pattern = [0, 2, 1, 3];
+  for (let beat = 0; beat < 4; beat++) {
+    const start = chord.start + beat * 0.75 + (chordIndex % 2) * 0.08;
+    const frequency = chord.notes[pattern[beat]] * 2;
+    const oscillator = context.createOscillator();
+    const filter = context.createBiquadFilter();
+    const envelope = context.createGain();
+    oscillator.type = 'triangle';
+    oscillator.frequency.value = frequency;
+    filter.type = 'lowpass';
+    filter.frequency.value = 1800;
+    filter.Q.value = 0.45;
+    envelope.gain.setValueAtTime(0.0001, start);
+    envelope.gain.linearRampToValueAtTime(0.022, start + 0.018);
+    envelope.gain.exponentialRampToValueAtTime(0.0001, start + 0.52);
+    oscillator.connect(filter);
+    filter.connect(envelope);
+    envelope.connect(destination);
+    oscillator.start(start);
+    oscillator.stop(start + 0.55);
+  }
+}
+
 export async function createDefaultMusicFile() {
   const OfflineContext = globalThis.OfflineAudioContext || globalThis.webkitOfflineAudioContext;
   if (!OfflineContext || typeof globalThis.File !== 'function') return null;
@@ -89,28 +153,14 @@ export async function createDefaultMusicFile() {
   const frameCount = sampleRate * DEFAULT_MUSIC_LOOP_SECONDS;
   const context = new OfflineContext(2, frameCount, sampleRate);
   const master = context.createGain();
-  master.gain.value = 0.72;
+  master.gain.value = 0.78;
   master.connect(context.destination);
 
-  for (const chord of getDefaultMusicChordPlan()) {
-    for (const [noteIndex, frequency] of chord.notes.entries()) {
-      const oscillator = context.createOscillator();
-      const envelope = context.createGain();
-      oscillator.type = 'sine';
-      oscillator.frequency.value = frequency;
-      const start = chord.start;
-      const end = chord.end;
-      const level = noteIndex === 0 ? 0.105 : 0.075;
-      envelope.gain.setValueAtTime(0, start);
-      envelope.gain.linearRampToValueAtTime(level, start + 0.45);
-      envelope.gain.setValueAtTime(level, end - 0.45);
-      envelope.gain.linearRampToValueAtTime(0, end);
-      oscillator.connect(envelope);
-      envelope.connect(master);
-      oscillator.start(start);
-      oscillator.stop(end + 0.01);
-    }
-  }
+  getDefaultMusicChordPlan().forEach((chord, index) => {
+    schedulePad(context, master, chord);
+    scheduleBass(context, master, chord);
+    schedulePluck(context, master, chord, index);
+  });
 
   const rendered = await context.startRendering();
   normalizeAudioBufferPeak(rendered, 0.85);

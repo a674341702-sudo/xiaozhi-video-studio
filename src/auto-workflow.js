@@ -158,7 +158,14 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <h3>04 · 配乐与配音</h3>
         <label class="xzw-field"><span>背景音乐（可上传已获授权音乐；留空自动使用内置原创轻音乐）</span><input id="xzw-music" type="file" accept="audio/*"></label>
         <label class="xzw-field"><span>配音文件（手机录音或中文AI配音文件）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
-        <p class="xzw-note">当前配音入口仅接受本机录音或已有音频文件。旧版在线模型依赖境外下载，已暂时停用；不会要求你购买接口或开通会员。</p>
+        <div class="xzw-section">
+          <strong>也可以直接用手机录旁白</strong>
+          <p class="xzw-note">建议先点击生成配音稿，再安静环境中按稿朗读。录音只在本机处理，不会上传到服务器。</p>
+          <div class="xzw-actions"><button class="xzw-secondary" id="xzw-record-start" type="button">开始录音</button><button class="xzw-secondary" id="xzw-record-stop" type="button" disabled>停止并使用录音</button></div>
+          <p class="xzw-note" id="xzw-record-status" role="status">等待录音。浏览器会请求麦克风权限。</p>
+          <audio id="xzw-record-preview" controls hidden style="width:100%;margin-top:8px"></audio>
+        </div>
+        <p class="xzw-note">旧版在线模型依赖境外下载，已暂时停用；不会要求你购买接口或开通会员。当前还没有自动文字转语音，录音功能用于直接录制真人旁白。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
         <div class="xzw-grid">
           <label class="xzw-field"><span>背景音乐音量（0–50%）</span><input id="xzw-music-volume" type="number" min="0" max="50" step="1" value="28" inputmode="numeric"></label>
@@ -384,9 +391,140 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     roleOptions().length
   );
 
-  // 中文配音实验室通过同源 BroadcastChannel 回传 WAV。
-  // 若主工作台尚未编排时间线，先暂存文件，等自动编排时再加入配音轨。
+  // Mobile-first local voice recording. Audio stays in this browser and is
+  // queued as the same File input used by the existing timeline importer.
   let pendingVoiceFile = null;
+  let voiceRecorder = null;
+  let voiceStream = null;
+  let voiceChunks = [];
+  let voicePreviewUrl = null;
+  let voiceRecordingTimer = null;
+  let voiceRecordingStartedAt = 0;
+  let discardVoiceRecording = false;
+  // Invalidates a pending microphone permission request when the workflow closes.
+  let voiceRequestToken = 0;
+  const formatVoiceRecordingTime = elapsedMs => {
+    const totalSeconds = Math.floor(Math.max(0, elapsedMs) / 1000);
+    return String(Math.floor(totalSeconds / 60)).padStart(2, '0') + ':' + String(totalSeconds % 60).padStart(2, '0');
+  };
+  const stopVoiceRecordingTimer = () => {
+    if (voiceRecordingTimer !== null) clearInterval(voiceRecordingTimer);
+    voiceRecordingTimer = null;
+    voiceRecordingStartedAt = 0;
+  };
+  const stopVoiceTracks = () => {
+    if (voiceStream) voiceStream.getTracks().forEach(track => track.stop());
+    voiceStream = null;
+  };
+  const resetVoicePreview = () => {
+    if (voicePreviewUrl) URL.revokeObjectURL(voicePreviewUrl);
+    voicePreviewUrl = null;
+    const preview = $('xzw-record-preview');
+    preview.pause();
+    preview.removeAttribute('src');
+    preview.hidden = true;
+    preview.load();
+  };
+  $('xzw-record-start').addEventListener('click', async () => {
+    if (!navigator.mediaDevices?.getUserMedia || typeof MediaRecorder === 'undefined') {
+      $('xzw-record-status').textContent = '当前浏览器不支持网页录音。请使用手机系统录音后，通过上方“配音文件”上传。';
+      return;
+    }
+    if (!window.isSecureContext) {
+      $('xzw-record-status').textContent = '浏览器未处于安全连接，无法申请麦克风。请通过 HTTPS 页面打开小智视频。';
+      return;
+    }
+    $('xzw-record-start').disabled = true;
+    $('xzw-record-status').textContent = '正在申请麦克风权限……';
+    const requestToken = ++voiceRequestToken;
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+      });
+      // The user may close the workflow while the browser permission prompt is open.
+      // Never start a recorder for a hidden/stale session; release the granted stream.
+      if (requestToken !== voiceRequestToken || !modal.classList.contains('open')) {
+        stream.getTracks().forEach(track => track.stop());
+        return;
+      }
+      voiceStream = stream;
+      const mimeCandidates = ['audio/webm;codecs=opus', 'audio/mp4', 'audio/webm'];
+      const mimeType = mimeCandidates.find(type => MediaRecorder.isTypeSupported?.(type));
+      voiceRecorder = mimeType ? new MediaRecorder(voiceStream, { mimeType }) : new MediaRecorder(voiceStream);
+      voiceChunks = [];
+      discardVoiceRecording = false;
+      voiceRecorder.ondataavailable = event => {
+        if (event.data?.size) voiceChunks.push(event.data);
+        const total = voiceChunks.reduce((sum, chunk) => sum + chunk.size, 0);
+        if (total > 40 * 1024 * 1024 && voiceRecorder?.state === 'recording') {
+          $('xzw-record-status').textContent = '录音超过40MB，已自动停止。请缩短旁白后重新录制。';
+          voiceRecorder.stop();
+        }
+      };
+      voiceRecorder.onerror = () => {
+        stopVoiceRecordingTimer();
+        stopVoiceTracks();
+        // Prevent a later onstop event from treating a failed partial recording as valid audio.
+        if (voiceRecorder) voiceRecorder.onstop = null;
+        voiceRecorder = null;
+        voiceChunks = [];
+        $('xzw-record-start').disabled = false;
+        $('xzw-record-stop').disabled = true;
+        $('xzw-record-status').textContent = '录音发生错误。请检查麦克风权限，或改用手机系统录音上传。';
+      };
+      voiceRecorder.onstop = () => {
+        stopVoiceRecordingTimer();
+        stopVoiceTracks();
+        $('xzw-record-start').disabled = false;
+        $('xzw-record-stop').disabled = true;
+        const blob = new Blob(voiceChunks, { type: voiceRecorder?.mimeType || 'audio/webm' });
+        voiceRecorder = null;
+        voiceChunks = [];
+        if (discardVoiceRecording) {
+          discardVoiceRecording = false;
+          resetVoicePreview();
+          return;
+        }
+        if (!blob.size || blob.size > 40 * 1024 * 1024) {
+          $('xzw-record-status').textContent = '录音为空或超过40MB，请重新录制。';
+          return;
+        }
+        const extension = blob.type.includes('mp4') ? 'm4a' : 'webm';
+        pendingVoiceFile = new File([blob], '小智手机录音.' + extension, { type: blob.type });
+        $('xzw-voice').value = '';
+        resetVoicePreview();
+        voicePreviewUrl = URL.createObjectURL(blob);
+        const preview = $('xzw-record-preview');
+        preview.src = voicePreviewUrl;
+        preview.hidden = false;
+        $('xzw-record-status').textContent = '录音已保存到本次工作台，可先试听；自动编排时会加入配音轨。';
+        invalidateProductionPreview();
+      };
+      voiceRecorder.start(1000);
+      voiceRecordingStartedAt = Date.now();
+      const updateVoiceRecordingStatus = () => {
+        $('xzw-record-status').textContent = '正在录音 ' + formatVoiceRecordingTime(Date.now() - voiceRecordingStartedAt) + '……请自然朗读配音稿；录音大小上限40MB。';
+      };
+      updateVoiceRecordingStatus();
+      voiceRecordingTimer = setInterval(updateVoiceRecordingStatus, 500);
+      $('xzw-record-stop').disabled = false;
+    } catch (error) {
+      // A rejected permission prompt after closing the modal must not update stale UI.
+      if (requestToken !== voiceRequestToken) return;
+      stopVoiceRecordingTimer();
+      stopVoiceTracks();
+      voiceRecorder = null;
+      $('xzw-record-start').disabled = false;
+      $('xzw-record-stop').disabled = true;
+      $('xzw-record-status').textContent = '无法开启麦克风：' + (error?.name === 'NotAllowedError' ? '请在浏览器设置中允许麦克风权限。' : (error?.message || '未知错误')) + '。也可以用手机系统录音后上传。';
+    }
+  });
+  $('xzw-record-stop').addEventListener('click', () => {
+    if (voiceRecorder?.state === 'recording') {
+      $('xzw-record-status').textContent = '正在整理录音……';
+      voiceRecorder.stop();
+    }
+  });
   const ttsChannel = typeof BroadcastChannel !== 'undefined'
     ? new BroadcastChannel('xiaozhi-tts-audio-v1') : null;
   if (ttsChannel) {
@@ -532,10 +670,21 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     }
   });
   const closeWorkflow = () => {
+    // Closing also cancels any unresolved microphone permission request.
+    voiceRequestToken += 1;
+    $('xzw-record-start').disabled = false;
     // Closing the workflow means the merchant has left this production attempt.
     // Invalidate any async imports so they cannot finish into a hidden, stale session.
     invalidateProductionPreview();
     closeMediaPreview();
+    if (voiceRecorder?.state === 'recording') {
+      discardVoiceRecording = true;
+      voiceRecorder.stop();
+    } else {
+      stopVoiceRecordingTimer();
+      stopVoiceTracks();
+    }
+    resetVoicePreview();
     modal.classList.remove('open');
   };
   launcher.addEventListener('click', () => modal.classList.add('open'));
