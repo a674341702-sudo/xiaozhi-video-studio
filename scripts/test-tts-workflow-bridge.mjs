@@ -27,7 +27,13 @@ assert.match(workflow, /URL\.revokeObjectURL\(voicePreviewUrl\)/,
   '录音试听 URL 必须在清理时释放，避免手机内存泄漏');
 assert.match(workflow, /window\.isSecureContext/,
   '录音前必须检查 HTTPS 安全上下文');
-assert.match(workflow, /formatVoiceRecordingTime/,\n  '手机录音必须显示易读的录音计时');\nassert.match(workflow, /voiceRecordingTimer = setInterval/,\n  '录音计时必须在录音期间持续刷新');\nassert.match(workflow, /stopVoiceRecordingTimer\(\)/,\n  '录音结束、失败或关闭工作台时必须清理计时器');\nassert.match(workflow, /40 \* 1024 \* 1024/,
+assert.match(workflow, /formatVoiceRecordingTime/,
+  '手机录音必须显示易读的录音计时');
+assert.match(workflow, /voiceRecordingTimer = setInterval/,
+  '录音计时必须在录音期间持续刷新');
+assert.match(workflow, /stopVoiceRecordingTimer\(\)/,
+  '录音结束、失败或关闭工作台时必须清理计时器');
+assert.match(workflow, /40 \* 1024 \* 1024/,
   '录音文件必须限制在手机端40MB以内');
 assert.match(workflow, /已停用需要境外下载的旧配音引擎/,
   '工作台必须清楚说明旧境外配音引擎已停用');
