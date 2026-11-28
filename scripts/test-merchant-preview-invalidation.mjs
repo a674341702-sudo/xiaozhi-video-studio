@@ -27,11 +27,11 @@ const industryHandlerEnd = profileBlock.indexOf("return;", industryHandlerStart)
 assert.ok(industryHandlerStart >= 0 && industryHandlerEnd > industryHandlerStart,
   'changing merchant industry must rebuild the shot-role options');
 const industryHandler = profileBlock.slice(industryHandlerStart, industryHandlerEnd);
-assert.match(industryHandler, /mediaRoleByFile\\.clear\\(\\)/,
+assert.ok(industryHandler.includes('mediaRoleByFile.clear()'),
   'industry-specific shot roles must not leak into another business type');
-assert.match(industryHandler, /renderMediaMapping\\(\\)/,
+assert.ok(industryHandler.includes('renderMediaMapping()'),
   'shot-role dropdowns must refresh after industry changes');
-assert.match(source, /suggestedShot < 0 \\|\\| suggestedShot >= plans\\.length/,
+assert.ok(source.includes('suggestedShot < 0 || suggestedShot >= plans.length'),
   'out-of-range shot roles must be discarded when the shot plan shrinks');
 
 console.log('Merchant production preview invalidation tests passed.');
