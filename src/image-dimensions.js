@@ -4,6 +4,8 @@
  * workflow; this rejects pathological inputs without recompressing originals.
  */
 export const MAX_IMAGE_PIXELS = 40_000_000;
+// Keep decoded source images and video frames within a safer phone memory budget.
+export const MAX_MOBILE_DECODE_PIXELS = 20_000_000;
 
 export function validateImageDimensions(width, height, maxPixels = MAX_IMAGE_PIXELS) {
   const w = Number(width);
