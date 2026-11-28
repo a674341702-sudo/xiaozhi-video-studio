@@ -361,9 +361,19 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         setStatus('普通话配音已自动传回工作台并暂存。接下来点击“自动编排商家视频”，配音会自动加入时间线。');
         return;
       }
+      const voiceGeneration = productionGeneration;
       try {
         const voice = await mediaManager.importFile(file, { startTime: 0, trackIndex: 5 });
         if (!voice) throw new Error('配音音轨导入失败');
+        if (voiceGeneration !== productionGeneration) {
+          // The merchant changed or closed the workflow while this file was
+          // importing. Remove the stale clip and keep the WAV queued for the
+          // next explicit production attempt.
+          composition.removeClip(voice.id);
+          onCompositionChanged();
+          pendingVoiceFile = file;
+          return;
+        }
         voice.volume = 1;
         voice.duration = Math.min(composition.duration, voice.duration);
         voice.trimEnd = (voice.trimStart || 0) + voice.duration;
