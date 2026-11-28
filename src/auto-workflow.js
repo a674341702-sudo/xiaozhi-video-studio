@@ -480,7 +480,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       confirmed.className = 'xzw-requirement-confirmed';
       const confirmationText = document.createElement('span');
       confirmationText.textContent = isRestrictionRequirement(text)
-        ? '已核对这条限制，制作时必须遵守（不会作为字幕）'
+        ? '已核对这条限制；系统不会自动审查画面，请人工确保素材不违反（不会作为字幕）'
         : '已核对这条要求，内容准确且可以用于宣传';
       confirmation.append(confirmed, confirmationText);
       textarea.addEventListener('input', invalidateProductionPreview);
@@ -612,7 +612,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     });
     const facts = document.createElement('p');
     facts.className = 'xzw-note';
-    facts.textContent = '请核对店名、地址、价格、优惠有效期等事实；本预览不会替商家证明这些信息真实。';
+    facts.textContent = '请核对店名、地址、价格、优惠有效期等事实；限制项只会从字幕中排除，系统不会自动识别画面是否违规，请人工检查每段素材。本预览也不会替商家证明宣传信息真实。';
     panel.append(heading, status, list, facts);
     box.appendChild(panel);
     productionPreviewReady = issues.length === 0;
