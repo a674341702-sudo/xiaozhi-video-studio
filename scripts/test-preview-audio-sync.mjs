@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { getClipPlaybackState, getMediaElementVolume } from '../src/keyframes.js';
+import { getClipPlaybackState, getMediaElementVolume, isTrackAudioEnabled } from '../src/keyframes.js';
 
 const music = {
   startTime: 0, duration: 30, trimStart: 0, trimEnd: 30,
@@ -44,3 +44,9 @@ assert.equal(getMediaElementVolume(0.4), 0.4);
 assert.equal(getMediaElementVolume(-2), 0);
 assert.equal(getMediaElementVolume(Number.NaN), 1);
 console.log('Native media element volume safety tests passed.');
+
+assert.equal(isTrackAudioEnabled({ muted: false, visible: false }), false, 'hidden tracks must be silent in preview');
+assert.equal(isTrackAudioEnabled({ muted: true, visible: true }), false, 'muted tracks must be silent');
+assert.equal(isTrackAudioEnabled({ muted: false, visible: true }), true, 'visible unmuted tracks remain audible');
+assert.equal(isTrackAudioEnabled(undefined), true, 'clips without a track retain legacy playback');
+console.log('Preview/export track audio eligibility tests passed.');
