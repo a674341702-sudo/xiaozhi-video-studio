@@ -21,7 +21,7 @@ for (const token of [
   'assets && sha256sum -c',
   'timeout-minutes: 90',
   'for asset in model-steps-3.onnx tokens.txt lexicon.txt phone.fst date.fst number.fst; do',
-  'find . -type f -print0 | sort -z | xargs -0 sha256sum',
+  "find . -type f ! -name 'SHA256SUMS.txt' ! -name 'FILE_SIZES.txt' ! -name 'BUILD-NOTES.txt' -print0 | sort -z | xargs -0 sha256sum",
   'Install headless browser for real TTS smoke test',
   'playwright@1.52.0',
   'npx playwright install --with-deps chromium',
