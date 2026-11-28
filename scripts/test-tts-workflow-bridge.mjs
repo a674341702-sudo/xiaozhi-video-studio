@@ -33,10 +33,20 @@ assert.match(workflow, /voiceRecordingTimer = setInterval/,
   '录音计时必须在录音期间持续刷新');
 assert.match(workflow, /stopVoiceRecordingTimer\(\)/,
   '录音结束、失败或关闭工作台时必须清理计时器');
-assert.match(workflow, /voiceRecorder\.onstop = null/,
-  '录音发生错误后必须阻止后续 onstop 保存不完整音频');
-assert.match(workflow, /voiceChunks = \[\]/,
-  '录音发生错误后必须清空未完成的音频分片');
+const recorderErrorHandler = workflow.match(/voiceRecorder\.onerror = \(\) => \{([\s\S]*?)\n      \};/);
+assert.ok(recorderErrorHandler, '必须定义录音错误处理器');
+assert.match(recorderErrorHandler[1], /stopVoiceRecordingTimer\(\)/,
+  '录音错误时必须停止计时器');
+assert.match(recorderErrorHandler[1], /stopVoiceTracks\(\)/,
+  '录音错误时必须释放麦克风轨道');
+assert.match(recorderErrorHandler[1], /voiceRecorder\.onstop = null/,
+  '录音错误后必须阻止后续 onstop 保存不完整音频');
+assert.match(recorderErrorHandler[1], /voiceChunks = \[\]/,
+  '录音错误后必须清空未完成的音频分片');
+assert.match(recorderErrorHandler[1], /xzw-record-start'\)\.disabled = false/,
+  '录音错误后必须重新启用开始录音按钮');
+assert.match(recorderErrorHandler[1], /xzw-record-stop'\)\.disabled = true/,
+  '录音错误后必须禁用停止录音按钮');
 assert.match(workflow, /40 \* 1024 \* 1024/,
   '录音文件必须限制在手机端40MB以内');
 assert.match(workflow, /已停用需要境外下载的旧配音引擎/,
