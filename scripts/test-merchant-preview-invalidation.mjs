@@ -21,6 +21,19 @@ assert.match(profileBlock, /xzw-branded-outro/);
 for (const id of ['xzw-music', 'xzw-voice', 'xzw-original-audio', 'xzw-music-volume', 'xzw-voice-volume', 'xzw-video-volume', 'xzw-export-preset']) {
   assert.match(profileBlock, new RegExp(id), `${id} must invalidate the previous production preview`);
 }
+
+const industryHandlerStart = profileBlock.indexOf("if (key === 'industry')");
+const industryHandlerEnd = profileBlock.indexOf("return;", industryHandlerStart);
+assert.ok(industryHandlerStart >= 0 && industryHandlerEnd > industryHandlerStart,
+  'changing merchant industry must rebuild the shot-role options');
+const industryHandler = profileBlock.slice(industryHandlerStart, industryHandlerEnd);
+assert.match(industryHandler, /mediaRoleByFile\\.clear\\(\\)/,
+  'industry-specific shot roles must not leak into another business type');
+assert.match(industryHandler, /renderMediaMapping\\(\\)/,
+  'shot-role dropdowns must refresh after industry changes');
+assert.match(source, /suggestedShot < 0 \\|\\| suggestedShot >= plans\\.length/,
+  'out-of-range shot roles must be discarded when the shot plan shrinks');
+
 console.log('Merchant production preview invalidation tests passed.');
 
 assert.match(source, /let productionGeneration = 0/);
