@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, getNarrationContentCoverage, getMerchantCaptionForShot, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, limitMerchantCaption, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, getNarrationContentCoverage, getMerchantCaptionForShot, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -18,6 +18,10 @@ assert.equal(mergeCaptionRequirements('到店体验 · 环境舒适', ['环境�
 assert.equal(mergeCaptionRequirements('', ['门店地址']), '门店地址');
 assert.equal(mergeCaptionRequirements('', ['门店地址', '昆明市五华区门店地址']), '昆明市五华区门店地址', 'overlapping merchant requirements should keep the more informative wording without repeating the same fact');
 assert.equal(mergeCaptionRequirements('昆明市五华区门店地址', ['门店地址', '欢迎到店']), '昆明市五华区门店地址 · 欢迎到店', 'a requirement already covered by the base caption should not be repeated');
+assert.equal(limitMerchantCaption('短字幕'), '短字幕');
+assert.equal(Array.from(limitMerchantCaption('这是一段很长的商家宣传字幕内容，需要确保手机上不会出现太长的一整行文字', 12)).length, 12, 'final caption must respect the mobile character budget');
+assert.equal(limitMerchantCaption('这是一段很长的商家宣传字幕内容，需要确保手机上不会出现太长的一整行文字', 12).endsWith('…'), true, 'truncated caption should visibly indicate omitted text');
+assert.equal(limitMerchantCaption('😀'.repeat(50), 48), '😀'.repeat(47) + '…', 'caption truncation must not split surrogate-pair emoji');
 console.log('字幕要求去重测试通过');
 const fakeFile = (name, type, size = 1024) => ({ name, type, size });
 assert.equal(validateMerchantMediaFiles([fakeFile('店面.jpg', 'image/jpeg')]).valid, true);
