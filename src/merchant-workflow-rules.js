@@ -173,7 +173,7 @@ export function getMerchantAudioMix({
     video: keepOriginalAudio
       ? clampVolume(videoVolume, hasVoice ? 0.12 : 0.7, 0.5)
       : 0,
-    music: clampVolume(musicVolume, hasVoice ? 0.12 : 0.22, 0.5),
+    music: clampVolume(musicVolume, hasVoice ? 0.12 : 0.28, 0.5),
     voice: clampVolume(voiceVolume, 1, 1.5)
   };
 }
