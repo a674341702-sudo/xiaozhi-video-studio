@@ -136,7 +136,7 @@
         <span class="header-dot active" id="header-dot"></span>
         <span class="header-status" id="header-status">就绪</span>
       </div>
-      <div class="header-right">
+      <div class="header-right">\n        <button class="tool-btn" id="btn-mobile-tools" type="button" aria-controls="mobile-tools-panel" aria-expanded="false">工具</button>
         <button class="tool-btn" id="btn-new-project" type="button" title="新建项目">新建</button>
         <span class="local-save-status" id="local-save-status">本机保存准备中</span>
         <button class="tool-btn" id="btn-project-library" type="button" title="商家项目管理">项目</button>
@@ -155,7 +155,7 @@
     </header>
 
     <!-- Main NLE Workspace -->
-    <main class="editor-layout">
+    <main class="editor-layout">\n      <div class="mobile-tools-backdrop" id="mobile-tools-backdrop" aria-hidden="true"></div>
       <div class="editor-view">
 
         <!-- Left: Media Library & Canvas Preview -->
@@ -242,7 +242,7 @@
 
         <!-- Right Sidebar: Properties & Export -->
         <div class="editor-sidebar-resizer" id="sidebar-resizer" title="拖动调整面板宽度"></div>
-        <aside class="editor-sidebar">
+        <aside class="editor-sidebar" id="mobile-tools-panel">\n          <div class="mobile-tools-header"><strong>编辑工具与导出</strong><button type="button" id="btn-mobile-tools-close" aria-label="关闭工具面板">收起 ×</button></div>
           <!-- Selection Actions Panel -->
           <section class="sidebar-panel">
             <div class="panel-header compact">
@@ -373,6 +373,26 @@
     </section>
   </div>
 
+  <script>
+    // Mobile tools drawer: keep the complete desktop sidebar available on phones.
+    (function() {
+      const openButton = document.getElementById('btn-mobile-tools');
+      const closeButton = document.getElementById('btn-mobile-tools-close');
+      const backdrop = document.getElementById('mobile-tools-backdrop');
+      if (!openButton || !closeButton || !backdrop) return;
+      const setOpen = (open) => {
+        document.body.classList.toggle('mobile-tools-open', open);
+        openButton.setAttribute('aria-expanded', String(open));
+      };
+      openButton.addEventListener('click', () => setOpen(!document.body.classList.contains('mobile-tools-open')));
+      closeButton.addEventListener('click', () => setOpen(false));
+      backdrop.addEventListener('click', () => setOpen(false));
+      document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') setOpen(false);
+      });
+      document.getElementById('btn-export')?.addEventListener('click', () => setOpen(false));
+    })();
+  </script>
   <script type="module" src="./src/main.js" id="main-script"></script>
   <script>
     // Fallback for when GitHub Pages serves the raw source index.html instead of
