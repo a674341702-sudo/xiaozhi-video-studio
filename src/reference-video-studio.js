@@ -26,6 +26,40 @@ export function initReferenceVideoStudio(workflowModal) {
   anchor.parentNode.insertBefore(section, anchor.nextSibling);
 
   const $ = id => { const element = section.querySelector('#' + id); if (!element) throw new Error('参考视频模块缺少页面元素 #' + id); return element; };
+  // Link context is passed from the homepage after a supported share URL is recognized.
+  // The link is shown as a reference only; this module does not scrape platform pages.
+  const sourcePanel = document.createElement('div');
+  sourcePanel.id = 'xzw-reference-source';
+  sourcePanel.className = 'xzw-note';
+  sourcePanel.style.cssText = 'display:none;padding:10px;border:1px solid #64748b55;border-radius:10px;margin:8px 0;overflow-wrap:anywhere';
+  sourcePanel.innerHTML = '<strong>已关联分享链接</strong><div id="xzw-reference-source-platform"></div><a id="xzw-reference-source-link" target="_blank" rel="noopener noreferrer">打开原视频页面</a><div id="xzw-reference-source-notes"></div>';
+  section.insertBefore(sourcePanel, section.children[2] || null);
+
+  section.addEventListener('xiaozhi:reference-link', event => {
+    const detail = event.detail || {};
+    let safeUrl;
+    try {
+      safeUrl = new URL(String(detail.url || ''));
+      if (!['http:', 'https:'].includes(safeUrl.protocol)) return;
+    } catch (_) { return; }
+    const allowed = ['douyin.com','iesdouyin.com','v.douyin.com','xiaohongshu.com','xhslink.com','xhslink.cn'];
+    const host = safeUrl.hostname.toLowerCase().replace(/^www\\./, '');
+    if (!allowed.some(domain => host === domain || host.endsWith('.' + domain))) return;
+    sourcePanel.style.display = 'block';
+    $('xzw-reference-source-platform').textContent = (detail.platform || '社交平台') + '分享链接';
+    const link = $('xzw-reference-source-link');
+    link.href = safeUrl.href;
+    link.textContent = '打开原视频页面 ↗';
+    $('xzw-reference-source-notes').textContent = detail.notes ? '补充说明：' + detail.notes : '打开原视频后，可手动记录镜头结构；也可上传你有权分析的视频文件提取关键画面。';
+    const notes = $('xzw-reference-notes');
+    const context = ['参考平台：' + (detail.platform || ''), '分享链接：' + safeUrl.href, detail.notes ? '用户观察：' + detail.notes : '待补充：开头钩子、镜头顺序、字幕节奏、结尾引导'].filter(Boolean).join('\\n');
+    if (!notes.value.trim() || notes.dataset.fromShareLink === 'true') {
+      notes.value = context;
+      notes.dataset.fromShareLink = 'true';
+    }
+    plan.textContent = '链接已关联。网页不会自动抓取该平台内容；请打开原视频观察，或上传有权使用的参考视频提取关键画面。';
+  });
+
   const fileInput = $('xzw-reference-file');
   const player = $('xzw-reference-player');
   const meta = $('xzw-reference-meta');
