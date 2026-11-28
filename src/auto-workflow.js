@@ -415,9 +415,18 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       setStatus('浏览器未允许自动复制，已选中配音稿，请长按文字选择复制。');
     }
   });
+  const closeWorkflow = () => {
+    closeMediaPreview();
+    modal.classList.remove('open');
+  };
   launcher.addEventListener('click', () => modal.classList.add('open'));
-  modal.querySelector('.xzw-close').addEventListener('click', () => modal.classList.remove('open'));
-  modal.addEventListener('click', event => { if (event.target === modal) modal.classList.remove('open'); });
+  modal.querySelector('.xzw-close').addEventListener('click', closeWorkflow);
+  modal.addEventListener('click', event => { if (event.target === modal) closeWorkflow(); });
+  document.addEventListener('keydown', event => {
+    if (event.key !== 'Escape') return;
+    if (mediaPreview.classList.contains('open')) closeMediaPreview();
+    else if (modal.classList.contains('open')) closeWorkflow();
+  });
   $('xzw-files').addEventListener('change', () => {
     const selected = Array.from($('xzw-files').files || []);
     // Reset the picker so the same file can be selected again later if needed.
@@ -899,7 +908,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const quality = document.getElementById('export-quality');
     if (fps) fps.value = preset === 'clear' ? '30' : '24';
     if (quality) quality.value = preset === 'clear' ? 'high' : 'medium';
-    modal.classList.remove('open');
+    closeWorkflow();
     onExport();
   });
 }
