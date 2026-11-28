@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -628,6 +628,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const customCaptions = $('xzw-captions').value.trim().split(/\n+/).map(s=>s.trim()).filter(Boolean);
     const shotPlan = getMerchantShotPlan(profile.industry, files.length);
     const mediaAssignments = getMediaAssignments();
+    const orderedAssignments = orderMerchantMediaAssignments(mediaAssignments);
     const captions = customCaptions.length ? customCaptions : shotPlan.map(item => item.caption);
     const requirementCards = Array.from($('xzw-requirements').querySelectorAll('.xzw-requirement'));
     const requirementsByShot = new Map();
@@ -670,9 +671,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const shots = [];
       const visualClips = [];
       const subtitleClips = [];
-      for (let i = 0; i < files.length && cursor < targetSeconds; i++) {
-        const file = files[i];
-        const assignedShotIndex = mediaAssignments[i]?.shotIndex ?? i;
+      for (let i = 0; i < orderedAssignments.length && cursor < targetSeconds; i++) {
+        const assignment = orderedAssignments[i];
+        const file = files[assignment.fileIndex];
+        if (!file) throw new Error('素材镜头排序异常，请重新检查素材匹配');
+        const assignedShotIndex = assignment.shotIndex;
         const assignedShot = shotPlan[assignedShotIndex] || shotPlan[i];
         const clip = await mediaManager.importFile(file, { startTime: cursor });
         if (!clip) throw new Error('素材导入失败：' + file.name);
