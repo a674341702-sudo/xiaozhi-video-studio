@@ -40,14 +40,31 @@ try {
       riff: ascii(0, 4),
       wave: ascii(8, 12),
       sampleRate: new DataView(bytes.buffer).getUint32(24, true),
-      duration: element.duration
+      channels: new DataView(bytes.buffer).getUint16(22, true),
+      bitsPerSample: new DataView(bytes.buffer).getUint16(34, true),
+      dataBytes: new DataView(bytes.buffer).getUint32(40, true),
+      duration: element.duration,
+      rms: (() => {
+        const view = new DataView(bytes.buffer, 44);
+        const count = Math.floor((bytes.length - 44) / 2);
+        let sum = 0;
+        for (let i = 0; i < count; i++) {
+          const sample = view.getInt16(i * 2, true) / 32768;
+          sum += sample * sample;
+        }
+        return count ? Math.sqrt(sum / count) : 0;
+      })()
     };
   });
   assert.ok(audioCheck.byteLength > 44, 'Generated WAV is empty');
   assert.equal(audioCheck.riff, 'RIFF', 'Generated audio is not a RIFF WAV');
   assert.equal(audioCheck.wave, 'WAVE', 'Generated audio is not a WAV container');
   assert.ok(audioCheck.sampleRate >= 16000, 'Unexpected generated sample rate');
+  assert.equal(audioCheck.channels, 1, 'Expected mono speech audio');
+  assert.equal(audioCheck.bitsPerSample, 16, 'Expected 16-bit PCM WAV');
+  assert.ok(audioCheck.dataBytes > 0, 'WAV contains no PCM samples');
   assert.ok(audioCheck.duration > 0, 'Generated audio duration is invalid');
+  assert.ok(audioCheck.rms > 0.001, 'Generated WAV is silent or nearly silent');
   assert.deepEqual(pageErrors, [], 'Browser reported runtime or local asset errors');
   console.log('Chinese Matcha browser smoke test passed:', JSON.stringify(audioCheck));
 } finally {
