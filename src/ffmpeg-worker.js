@@ -10,6 +10,7 @@ import { evaluateKeyframes } from './keyframes.js';
 import { appendBoundedExportLog } from './export-log-buffer.js';
 import { captureCanvasBlob } from './abortable-canvas-blob.js';
 import { waitForSharedTask } from './wait-for-shared-task.js';
+import { getExportableVideoClips } from './export-video-clips.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -539,7 +540,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
     const totalFrames = Math.ceil(duration * fps);
     const frameDuration = 1 / fps;
-    const videoClips = composition.clips.filter(c => c.type === 'video' && c.element);
+    const videoClips = getExportableVideoClips(composition);
 
     const jpegQuality = quality === 'low' ? 0.68 : quality === 'medium' ? 0.78 : 0.88;
 
