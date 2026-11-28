@@ -106,11 +106,23 @@ export function isVideoMediaFile(file) {
  * Keep narration intelligible by ducking music and camera audio whenever
  * a voice track is present. Values are normalized 0..1 timeline gains.
  */
-export function getMerchantAudioMix({ hasVoice = false, keepOriginalAudio = false } = {}) {
+export function getMerchantAudioMix({
+  hasVoice = false,
+  keepOriginalAudio = false,
+  musicVolume = null,
+  voiceVolume = 1,
+  videoVolume = null
+} = {}) {
+  const clampVolume = (value, fallback) => {
+    const numeric = Number(value);
+    return Number.isFinite(numeric) ? Math.min(1, Math.max(0, numeric)) : fallback;
+  };
   return {
-    video: keepOriginalAudio ? (hasVoice ? 0.12 : 0.7) : 0,
-    music: hasVoice ? 0.12 : 0.22,
-    voice: 1
+    video: keepOriginalAudio
+      ? clampVolume(videoVolume, hasVoice ? 0.12 : 0.7)
+      : 0,
+    music: clampVolume(musicVolume, hasVoice ? 0.12 : 0.22),
+    voice: clampVolume(voiceVolume, 1)
   };
 }
 
