@@ -238,9 +238,20 @@ function bindHomeDashboard() {
       modal.classList.add('open');
       copy.value = brief;
       copy.dispatchEvent(new Event('input', { bubbles: true }));
+      // Hand the validated share URL to the local reference-video study room.
+      // This only preserves context and offers a safe link-out; it does not scrape the platform.
+      const referenceStudio = document.getElementById('xzw-reference-studio');
+      referenceStudio?.dispatchEvent(new CustomEvent('xiaozhi:reference-link', {
+        bubbles: false,
+        detail: { url: rawUrl, platform, notes }
+      }));
       document.getElementById('xzw-make-script')?.click();
-      document.getElementById('xzw-shop')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      showToast('已识别' + platform + '链接并整理拆解任务。请补充视频内容素材后再生成，当前不会自动抓取原视频。', 'success', 7000);
+      if (referenceStudio) {
+        referenceStudio.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      } else {
+        document.getElementById('xzw-shop')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+      showToast('已关联' + platform + '分享链接。可打开原视频观察，或上传有权使用的参考视频提取关键画面；当前不会自动抓取原视频。', 'success', 8000);
     });
   }
 
