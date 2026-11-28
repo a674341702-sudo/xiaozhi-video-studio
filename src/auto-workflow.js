@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, getMerchantRequirementStats, getNarrationContentCoverage, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, getNarrationContentCoverage, isRestrictionRequirement, getMerchantCaptionForShot, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -739,7 +739,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const fade = Math.min(0.45, shotDuration / 4);
         visualClips.push(clip);
 
-        const baseCaption = captions[assignedShotIndex % captions.length] || profile.shop || '到店体验，发现更多精彩';
+        const baseCaption = getMerchantCaptionForShot(captions, assignedShotIndex, assignedShot?.caption || shotPlan[i]?.caption, profile.shop || '到店体验，发现更多精彩');
         const assignedRequirements = requirementsByShot.get(assignedShotIndex) || [];
         // Requirement text may already be present in the generated caption list.
         // Add only missing items so merchant instructions never appear twice.

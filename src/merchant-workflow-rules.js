@@ -20,6 +20,18 @@ export function splitMerchantRequirements(source, limit = 16) {
 export function isRestrictionRequirement(text) {
   return /不要|禁止|不得|不能|严禁|避免|不可|勿用|不允许/.test(String(text || ''));
 }
+/**
+ * Resolve one shot caption without cycling a shorter custom list.
+ * Missing custom lines fall back to that shot's industry template instead of
+ * repeating earlier merchant copy on unrelated footage.
+ */
+export function getMerchantCaptionForShot(customCaptions = [], shotIndex = 0, fallbackCaption = '', finalFallback = '') {
+  const captions = Array.from(customCaptions || []).map(value => String(value || '').trim());
+  const index = Number(shotIndex);
+  if (Number.isInteger(index) && index >= 0 && captions[index]) return captions[index];
+  return String(fallbackCaption || '').trim() || String(finalFallback || '').trim();
+}
+
 export function mergeCaptionRequirements(baseCaption, requirements = []) {
   const base = String(baseCaption || '').trim();
   const normalize = value => String(value || '').replace(/[\s，。！？、；：,.!?;:（）()【】《》“”"'‘’·…—_-]+/g, '').toLocaleLowerCase();

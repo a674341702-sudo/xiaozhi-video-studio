@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, getNarrationContentCoverage, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, getNarrationContentCoverage, getMerchantCaptionForShot, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -181,3 +181,13 @@ const restrictionUiSource = readFileSync(new URL('../src/auto-workflow.js', impo
 assert.ok(restrictionUiSource.includes('系统不会自动审查画面'), '禁止项确认必须明确说明画面由人工核查');
 assert.ok(restrictionUiSource.includes('系统不会自动识别画面是否违规'), '制作预览必须提醒限制项不会自动进行画面审查');
 console.log('商家限制项人工画面核查提示测试通过');
+
+
+assert.equal(getMerchantCaptionForShot(['字幕一', '字幕二', '字幕三'], 0, '模板一'), '字幕一');
+assert.equal(getMerchantCaptionForShot(['字幕一', '字幕二', '字幕三'], 2, '模板三'), '字幕三');
+assert.equal(getMerchantCaptionForShot(['字幕一', '字幕二', '字幕三'], 3, '模板四'), '模板四',
+  'when custom captions are fewer than shots, use the matching shot template instead of cycling earlier captions');
+assert.equal(getMerchantCaptionForShot(['字幕一'], 4, '', '店铺介绍'), '店铺介绍');
+assert.equal(getMerchantCaptionForShot([], 1, '行业镜头建议'), '行业镜头建议');
+assert.equal(getMerchantCaptionForShot(['', '  '], 1, '行业镜头建议'), '行业镜头建议');
+console.log('逐镜字幕不循环重复及行业模板回退测试通过');
