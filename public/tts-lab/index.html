@@ -26,7 +26,7 @@ button.secondary{background:#334155}button:disabled{opacity:.45}input[type=file]
 <section class="panel">
 <strong>本地音频导入测试</strong>
 <p class="muted">选择手机已有的 WAV、MP3、M4A 或 WebM 音频，检查浏览器解码与播放能力。仅在本机试听，不会上传。单个文件最大 40MB。</p>
-<input id="audioFile" type="file" accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,audio/*">
+<input id="audioFile" type="file" accept=".wav,.mp3,.m4a,.aac,.ogg,.webm,audio/wav,audio/mpeg,audio/mp4,audio/aac,audio/ogg,audio/webm,audio/*">
 <audio id="player" controls preload="metadata" hidden></audio>
 <div id="audioInfo" class="small" aria-live="polite">尚未选择音频。</div>
 <button id="clearAudio" class="secondary" type="button" disabled>清除音频</button>
