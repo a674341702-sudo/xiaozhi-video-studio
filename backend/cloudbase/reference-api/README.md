@@ -4,14 +4,14 @@
 
 ## 本地测试
 
-在该目录运行 `npm test`（Node.js 20+，使用 Node 内置测试框架，无需安装第三方依赖）。测试覆盖健康检查、抖音/小红书域名识别、恶意域名/凭据/端口拒绝、JSON 错误、CORS 白名单、404 路由、API Gateway v2 事件格式、Base64 请求体和 16 KB 请求体限制。
+在该目录运行 `npm test`（Node.js 20+，使用 Node 内置测试框架，无需安装第三方依赖）。测试覆盖健康检查、抖音/小红书域名识别、恶意域名/凭据/端口拒绝、JSON 错误、CORS 白名单、404 路由、API Gateway v2 事件格式、Base64 请求体和 16 KB 请求体限制、严格主机名白名单和 CORS 预检。
 
 ## 接口
 
 - `GET /health`：检查函数是否可用；`parser` 会明确返回 `not_configured`。
 - `POST /reference/inspect`：JSON body：`{"url":"https://..." }`。合法域名会返回 HTTP 501 `PARSER_NOT_CONFIGURED`，不会抓取视频。
 
-支持域名白名单：抖音 `douyin.com`、`iesdouyin.com`、`v.douyin.com`；小红书 `xiaohongshu.com`、`xhslink.com`、`xhslink.cn`（含其子域名）。
+支持域名白名单：抖音 `douyin.com`、`iesdouyin.com`、`v.douyin.com`；小红书 `xiaohongshu.com`、`xhslink.com`、`xhslink.cn`。仅接受明确列出的主机名（以及可选的 `www.` 前缀），不接受任意嵌套子域名。
 
 ## 环境变量
 
