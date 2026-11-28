@@ -183,7 +183,6 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
   const $ = (id) => modal.querySelector('#' + id);
   const setStatus = (message) => { $('xzw-status').textContent = message; };
-  $('xzw-captions').addEventListener('input', () => { captionsManuallyEdited = true; });
   let productionPreviewReady = false;
   let captionsManuallyEdited = false;
   let orderedMediaFiles = [];
@@ -371,6 +370,26 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     };
   }
   const profileKeys = ['shop','industry','product','address','offer','copy','brief','style','length','cta'];
+  // Any change to information used by the production check makes its previous
+  // approval stale. Require a fresh check before arranging the updated video.
+  profileKeys.forEach(key => {
+    const field = $('xzw-' + key);
+    field?.addEventListener('input', invalidateProductionPreview);
+    field?.addEventListener('change', invalidateProductionPreview);
+  });
+  $('xzw-captions').addEventListener('input', () => {
+    captionsManuallyEdited = true;
+    invalidateProductionPreview();
+  });
+  $('xzw-requirements').addEventListener('input', invalidateProductionPreview);
+  $('xzw-requirements').addEventListener('change', invalidateProductionPreview);
+  $('xzw-media-map').addEventListener('change', event => {
+    if (event.target?.classList?.contains('xzw-media-role')) invalidateProductionPreview();
+  });
+  ['xzw-ratio', 'xzw-subtitle', 'xzw-branded-outro', 'xzw-cta'].forEach(id => {
+    $(id)?.addEventListener('change', invalidateProductionPreview);
+    $(id)?.addEventListener('input', invalidateProductionPreview);
+  });
   const readProfile = () => Object.fromEntries(profileKeys.map(key => [key, $('xzw-' + key).value]));
   const renderTemplateGuide = () => {
     const plan = getMerchantShotPlan($('xzw-industry').value, 6);
