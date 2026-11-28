@@ -161,11 +161,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <p class="xzw-note">当前配音入口仅接受本机录音或已有音频文件。旧版在线模型依赖境外下载，已暂时停用；不会要求你购买接口或开通会员。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
         <div class="xzw-grid">
-          <label class="xzw-field"><span>背景音乐音量（0–50%）</span><input id="xzw-music-volume" type="number" min="0" max="50" step="1" value="12" inputmode="numeric"></label>
+          <label class="xzw-field"><span>背景音乐音量（0–50%）</span><input id="xzw-music-volume" type="number" min="0" max="50" step="1" value="28" inputmode="numeric"></label>
           <label class="xzw-field"><span>配音音量（50–150%）</span><input id="xzw-voice-volume" type="number" min="50" max="150" step="5" value="100" inputmode="numeric"></label>
           <label class="xzw-field"><span>原视频现场声（0–50%）</span><input id="xzw-video-volume" type="number" min="0" max="50" step="1" value="12" inputmode="numeric"></label>
         </div>
-        <p class="xzw-note">建议配音 100%、背景音乐 8–15%、现场声 0–12%。如果没有配音，背景音乐会自动使用更高的默认音量。</p>
+        <p class="xzw-note">建议配音 100%；有配音时背景音乐建议 8–15%，没有配音时默认 28%，让纯音乐成片更容易听清。现场声建议 0–12%。</p>
         <p class="xzw-note">未上传配乐时会在本机生成一段原创轻音乐并循环铺底；上传自己的音乐时优先使用上传文件。配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。当前版本不再加载境外配音模型；需要人声时，请上传手机录音或已有的中文配音音频。</p>
       </div>
 
