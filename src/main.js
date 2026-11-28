@@ -150,6 +150,59 @@ function bindHomeDashboard() {
       target.focus({ preventScroll: true });
     }
   });
+
+  // Case cards reuse the real merchant workflow with an industry/style preset.
+  document.addEventListener('click', event => {
+    const caseButton = event.target.closest('[data-home-case]');
+    if (!caseButton) return;
+    const modal = document.getElementById('xiaozhi-workflow');
+    if (!modal) {
+      showToast('商家制作工作台正在加载，请稍后再试。', 'warning');
+      return;
+    }
+    modal.classList.add('open');
+    const industry = document.getElementById('xzw-industry');
+    const style = document.getElementById('xzw-style');
+    const copy = document.getElementById('xzw-copy');
+    if (!industry || !style || !copy) {
+      showToast('案例制作表单尚未准备好，请稍后再试。', 'warning');
+      return;
+    }
+    industry.value = caseButton.dataset.industry || industry.value;
+    industry.dispatchEvent(new Event('change', { bubbles: true }));
+    style.value = caseButton.dataset.style || style.value;
+    style.dispatchEvent(new Event('change', { bubbles: true }));
+    const caseCopy = {
+      hotel: '请根据我上传的酒店或民宿素材制作宣传视频。建议结构：1. 用最有吸引力的客房或环境画面开场；2. 展示房间细节、配套设施和公共空间；3. 突出真实、可核实的入住体验与特色；4. 结尾引导咨询或预订。请勿编造价格、设施、评价或优惠。',
+      food: '请根据我上传的餐饮门店和菜品素材制作探店宣传视频。建议结构：1. 用招牌菜或诱人的近景开场；2. 展示菜品细节、用餐环境和特色服务；3. 突出商家实际提供的产品与真实卖点；4. 结尾引导到店或咨询。请勿编造价格、折扣或食材信息。',
+      beauty: '请根据我上传的美容美发门店素材制作宣传视频。建议结构：1. 用门店环境或服务细节开场；2. 展示真实服务项目、环境和体验流程；3. 突出商家实际特色；4. 结尾引导预约或咨询。请勿编造资质、效果承诺或优惠。',
+      retail: '请根据我上传的商品和门店素材制作宣传视频。建议结构：1. 用主打商品或陈列画面开场；2. 展示商品细节、使用场景和实际特点；3. 呈现商家确认的活动或价格信息；4. 结尾引导进店或咨询。请勿编造价格、库存、折扣或产品功效。'
+    };
+    copy.value = caseCopy[caseButton.dataset.homeCase] || '';
+    copy.dispatchEvent(new Event('input', { bubbles: true }));
+    document.getElementById('xzw-make-script')?.click();
+    document.getElementById('xzw-shop')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    showToast('已套用案例制作方案。填写店名和真实卖点，再上传自己的素材即可。', 'success');
+  });
+
+  // Search filters the bundled starter cases locally; it does not pretend to
+  // search Douyin, Xiaohongshu, or a live external trend feed.
+  const caseSearch = document.getElementById('xh-case-search');
+  if (caseSearch) {
+    caseSearch.addEventListener('input', () => {
+      const query = caseSearch.value.trim().toLowerCase();
+      const cards = [...document.querySelectorAll('#xh-case-grid [data-home-case]')];
+      let visible = 0;
+      cards.forEach(card => {
+        const matches = !query || card.textContent.toLowerCase().includes(query) ||
+          String(card.dataset.industry || '').toLowerCase().includes(query);
+        card.hidden = !matches;
+        if (matches) visible += 1;
+      });
+      const empty = document.getElementById('xh-case-empty');
+      if (empty) empty.style.display = visible ? 'none' : 'block';
+    });
+  }
 }
 
 // --- Initialization ---
