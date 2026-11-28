@@ -32,3 +32,23 @@ assert.match(source, /await mediaManager\.importFile\(file, \{ startTime: cursor
 assert.match(source, /await createDefaultMusicFile\(\);\s*assertGenerationCurrent\(\)/);
 assert.match(source, /await mediaManager\.importFile\(musicFile, \{ startTime: 0, trackIndex: 4 \}\);\s*assertGenerationCurrent\(\)/);
 assert.match(source, /await mediaManager\.importFile\(voiceFile, \{ startTime: 0, trackIndex: 5 \}\);\s*assertGenerationCurrent\(\)/);
+
+const closeWorkflowStart = source.indexOf('const closeWorkflow = () => {');
+const closeWorkflowEnd = source.indexOf('launcher.addEventListener', closeWorkflowStart);
+assert.ok(closeWorkflowStart >= 0 && closeWorkflowEnd > closeWorkflowStart);
+assert.match(source.slice(closeWorkflowStart, closeWorkflowEnd), /invalidateProductionPreview\(\)/,
+  'closing the merchant workflow must invalidate an in-flight async production attempt');
+const briefImportStart = source.indexOf("$('xzw-brief-file').addEventListener('change', async () => {");
+const briefImportEnd = source.indexOf('function getMerchantContentPoints', briefImportStart);
+assert.ok(briefImportStart >= 0 && briefImportEnd > briefImportStart);
+assert.match(source.slice(briefImportStart, briefImportEnd), /if \(!file\) return;\s*\/\/[\s\S]*?invalidateProductionPreview\(\)/,
+  'selecting a brief document must invalidate an old run before asynchronous extraction');
+const voiceReceiveStart = source.indexOf('pendingVoiceFile = file;');
+const voiceReceiveEnd = source.indexOf("const profileKeys", voiceReceiveStart);
+assert.ok(voiceReceiveStart >= 0 && voiceReceiveEnd > voiceReceiveStart);
+const voiceReceiveBlock = source.slice(voiceReceiveStart, voiceReceiveEnd);
+assert.match(voiceReceiveBlock, /invalidateProductionPreview\(\)/,
+  'receiving generated voice must invalidate the previous production inputs');
+assert.match(voiceReceiveBlock, /if \(\$\('xzw-generate'\)\.disabled\)/,
+  'voice received during arrangement must be queued instead of importing into a partial timeline');
+assert.match(voiceReceiveBlock, /当前编排已停止/);
