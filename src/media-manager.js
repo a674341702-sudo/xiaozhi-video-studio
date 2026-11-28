@@ -6,6 +6,7 @@ import { validateFile, showToast } from './utils.js';
 import { generateProxy } from './proxy.js';
 import { getPreciseMediaDuration } from './media-duration.js';
 import { takeSelectedFiles } from './media-file-selection.js';
+import { createImportGeneration } from './media-import-generation.js';
 
 // Mobile browsers can occasionally leave media metadata loading unresolved.
 // Bound the wait so the workflow can show a useful error instead of hanging forever.
@@ -37,8 +38,13 @@ export class MediaManager {
     this.onCompositionChanged = onCompositionChanged;
     this.onMediaUrlRegistered = onMediaUrlRegistered;
     this.store = store;
+    this.importGeneration = createImportGeneration();
 
     this._bindFileInputs();
+  }
+
+  cancelPendingImports() {
+    this.importGeneration.cancel();
   }
 
   _bindFileInputs() {
@@ -104,16 +110,16 @@ export class MediaManager {
     return clip;
   }
 
-  async importFile(file, { startTime = 0, trackIndex = null } = {}) {
+  async importFile(file, { startTime = 0, trackIndex = null, generation = this.importGeneration.capture() } = {}) {
     const type = this._detectType(file);
     if (!type) {
       showToast(`不支持的文件类型： ${file.name}`, 'error');
       return;
     }
 
-    if (type === 'video') return this._importVideo(file, { startTime, trackIndex });
-    if (type === 'image') return this._importImage(file, { startTime, trackIndex });
-    if (type === 'audio') return this._importAudio(file, { startTime, trackIndex });
+    if (type === 'video') return this._importVideo(file, { startTime, trackIndex, generation });
+    if (type === 'image') return this._importImage(file, { startTime, trackIndex, generation });
+    if (type === 'audio') return this._importAudio(file, { startTime, trackIndex, generation });
   }
 
   _detectType(file) {
@@ -126,7 +132,7 @@ export class MediaManager {
     return null;
   }
 
-  async _importVideo(file, { startTime, trackIndex }) {
+  async _importVideo(file, { startTime, trackIndex, generation = this.importGeneration.capture() }) {
     const val = validateFile(file, 'video');
     if (!val.valid) {
       showToast(val.error, 'error');
@@ -155,6 +161,12 @@ export class MediaManager {
     video.src = objectUrl;
     video.load();
     const videoReady = await waitForMediaReady(video, () => video.readyState >= 2, 'loadeddata', 30000);
+    if (!this.importGeneration.isCurrent(generation)) {
+      URL.revokeObjectURL(objectUrl);
+      video.removeAttribute('src');
+      video.load();
+      return null;
+    }
     if (!videoReady) {
       URL.revokeObjectURL(objectUrl);
       showToast('手机读取视频失败或等待超时，请换成 MP4 文件或压缩后重试。', 'error');
@@ -223,7 +235,7 @@ export class MediaManager {
     return clip;
   }
 
-  async _importImage(file, { startTime, trackIndex }) {
+  async _importImage(file, { startTime, trackIndex, generation = this.importGeneration.capture() }) {
     const val = validateFile(file, 'image');
     if (!val.valid) {
       showToast(val.error, 'error');
@@ -234,6 +246,11 @@ export class MediaManager {
     const img = new Image();
     img.src = objectUrl;
     const imageReady = await waitForMediaReady(img, () => img.complete && img.naturalWidth > 0, 'load');
+    if (!this.importGeneration.isCurrent(generation)) {
+      URL.revokeObjectURL(objectUrl);
+      img.src = '';
+      return null;
+    }
     if (!imageReady) {
       URL.revokeObjectURL(objectUrl);
       showToast('手机读取图片失败或等待超时，请换成 JPG、PNG 图片后重试。', 'error');
@@ -279,7 +296,7 @@ export class MediaManager {
     return clip;
   }
 
-  async _importAudio(file, { startTime, trackIndex }) {
+  async _importAudio(file, { startTime, trackIndex, generation = this.importGeneration.capture() }) {
     const val = validateFile(file, 'audio');
     if (!val.valid) {
       showToast(val.error, 'error');
@@ -290,6 +307,13 @@ export class MediaManager {
     const audio = new Audio(objectUrl);
     audio.preload = 'metadata';
     const audioReady = await waitForMediaReady(audio, () => audio.readyState >= 1, 'loadedmetadata');
+    if (!this.importGeneration.isCurrent(generation)) {
+      URL.revokeObjectURL(objectUrl);
+      audio.pause();
+      audio.removeAttribute('src');
+      audio.load();
+      return null;
+    }
     if (!audioReady) {
       URL.revokeObjectURL(objectUrl);
       showToast('手机读取音频失败或等待超时，请换成 MP3 或 WAV 文件后重试。', 'error');
@@ -329,22 +353,28 @@ export class MediaManager {
 
   async _onVideoSelected(e) {
     const files = takeSelectedFiles(e.target);
+    const generation = this.importGeneration.capture();
     for (const file of files) {
-      await this._importVideo(file, { startTime: 0 });
+      if (!this.importGeneration.isCurrent(generation)) break;
+      await this._importVideo(file, { startTime: 0, generation });
     }
   }
 
   async _onImageSelected(e) {
     const files = takeSelectedFiles(e.target);
+    const generation = this.importGeneration.capture();
     for (const file of files) {
-      await this._importImage(file, { startTime: 0 });
+      if (!this.importGeneration.isCurrent(generation)) break;
+      await this._importImage(file, { startTime: 0, generation });
     }
   }
 
   async _onAudioSelected(e) {
     const files = takeSelectedFiles(e.target);
+    const generation = this.importGeneration.capture();
     for (const file of files) {
-      await this._importAudio(file, { startTime: 0 });
+      if (!this.importGeneration.isCurrent(generation)) break;
+      await this._importAudio(file, { startTime: 0, generation });
     }
   }
 }
