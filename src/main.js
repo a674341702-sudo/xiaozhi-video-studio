@@ -26,6 +26,7 @@ import { createSerialTaskQueue } from './serial-task-queue.js';
 import { shouldWarnBeforeProjectExit } from './local-save-guard.js';
 import { getLocalStorageFailureMessage } from './local-storage-diagnostics.js';
 import { revokeProxy } from './proxy.js';
+import { assertProjectMediaComplete } from './project-media-integrity.js';
 
 // --- Global State ---
 let composition = null;
@@ -855,6 +856,7 @@ async function buildLocalProjectSnapshot(sourceComposition = composition, projec
       blob
     });
   }
+  assertProjectMediaComplete(project, media);
   return { project, media };
 }
 
