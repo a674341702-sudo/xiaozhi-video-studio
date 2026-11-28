@@ -184,6 +184,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   const $ = (id) => modal.querySelector('#' + id);
   const setStatus = (message) => { $('xzw-status').textContent = message; };
   let productionPreviewReady = false;
+  let productionGeneration = 0;
   let captionsManuallyEdited = false;
   let orderedMediaFiles = [];
   const mediaRoleByFile = new Map();
@@ -193,6 +194,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     mediaPreviewUrls.clear();
   };
   const invalidateProductionPreview = () => {
+    productionGeneration += 1;
     productionPreviewReady = false;
     $('xzw-production-preview').innerHTML = '';
   };
@@ -771,6 +773,12 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       voiceVolume: readVolumePercent('xzw-voice-volume', 1),
       videoVolume: readVolumePercent('xzw-video-volume', 0.12)
     });
+    const generationVersion = productionGeneration;
+    const assertGenerationCurrent = () => {
+      if (generationVersion !== productionGeneration) {
+        throw new Error('制作过程中商家资料或素材发生变化，已停止旧任务。请重新确认后生成。');
+      }
+    };
     $('xzw-generate').disabled = true;
     $('xzw-shots').innerHTML = '';
     setStatus('正在准备画布并导入素材，请不要关闭页面……');
@@ -795,6 +803,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const assignedShotIndex = assignment.shotIndex;
         const assignedShot = shotPlan[assignedShotIndex] || shotPlan[i];
         const clip = await mediaManager.importFile(file, { startTime: cursor });
+        assertGenerationCurrent();
         if (!clip) throw new Error('素材导入失败：' + file.name);
         // Importer may move a clip forward to avoid overlapping its original full-length
         // duration. The workflow has its own sequential shot schedule, so restore the
@@ -891,6 +900,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         setStatus('正在本机生成原创轻音乐……');
         try {
           musicFile = await createDefaultMusicFile();
+          assertGenerationCurrent();
           usingDefaultMusic = Boolean(musicFile);
         } catch (musicError) {
           console.warn('[小智商家短视频] 内置配乐生成失败，将保留无配乐成片能力', musicError);
@@ -898,6 +908,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       }
       if (musicFile) {
         const music = await mediaManager.importFile(musicFile, { startTime: 0, trackIndex: 4 });
+        assertGenerationCurrent();
         if (!music) throw new Error('背景音乐导入失败：' + musicFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
         music.volume = audioMix.music;
         music.loop = true;
@@ -911,6 +922,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       let voiceSourceDuration = null;
       if (voiceFile) {
         const voice = await mediaManager.importFile(voiceFile, { startTime: 0, trackIndex: 5 });
+        assertGenerationCurrent();
         if (!voice) throw new Error('中文配音导入失败：' + voiceFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
         voice.volume = audioMix.voice;
         voiceSourceDuration = voice.duration;
