@@ -14,7 +14,9 @@ for (const action of ['viral', 'smart', 'materials', 'document', 'projects', 'ed
 }
 
 for (const targetId of ['xzw-reference-studio', 'xzw-files', 'xzw-brief-file']) {
-  assert.ok((workflow + referenceStudio).includes(`id="${targetId}"`), `工作台缺少目标控件：${targetId}`);
+  const hasStaticId = (workflow + referenceStudio).includes(`id="${targetId}"`);
+  const hasDynamicId = referenceStudio.includes(`section.id = '${targetId}'`);
+  assert.ok(hasStaticId || hasDynamicId, `工作台缺少目标控件：${targetId}`);
   assert.ok(main.includes(`'${targetId}'`), `主页入口没有关联目标控件：${targetId}`);
 }
 
