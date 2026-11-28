@@ -127,6 +127,12 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <label class="xzw-field"><span>配音文件（手机录音或中文AI配音文件）</span><input id="xzw-voice" type="file" accept="audio/*"></label>
         <p class="xzw-note"><a href="./tts-lab.html" target="_blank" rel="noopener">✦ 打开中文配音实验室（普通话）</a>：生成后会尝试自动传回当前工作台；若未成功，再下载 WAV 手动上传。</p>
         <label class="xzw-check"><input id="xzw-original-audio" type="checkbox"><span>保留原视频现场声音（默认关闭，避免盖过配音）</span></label>
+        <div class="xzw-grid">
+          <label class="xzw-field"><span>背景音乐音量（0–50%）</span><input id="xzw-music-volume" type="number" min="0" max="50" step="1" value="12" inputmode="numeric"></label>
+          <label class="xzw-field"><span>配音音量（50–150%）</span><input id="xzw-voice-volume" type="number" min="50" max="150" step="5" value="100" inputmode="numeric"></label>
+          <label class="xzw-field"><span>原视频现场声（0–50%）</span><input id="xzw-video-volume" type="number" min="0" max="50" step="1" value="12" inputmode="numeric"></label>
+        </div>
+        <p class="xzw-note">建议配音 100%、背景音乐 8–15%、现场声 0–12%。如果没有配音，背景音乐会自动使用更高的默认音量。</p>
         <p class="xzw-note">配乐会自动降低音量，配音放在独立音轨并优先突出。手机首测时，配乐和配音分别不超过40MB、合计不超过60MB。默认关闭拍摄视频自带声音，避免环境噪声影响成片；需要保留现场声时可勾选。中文配音实验室支持同源自动回传；如果主工作台未打开、浏览器不支持或导入失败，可下载 WAV 后手动上传。</p>
       </div>
 
@@ -653,7 +659,17 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       return;
     }
 
-    const audioMix = getMerchantAudioMix({ hasVoice: Boolean(voiceFile), keepOriginalAudio: $('xzw-original-audio').checked });
+    const readVolumePercent = (id, fallback) => {
+      const value = Number($(id).value);
+      return Number.isFinite(value) ? Math.min(150, Math.max(0, value)) / 100 : fallback;
+    };
+    const audioMix = getMerchantAudioMix({
+      hasVoice: Boolean(voiceFile),
+      keepOriginalAudio: $('xzw-original-audio').checked,
+      musicVolume: readVolumePercent('xzw-music-volume', null),
+      voiceVolume: readVolumePercent('xzw-voice-volume', 1),
+      videoVolume: readVolumePercent('xzw-video-volume', 0.12)
+    });
     $('xzw-generate').disabled = true;
     $('xzw-shots').innerHTML = '';
     setStatus('正在准备画布并导入素材，请不要关闭页面……');
@@ -785,11 +801,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       if (voiceFile) {
         const voice = await mediaManager.importFile(voiceFile, { startTime: 0, trackIndex: 5 });
         if (!voice) throw new Error('中文配音导入失败：' + voiceFile.name + '。请检查文件格式，建议使用 MP3 或 WAV。');
-        voice.volume = 1;
+        voice.volume = audioMix.voice;
         voiceSourceDuration = voice.duration;
         voice.duration = getVoiceClipDuration(voice.duration, narrationDuration);
         voice.trimEnd = (voice.trimStart || 0) + voice.duration;
-        voice.keyframes = { volume: getAudioFadeKeyframes(voice.duration, 1, 0.18, 0.18) };
+        voice.keyframes = { volume: getAudioFadeKeyframes(voice.duration, audioMix.voice, 0.18, 0.18) };
       }
       onCompositionChanged();
       canvasPreview.setCurrentTime(0);

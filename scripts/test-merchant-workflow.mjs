@@ -72,6 +72,19 @@ assert.equal(musicOnlyMix.music, 0.22);
 assert.equal(musicOnlyMix.video, 0);
 const cameraAudioMix = getMerchantAudioMix({ hasVoice: false, keepOriginalAudio: true });
 assert.equal(cameraAudioMix.video, 0.7);
+const customMix = getMerchantAudioMix({
+  hasVoice: true, keepOriginalAudio: true,
+  musicVolume: 0.08, voiceVolume: 0.85, videoVolume: 0.05
+});
+assert.deepEqual(customMix, { music: 0.08, voice: 0.85, video: 0.05 });
+assert.equal(getMerchantAudioMix({ hasVoice: true, musicVolume: 4, voiceVolume: 2 }).music, 0.5,
+  'background music must be capped at 50%');
+assert.equal(getMerchantAudioMix({ hasVoice: true, voiceVolume: 2 }).voice, 1.5,
+  'narration gain may be increased up to 150%');
+assert.equal(getMerchantAudioMix({ hasVoice: true, voiceVolume: -1 }).voice, 0,
+  'negative volume values must be clamped');
+assert.equal(getMerchantAudioMix({ hasVoice: true, musicVolume: Number.NaN }).music, 0.12,
+  'invalid music volume falls back to the safe default');
 console.log('人声优先与背景音压低规则测试通过');
 
 
