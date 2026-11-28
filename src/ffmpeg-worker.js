@@ -17,6 +17,7 @@ import { cleanupFFmpegFiles } from './ffmpeg-file-cleanup.js';
 import { trackExportFile } from './export-file-tracker.js';
 import { assertFrameMemoryBudget } from './export-frame-budget.js';
 import { validateMp4Output } from './mp4-output-validation.js';
+import { getDefaultExportFrameBudget } from './export-memory-budget.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -509,7 +510,8 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   // FFmpeg.wasm keeps imported frames in its virtual filesystem until encoding.
   // Bound the workload on phones before allocating hundreds of large JPEG frames.
   const maxFrames = options.mobileSafe === false ? 1800 : 900;
-  const maxFrameBytes = options.maxFrameBytes ?? (options.mobileSafe === false ? 768 : 256) * 1024 * 1024;
+  const deviceMemory = typeof navigator !== 'undefined' ? navigator.deviceMemory : undefined;
+  const maxFrameBytes = options.maxFrameBytes ?? getDefaultExportFrameBudget(deviceMemory, options.mobileSafe !== false);
   if (!Number.isSafeInteger(maxFrameBytes) || maxFrameBytes <= 0) {
     throw new Error('导出帧内存预算无效，请恢复默认导出设置后重试。');
   }
