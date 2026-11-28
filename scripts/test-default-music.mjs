@@ -57,6 +57,7 @@ const originalOffline = globalThis.OfflineAudioContext;
 const originalWebkitOffline = globalThis.webkitOfflineAudioContext;
 const originalFile = globalThis.File;
 let oscillatorCount = 0;
+let filterCount = 0;
 let renderShape = null;
 class TestFile extends Blob {
   constructor(parts, name, options = {}) {
@@ -72,9 +73,13 @@ class TestOfflineAudioContext {
   }
   createGain() {
     return {
-      gain: { value: 1, setValueAtTime() {}, linearRampToValueAtTime() {} },
+      gain: { value: 1, setValueAtTime() {}, linearRampToValueAtTime() {}, exponentialRampToValueAtTime() {} },
       connect() {}
     };
+  }
+  createBiquadFilter() {
+    filterCount++;
+    return { type: '', frequency: { value: 0 }, Q: { value: 0 }, connect() {} };
   }
   createOscillator() {
     oscillatorCount++;
@@ -104,7 +109,8 @@ try {
   globalThis.webkitOfflineAudioContext = undefined;
   globalThis.File = TestFile;
   const generated = await createDefaultMusicFile();
-  assert.equal(oscillatorCount, 16, 'the generator should schedule four notes for each of four chords');
+  assert.equal(oscillatorCount, 36, 'the arrangement should schedule chord pads, bass notes and four plucks per chord');
+  assert.equal(filterCount, 32, 'pads and plucks should be softly filtered');
   assert.deepEqual(renderShape, {
     channels: 2,
     frames: DEFAULT_MUSIC_SAMPLE_RATE * DEFAULT_MUSIC_LOOP_SECONDS,
