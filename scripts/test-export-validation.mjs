@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { validateCompositionMedia } from '../src/ffmpeg-worker.js';
 
 assert.throws(() => validateCompositionMedia({ clips: [] }), /还没有可见的画面内容/);
-assert.throws(() => validateCompositionMedia({ clips: [{ type: 'audio', startTime: 0, duration: 5, file: new Blob(['audio']) }] }), /还没有画面内容/);
+assert.throws(() => validateCompositionMedia({ clips: [{ type: 'audio', startTime: 0, duration: 5, file: new Blob(['audio']) }] }), /还没有可见的画面内容/);
 assert.equal(validateCompositionMedia({ clips: [{ type: 'text', startTime: 0, duration: 3 }] }), true);
 assert.throws(() => validateCompositionMedia({
   tracks: [{ id: 'v1', visible: false }],
