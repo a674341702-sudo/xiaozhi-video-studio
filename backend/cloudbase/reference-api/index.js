@@ -98,9 +98,9 @@ function validateShareUrl(input) {
     return { ok: false, reason: '链接包含不允许的账号信息或端口' };
   }
   const host = url.hostname.toLowerCase().replace(/^www\./, '');
-  const allowed = [...ALLOWED_HOSTS].some(domain =>
-    host === domain || host.endsWith('.' + domain)
-  );
+  // Accept only known platform hosts (plus an optional leading www. above).
+  // Do not trust arbitrary subdomains merely because they end in a platform domain.
+  const allowed = ALLOWED_HOSTS.has(host);
   if (!allowed) return { ok: false, reason: '暂不支持该平台链接' };
   return { ok: true, platform: /xiaohongshu|xhslink/.test(host) ? 'xiaohongshu' : 'douyin' };
 }
