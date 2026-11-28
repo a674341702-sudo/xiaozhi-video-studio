@@ -33,6 +33,10 @@ assert.match(workflow, /voiceRecordingTimer = setInterval/,
   '录音计时必须在录音期间持续刷新');
 assert.match(workflow, /stopVoiceRecordingTimer\(\)/,
   '录音结束、失败或关闭工作台时必须清理计时器');
+assert.match(workflow, /voiceRecorder\.onstop = null/,
+  '录音发生错误后必须阻止后续 onstop 保存不完整音频');
+assert.match(workflow, /voiceChunks = \[\]/,
+  '录音发生错误后必须清空未完成的音频分片');
 assert.match(workflow, /40 \* 1024 \* 1024/,
   '录音文件必须限制在手机端40MB以内');
 assert.match(workflow, /已停用需要境外下载的旧配音引擎/,
