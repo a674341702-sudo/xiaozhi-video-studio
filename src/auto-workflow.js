@@ -398,6 +398,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   let voiceStream = null;
   let voiceChunks = [];
   let voicePreviewUrl = null;
+  let discardVoiceRecording = false;
   const stopVoiceTracks = () => {
     if (voiceStream) voiceStream.getTracks().forEach(track => track.stop());
     voiceStream = null;
@@ -430,6 +431,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       const mimeType = mimeCandidates.find(type => MediaRecorder.isTypeSupported?.(type));
       voiceRecorder = mimeType ? new MediaRecorder(voiceStream, { mimeType }) : new MediaRecorder(voiceStream);
       voiceChunks = [];
+      discardVoiceRecording = false;
       voiceRecorder.ondataavailable = event => {
         if (event.data?.size) voiceChunks.push(event.data);
         const total = voiceChunks.reduce((sum, chunk) => sum + chunk.size, 0);
@@ -452,6 +454,11 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         const blob = new Blob(voiceChunks, { type: voiceRecorder?.mimeType || 'audio/webm' });
         voiceRecorder = null;
         voiceChunks = [];
+        if (discardVoiceRecording) {
+          discardVoiceRecording = false;
+          resetVoicePreview();
+          return;
+        }
         if (!blob.size || blob.size > 40 * 1024 * 1024) {
           $('xzw-record-status').textContent = '录音为空或超过40MB，请重新录制。';
           return;
@@ -633,8 +640,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     // Invalidate any async imports so they cannot finish into a hidden, stale session.
     invalidateProductionPreview();
     closeMediaPreview();
-    if (voiceRecorder?.state === 'recording') voiceRecorder.stop();
-    else stopVoiceTracks();
+    if (voiceRecorder?.state === 'recording') {
+      discardVoiceRecording = true;
+      voiceRecorder.stop();
+    } else stopVoiceTracks();
     resetVoicePreview();
     modal.classList.remove('open');
   };
