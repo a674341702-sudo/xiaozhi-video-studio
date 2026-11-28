@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import { assertFrameMemoryBudget } from '../src/export-frame-budget.js';
+const mib=1024*1024;
+assert.equal(assertFrameMemoryBudget(0,10,100),10);
+assert.equal(assertFrameMemoryBudget(90,10,100),100);
+assert.throws(()=>assertFrameMemoryBudget(90,11,100),/内存保护上限/);
+assert.throws(()=>assertFrameMemoryBudget(Number.MAX_SAFE_INTEGER,2,Number.MAX_SAFE_INTEGER),/大小无效/);
+assert.throws(()=>assertFrameMemoryBudget(-1,1,100),/大小无效/);
+assert.throws(()=>assertFrameMemoryBudget(0,0,100),/大小无效/);
+assert.throws(()=>assertFrameMemoryBudget(0,mib,0),/大小无效/);
+console.log('Export frame memory budget tests passed.');
