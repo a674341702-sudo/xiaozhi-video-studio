@@ -621,7 +621,18 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
 
     if (onProgress) onProgress(95, 'Finalizing export');
 
-    const mp4Data = await ffmpeg.readFile('export.mp4');
+    // Keep cancellation active while the encoded MP4 is copied out of the
+    // FFmpeg virtual filesystem. A large file read can take noticeable time
+    // on mobile even after encoding has completed.
+    checkAborted();
+    if (abortSignal) abortSignal.addEventListener('abort', terminateEncoder, { once: true });
+    let mp4Data;
+    try {
+      mp4Data = await encoder.readFile('export.mp4');
+      checkAborted();
+    } finally {
+      if (abortSignal) abortSignal.removeEventListener('abort', terminateEncoder);
+    }
 
     if (!mp4Data || mp4Data.length === 0) {
       throw new Error('FFmpeg failed to produce output MP4');
