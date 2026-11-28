@@ -24,6 +24,8 @@ assert.match(worker, /a\.download = filename/,
   '导出文件必须设置可识别的下载文件名');
 assert.match(worker, /setTimeout\(\(\) => URL\.revokeObjectURL\(url\), 60_000\)/,
   '移动端下载启动后必须保留Blob URL一段时间');
+assert.match(main, /exportWidthEl\) exportWidthEl\.value = String\(dims\.width\)[\s\S]*?exportHeightEl\) exportHeightEl\.value = String\(dims\.height\)/,
+  '选择竖屏或方形画幅后，MP4导出尺寸必须同步，不能沿用旧画幅');
 assert.match(main, /downloadBlob\(blob, filename\)/,
   '主工作台必须将完成的MP4交给浏览器下载');
 assert.match(main, /signal\.aborted/,
