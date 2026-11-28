@@ -150,6 +150,10 @@ assert.match(autoWorkflowSource, /String\(profile\.copy \|\| ''\)\.split/, 'merc
 assert.ok(autoWorkflowSource.includes('copyByShot.get(index)'), 'merchant copy points must be distributed across generated shot captions');
 assert.ok(autoWorkflowSource.includes('没有明显线索时按上传顺序自动安排，不需要逐张确认'), 'unknown media filenames must be assigned automatically by upload order without forcing manual confirmation');
 assert.ok(autoWorkflowSource.includes('系统已自动安排镜头，可直接生成'), 'upload feedback must tell merchants that automatic shot assignment is ready');
+assert.ok(autoWorkflowSource.includes("import { createDefaultMusicFile } from './default-music.js'"), 'merchant workflow must load the built-in original music generator');
+assert.ok(autoWorkflowSource.includes("musicFile = await createDefaultMusicFile()"), 'missing uploaded music must trigger local original music generation');
+assert.ok(autoWorkflowSource.includes("usingDefaultMusic ? '、内置原创轻音乐'"), 'completion feedback must distinguish built-in music from merchant-uploaded music');
+
 const captionFallbackIndex = autoWorkflowSource.indexOf("if (!$('xzw-captions').value.trim())");
 const narrationSplitIndex = autoWorkflowSource.indexOf("const script = $('xzw-narration').value.trim().split");
 assert.ok(captionFallbackIndex > 0 && captionFallbackIndex < narrationSplitIndex, 'missing画面字幕时必须独立根据商家文案生成字幕，不能依赖配音稿是否为空');
