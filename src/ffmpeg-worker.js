@@ -513,6 +513,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   checkAborted();
 
   const inputFiles = [];
+  let totalFrameBytes = 0;
   const exportFFmpeg = ffmpeg;
   let offscreenCanvas = null;
 
@@ -540,6 +541,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     if (hasAudio) {
       let wavBlob = await audioBufferToWav(audioBuffer, abortSignal);
       let wavData = await fetchFile(wavBlob);
+      totalFrameBytes = assertFrameMemoryBudget(totalFrameBytes, wavData.byteLength, maxFrameBytes);
       trackExportFile(inputFiles, 'audio.wav');
       await ffmpeg.writeFile('audio.wav', wavData);
       wavData = null;
@@ -565,8 +567,6 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     const videoClips = getExportableVideoClips(composition);
 
     const jpegQuality = quality === 'low' ? 0.68 : quality === 'medium' ? 0.78 : 0.88;
-    let totalFrameBytes = 0;
-
     for (let f = 0; f < totalFrames; f++) {
       checkAborted();
       const time = f * frameDuration;
