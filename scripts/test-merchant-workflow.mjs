@@ -140,6 +140,10 @@ console.log('商家工作流模板说明 CSS 分隔测试通过');
 assert.ok(autoWorkflowSource.includes('accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,.mov"'), 'merchant media picker must expose only formats accepted by validation, not generic HEIC images');
 assert.ok(!autoWorkflowSource.includes("if (briefText && !requirements.length) issues.push("), 'pasted merchant copy must not require a separate checklist extraction step');
 assert.ok(!autoWorkflowSource.includes("requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)"), 'optional checklist confirmations must not block the simple photo-plus-copy workflow');
+assert.match(autoWorkflowSource, /String\(profile\.copy \|\| ''\)\.split/, 'merchant copy must be split into usable caption points');
+assert.ok(autoWorkflowSource.includes('copyByShot.get(index)'), 'merchant copy points must be distributed across generated shot captions');
+assert.ok(autoWorkflowSource.includes('chars.length > 48'), 'automatically generated captions must be kept short for mobile viewing');
+
 
 
 
