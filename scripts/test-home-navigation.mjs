@@ -35,5 +35,10 @@ assert.match(handler, /else if \(action === 'document'\)[\s\S]*?target\.click\(\
   '商家文档入口必须在用户点击时调起文件选择器');
 
 assert.match(workflow, /initReferenceVideoStudio\(modal\)/, '参考视频研究室必须在工作台初始化时挂载');
+assert.match(workflow, /const closeWorkflow = \(\) => \{[\s\S]*?closeMediaPreview\(\);[\s\S]*?modal\.classList\.remove\('open'\);/, '关闭制作窗口必须同时停止素材预览');
+assert.match(workflow, /modal\.querySelector\('\.xzw-close'\)\.addEventListener\('click', closeWorkflow\)/, '关闭按钮必须调用统一关闭逻辑');
+assert.match(workflow, /document\.addEventListener\('keydown',[\s\S]*?event\.key !== 'Escape'[\s\S]*?closeWorkflow\(\)/, '手机键盘/返回键 Escape 必须能够关闭制作窗口');
+assert.match(workflow, /if \(mediaPreview\.classList\.contains\('open'\)\) closeMediaPreview\(\)/, 'Escape 应优先关闭素材放大预览');
+
 
 console.log('主页入口回归测试通过：6个入口、商家资料/素材/文档目标控件、直接打开弹层和手机文件选择器链路均已核对。');
