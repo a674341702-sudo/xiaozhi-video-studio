@@ -253,3 +253,29 @@ MOSS-TTS-Nano 暂不进入商家主流程；它的参考音频/声音克隆能�
 - 尚未在用户手机上安装/试听；没有音质、耗时、内存或大陆网络实测结果。
 - 尚未改变现有 WASM 构建工作流，也未把 TTS 接入商家工作台。
 - 当前方案仍为实验阶段，录音上传继续作为可靠回退路径。
+
+
+
+## 2026-11-29：官方 Android TTS Engine 下载入口复核
+
+本次再次直接核对 sherpa-onnx 官方中文 APK 清单，而不是只依据仓库 README 的摘要：
+
+- 官方页面当前列出 sherpa-onnx 2.0.2 的 `arm64-v8a` 与 `armeabi-v7a` 两种架构的 Matcha 中文 Baker 和 Matcha 中英双语 TTS Engine APK。
+- 官方页面同时明确提醒：sherpa-onnx 引擎代码为 Apache-2.0，但 APK 所包含的模型可能有独立许可证，必须单独检查。
+- 官方页面提供“中国用户”下载入口；这属于面向中国用户的镜像链接线索，但页面本身不能证明每个文件在中国大陆每个运营商网络均可稳定下载。仍需实际请求、校验文件大小与 SHA-256，并在大陆网络实测。
+- 该 APK 是 Android TTS Engine 形式的独立系统组件，适合在手机上验证模型是否能运行、中文读音是否自然、长文本是否稳定；它不是可直接嵌入网页的 JavaScript SDK，也不能直接把 APK 当作网页 TTS 引擎。
+
+官方入口：
+- 中文用户 TTS Engine APK 清单：https://k2-fsa.github.io/sherpa/onnx/tts/apk-engine-cn.html
+- Matcha 中文 Baker 模型说明与音频样例：https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese/matcha-icefall-zh-baker.html
+- sherpa-onnx 源码：https://github.com/k2-fsa/sherpa-onnx
+
+### 本轮结论与下一步执行顺序
+
+1. **优先把 Android APK 当作手机基准测试，不把它误当成网页集成完成。** 先验证音质、生成耗时和稳定性，再决定是否继续投入浏览器 WASM 路线。
+2. 浏览器路线继续使用 sherpa-onnx 官方 WASM Worker + Matcha 中文模型 + 已有 WAV 适配器；必须先通过真实中文 WAV 生成测试，才允许接入 `pendingVoiceFile`。
+3. 对所有候选模型资源建立文件级清单：原始来源、镜像来源、字节数、SHA-256、许可证、是否已通过中国大陆普通网络下载验证。任何一项未知都保持 `not-ready`。
+4. 不把 APK、模型权重或大型 WASM 产物提交到 Git 仓库；不将海外域名作为运行时 fallback；不触发付费存储或 CDN。
+5. APK 的中国用户镜像链接与浏览器模型资源是两条不同下载链路。APK 下载成功不能替代浏览器模型资源验收；反之亦然。
+
+当前仍未完成：APK 真机试听、镜像文件校验、浏览器端到端生成、Android Chrome/微信浏览器测试及中国大陆网络实测。本次更新只修正了验证路线和验收边界，不改变商家工作台现有行为。
