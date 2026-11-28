@@ -32,7 +32,7 @@ assert.ok(mediaManagerSource.includes('getPreciseMediaDuration(audio.duration)')
 assert.ok(!mediaManagerSource.includes('getPreciseMediaDuration(audio.duration, 10)'),
   'audio imports must not silently substitute a guessed ten-second duration');
 
-assert.ok(mediaManagerSource.includes('const videoDimensions = validateImageDimensions(vW, vH)'),
+assert.ok(mediaManagerSource.includes('const videoDimensions = validateImageDimensions(vW, vH, maxDecodePixels)'),
   'video imports must validate decoded source dimensions before adding the clip');
 assert.ok(mediaManagerSource.includes('if (!videoDimensions.valid)'),
   'video imports must reject extreme source dimensions');
