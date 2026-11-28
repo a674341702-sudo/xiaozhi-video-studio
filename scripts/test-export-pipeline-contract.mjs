@@ -16,6 +16,8 @@ assert.match(worker, /'-c:a', 'aac'/,
   '有音轨时必须使用AAC编码');
 assert.match(worker, /'-pix_fmt', 'yuv420p'/,
   '输出必须使用手机播放器兼容的yuv420p像素格式');
+assert.match(worker, /const offCtx = offscreenCanvas\.getContext\('2d'\);[\s\S]*?if \(!offCtx\)[\s\S]*?手机浏览器无法创建视频渲染画布/,
+  '手机端无法创建 Canvas 2D 上下文时必须给出可理解的错误，而不是继续渲染并崩溃');
 assert.match(worker, /'-t', duration\.toFixed\(3\)/,
   '输出时长必须受时间线总时长约束');
 assert.match(worker, /return \{ blob: createMp4Blob\(mp4Data\), ext: 'mp4' \}/,
