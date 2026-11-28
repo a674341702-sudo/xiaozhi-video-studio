@@ -390,7 +390,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   // invalidate the approval just like copy, captions, and visual settings.
   ['xzw-ratio', 'xzw-subtitle', 'xzw-branded-outro', 'xzw-cta',
     'xzw-music', 'xzw-voice', 'xzw-original-audio',
-    'xzw-music-volume', 'xzw-voice-volume', 'xzw-video-volume'].forEach(id => {
+    'xzw-music-volume', 'xzw-voice-volume', 'xzw-video-volume', 'xzw-export-preset'].forEach(id => {
     $(id)?.addEventListener('change', invalidateProductionPreview);
     $(id)?.addEventListener('input', invalidateProductionPreview);
   });
