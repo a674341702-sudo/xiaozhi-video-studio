@@ -89,7 +89,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         <label class="xzw-field"><span>门店照片 / 产品照片 / 视频（可多选）</span><div class="xzw-file"><input id="xzw-files" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,.mov" multiple><p class="xzw-note">建议 4–8 个素材；手机首测每次不超过8个，单个视频尽量不超过40MB。优先使用清晰、稳定、光线好的原片。</p></div></label>
         <div id="xzw-file-summary" class="xzw-note">尚未选择素材</div>
         <div id="xzw-media-map" class="xzw-media-map"></div>
-        <p class="xzw-note">系统会按文件名和素材类型推荐镜头用途，你可以手动调整；没有明显匹配依据时会标记为待确认。</p>
+        <p class="xzw-note">系统优先按文件名和素材类型推荐镜头用途；没有明显线索时按上传顺序自动安排，不需要逐张确认。你也可以手动调整。</p>
         <div class="xzw-field">
           <span>商家文字要求（可选）</span>
           <div class="xzw-file">
@@ -235,7 +235,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       select.setAttribute('aria-label', file.name + ' 的镜头用途');
       const unassigned = document.createElement('option');
       unassigned.value = '';
-      unassigned.textContent = '自动安排（可手动调整）';
+      unassigned.textContent = '自动安排（默认，可手动调整）';
       select.appendChild(unassigned);
       plans.forEach((plan, planIndex) => {
         const option = document.createElement('option');
@@ -431,7 +431,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     invalidateProductionPreview();
     renderMediaMapping();
     const duplicateNote = result.duplicateCount ? '，跳过重复文件 ' + result.duplicateCount + ' 个' : '';
-    setStatus('本次新增 ' + result.addedCount + ' 个素材' + duplicateNote + '。当前共 ' + orderedMediaFiles.length + ' 个，请检查预览和镜头用途。');
+    setStatus('本次新增 ' + result.addedCount + ' 个素材' + duplicateNote + '。当前共 ' + orderedMediaFiles.length + ' 个，系统已自动安排镜头，可直接生成；需要时再手动调整。');
   });
   $('xzw-extract-requirements').addEventListener('click', () => {
     const source = $('xzw-brief').value.trim();
