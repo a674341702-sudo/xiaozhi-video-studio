@@ -4,7 +4,7 @@
 
 ## 本地测试
 
-在该目录运行 `npm test`（Node.js 20+，使用 Node 内置测试框架，无需安装第三方依赖）。测试覆盖健康检查、抖音/小红书域名识别、恶意域名/凭据/端口拒绝、JSON 错误、CORS 白名单和 404 路由。
+在该目录运行 `npm test`（Node.js 20+，使用 Node 内置测试框架，无需安装第三方依赖）。测试覆盖健康检查、抖音/小红书域名识别、恶意域名/凭据/端口拒绝、JSON 错误、CORS 白名单、404 路由、API Gateway v2 事件格式、Base64 请求体和 16 KB 请求体限制。
 
 ## 接口
 
@@ -16,11 +16,12 @@
 ## 环境变量
 
 - `CORS_ALLOWED_ORIGINS`：逗号分隔的精确前端 Origin，例如 `https://a674341702-sudo.github.io`。不要使用 `*`。
+- 请求体上限为 16 KB；超限返回 HTTP 413 `BODY_TOO_LARGE`。
 - 当前不需要也不接受 Cookie、平台账号密码或第三方 API Key。
 
 ## 部署前检查
 
-1. 在 CloudBase 创建 Node.js 20 HTTP 云函数，将 `index.js` 作为入口；确认平台的 HTTP 触发器会传入 `httpMethod`、`path`、`headers`、`body`。
+1. 在 CloudBase 创建 Node.js 20 HTTP 云函数，将 `index.js` 作为入口；代码兼容常见的 `httpMethod/path/headers/body` 事件字段，以及 API Gateway v2 的 `requestContext.http.method/path` 结构。实际部署后仍须用 CloudBase 控制台提供的真实触发器进行验证。
 2. 配置 `CORS_ALLOWED_ORIGINS` 为实际前端 Origin。
 3. 先用 GET `/health` 验证，再用 POST `/reference/inspect` 验证错误响应。
 4. 不要把函数地址或任何密钥写入前端仓库，除非前端 API 地址已经通过配置和 CORS 验证。
