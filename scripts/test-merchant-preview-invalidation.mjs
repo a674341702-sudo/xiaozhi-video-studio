@@ -22,3 +22,13 @@ for (const id of ['xzw-music', 'xzw-voice', 'xzw-original-audio', 'xzw-music-vol
   assert.match(profileBlock, new RegExp(id), `${id} must invalidate the previous production preview`);
 }
 console.log('Merchant production preview invalidation tests passed.');
+
+assert.match(source, /let productionGeneration = 0/);
+assert.match(source, /productionGeneration \+= 1/);
+assert.match(source, /const generationVersion = productionGeneration/);
+assert.match(source, /const assertGenerationCurrent = \(\) =>/);
+assert.match(source, /制作过程中商家资料或素材发生变化/);
+assert.match(source, /await mediaManager\.importFile\(file, \{ startTime: cursor \}\);\s*assertGenerationCurrent\(\)/);
+assert.match(source, /await createDefaultMusicFile\(\);\s*assertGenerationCurrent\(\)/);
+assert.match(source, /await mediaManager\.importFile\(musicFile, \{ startTime: 0, trackIndex: 4 \}\);\s*assertGenerationCurrent\(\)/);
+assert.match(source, /await mediaManager\.importFile\(voiceFile, \{ startTime: 0, trackIndex: 5 \}\);\s*assertGenerationCurrent\(\)/);
