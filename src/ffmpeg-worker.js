@@ -131,11 +131,15 @@ function readFileAsArrayBuffer(file, abortSignal) {
   });
 }
 
-function decodeAudioData(arrayBuffer) {
-  const ctx = new (window.AudioContext || window.webkitAudioContext)();
-  return ctx.decodeAudioData(arrayBuffer.slice(0)).finally(() => {
-    try { ctx.close(); } catch(e) {}
-  });
+export async function decodeAudioData(arrayBuffer, AudioContextClass = (window.AudioContext || window.webkitAudioContext)) {
+  // The input buffer is consumed only by this decode operation, so avoid
+  // making another full-size copy just to protect a value we never reuse.
+  const ctx = new AudioContextClass();
+  try {
+    return await ctx.decodeAudioData(arrayBuffer);
+  } finally {
+    try { await ctx.close(); } catch (_) {}
+  }
 }
 
 /**
