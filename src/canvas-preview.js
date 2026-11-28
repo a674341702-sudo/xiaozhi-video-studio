@@ -188,7 +188,10 @@ export class CanvasPreview {
     // every canvas animation frame fights native decoding and causes stutter.
     if (!this.isPlaying) {
       if (!this._videoSeekListeners.has(video) && typeof video.addEventListener === 'function') {
-        video.addEventListener('seeked', () => this.markNeedsRender());
+        const repaintWhenFrameReady = () => this.markNeedsRender();
+        video.addEventListener('seeked', repaintWhenFrameReady);
+        video.addEventListener('loadeddata', repaintWhenFrameReady);
+        video.addEventListener('canplay', repaintWhenFrameReady);
         this._videoSeekListeners.add(video);
       }
       if (Math.abs(video.currentTime - clipOffset) > 0.04) {

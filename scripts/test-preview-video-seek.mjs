@@ -11,3 +11,8 @@ assert.match(source, /if \(Math\.abs\(video\.currentTime - clipOffset\) > 0\.04\
 assert.match(source, /video\.readyState === 'number' && video\.readyState < 2/,
   'preview must wait until a decoded frame is available');
 console.log('Preview video seek and stale-frame regression tests passed.');
+
+assert.match(source, /video\.addEventListener\('loadeddata', repaintWhenFrameReady\)/,
+  'preview must repaint when media data becomes available without a seek event');
+assert.match(source, /video\.addEventListener\('canplay', repaintWhenFrameReady\)/,
+  'preview must repaint when the browser can provide a frame after loading');
