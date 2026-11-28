@@ -62,9 +62,20 @@ export const SUPPORTED_TYPES = {
 };
 
 /**
- * Maximum file size in bytes (2 GB).
+ * File-size guardrails: keep desktop compatibility while protecting phone memory.
  */
 export const MAX_FILE_SIZE = 2 * 1024 * 1024 * 1024;
+export const MAX_MOBILE_FILE_SIZE = 250 * 1024 * 1024;
+
+export function getMediaFileSizeLimit(isMobile = false) {
+  return isMobile ? MAX_MOBILE_FILE_SIZE : MAX_FILE_SIZE;
+}
+
+export function isMobileMediaDevice(navigatorLike = globalThis.navigator) {
+  const userAgent = navigatorLike?.userAgent || '';
+  return /Android|iPhone|iPad|iPod|Mobile/i.test(userAgent) ||
+    (Number(navigatorLike?.maxTouchPoints) > 1 && /Mac/i.test(navigatorLike?.platform || ''));
+}
 
 /**
  * Validates a media file for supported type and size.
@@ -87,11 +98,14 @@ export function validateFile(file, type = 'video') {
     };
   }
 
-  if (file.size > MAX_FILE_SIZE) {
+  const mobile = isMobileMediaDevice();
+  const maxSize = getMediaFileSizeLimit(mobile);
+  if (!Number.isFinite(file.size) || file.size < 0 || file.size > maxSize) {
     const sizeMB = (file.size / (1024 * 1024)).toFixed(0);
+    const limitMB = Math.round(maxSize / (1024 * 1024));
     return {
       valid: false,
-      error: `File too large (${sizeMB} MB). Maximum size is 2 GB.`,
+      error: `文件过大（${sizeMB} MB），当前设备单个素材最大支持 ${limitMB} MB。建议先压缩视频或图片后再导入。`,
     };
   }
 
