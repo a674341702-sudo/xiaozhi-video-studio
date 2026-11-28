@@ -178,6 +178,19 @@ export function limitNarrationLines(lines = [], maxChars = 480) {
  * Order the most decision-critical merchant facts before optional supporting
  * copy so a mobile TTS length cap is less likely to remove the offer or address.
  */
+/**
+ * Report which merchant content points survived the narration length limit.
+ * This checks exact wording and does not claim semantic equivalence.
+ */
+export function getNarrationContentCoverage(contentPoints = [], narration = '') {
+  const normalize = value => String(value || '').trim().replace(/[。！？!?；;，,、\s]+$/g, '');
+  const lines = Array.from(new Set(Array.from(contentPoints || []).map(normalize).filter(Boolean)));
+  const text = String(narration || '');
+  const included = lines.filter(point => text.includes(point));
+  const missing = lines.filter(point => !text.includes(point));
+  return { total: lines.length, included: included.length, missing };
+}
+
 export function prioritizeMerchantNarrationLines({
   intro = '',
   product = '',

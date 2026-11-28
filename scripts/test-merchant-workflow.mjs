@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, getNarrationContentCoverage, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -91,6 +91,14 @@ assert.equal(getMerchantAudioMix({ hasVoice: true, musicVolume: Number.NaN }).mu
   'invalid music volume falls back to the safe default');
 console.log('人声优先与背景音压低规则测试通过');
 
+
+assert.deepEqual(getNarrationContentCoverage(['招牌牛肉面', '新客优惠', '门店地址'], '招牌牛肉面。门店地址：昆明市。'), {
+  total: 3, included: 2, missing: ['新客优惠']
+});
+assert.deepEqual(getNarrationContentCoverage(['招牌牛肉面', '招牌牛肉面'], '招牌牛肉面。'), {
+  total: 1, included: 1, missing: []
+});
+console.log('商家重点进入配音稿覆盖率测试通过');
 
 const shortNarration = limitNarrationLines(['今天带你了解这家门店。', '主打产品真实展示。'], 40);
 assert.equal(shortNarration.text, '今天带你了解这家门店。\n主打产品真实展示。');
