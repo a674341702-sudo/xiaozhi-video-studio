@@ -52,3 +52,11 @@ assert.match(voiceReceiveBlock, /invalidateProductionPreview\(\)/,
 assert.match(voiceReceiveBlock, /if \(\$\('xzw-generate'\)\.disabled\)/,
   'voice received during arrangement must be queued instead of importing into a partial timeline');
 assert.match(voiceReceiveBlock, /当前编排已停止/);
+
+const musicFallbackStart = source.indexOf("} catch (musicError) {");
+const musicFallbackEnd = source.indexOf("\n        }", musicFallbackStart);
+assert.ok(musicFallbackStart >= 0 && musicFallbackEnd > musicFallbackStart,
+  'default music fallback must have a guarded error handler');
+assert.match(source.slice(musicFallbackStart, musicFallbackEnd),
+  /if \(generationVersion !== productionGeneration\) throw musicError/,
+  'a stale generation error must not be swallowed as an optional background-music failure');
