@@ -54,6 +54,39 @@
 | MOSS-TTS-Nano ONNX | 浏览器 ONNX 路线；支持中文和参考音频工作流 | TTS + 音频 tokenizer 双模型约 760MB 级；国内完整镜像未核实 | 后续高质量/声音克隆候选 |
 | Kokoro 中文 ONNX 浏览器方案 | 有第三方中文前端和浏览器运行封装 | WebGPU 优先；模型与 voice 资源国内来源未验证；第三方实现需审许可证 | 观察，不优先接入 |
 
+
+## 本轮补充：Matcha 中文模型资源核对（2026-11-28）
+
+核对来源：
+- 官方 Matcha Baker 中文模型说明：https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese/matcha-icefall-zh-baker.html
+- 官方 Matcha 中英双语模型说明：https://k2-fsa.github.io/sherpa/onnx/tts/all/Chinese-English/matcha-icefall-zh-en.html
+- 官方 WASM TTS 目录：https://github.com/k2-fsa/sherpa-onnx/tree/master/wasm/tts
+
+### 资源体积与依赖修正
+
+Matcha Baker 中文模型并非“单个 125 MB 模型文件”。官方清单至少包含：
+- 声学模型 `model-steps-3.onnx`：约 72 MB；
+- 声码器 `vocos-22khz-univ.onnx`：约 51 MB；
+- `tokens.txt`、`lexicon.txt`、`phone.fst`、`date.fst`、`number.fst` 等小型词典/规则文件。
+
+因此模型核心文件合计约 123 MB，尚未计入 WASM 运行时、浏览器缓存和下载临时空间。不能只按演示页的“约 125 MB”作为整个首次安装体积。
+
+官方 WASM TTS 目录包含 CMake 构建文件、JS 主线程、Worker、WASM C++ 源码和 assets 说明；仓库目录本身没有可直接复制使用的已构建中文模型包。集成需要先构建并验证对应 WASM 运行时，再准备模型资源。
+
+### 中英模型与 ModelScope 来源的边界
+
+官方 `matcha-icefall-zh-en` 页面明确说明该模型来自 ModelScope 的 `dengcunqin/matcha_tts_zh_en_20251010`，支持中文和英文，采样率 16 kHz；但官方运行说明仍要求另外下载 sherpa-onnx 发布的 ONNX 声学模型包和 Vocos 声码器。仅凭“训练模型来源于 ModelScope”不能证明 ModelScope 页面已提供可直接用于浏览器的完整 ONNX + vocoder + FST 资源集合。
+
+官方文档列出的 WASM 在线演示仍托管在 Hugging Face Space；不能作为大陆生产环境的默认加载入口。官方文档还列有 Android APK 的 hf-mirror 下载项，但它不是我们已经完成可用性、完整性和稳定性验收的大陆资源托管方案。
+
+### 当前工程决策
+
+1. 继续把 sherpa-onnx Matcha 作为候选，但暂停将其标记为“国内可用”。
+2. 先取得可核验的 WASM 运行时产物、模型包及 vocoder 的具体下载来源、文件大小、SHA-256 和许可证；缺任何一项都不接入商家工作台。
+3. 若最终资源必须由我们托管，先比较 GitHub Pages 仓库体积/带宽限制与现有 CloudBase 免费额度；不得直接把 123 MB 模型提交进 Git 仓库，也不得在未经用户同意时启用付费对象存储或 CDN。
+4. 单独实验页必须显式展示首次下载总量、只在用户点击后下载、支持取消/重试，并且不能在首页启动时加载模型。
+5. 保持当前录音上传方案作为可用回退；不在尚未验证音质和性能前替换现有配音流程。
+
 ## 集成前必须通过的门槛
 
 1. 找到完整模型清单的国内可访问来源；逐个记录文件大小、SHA-256、许可与来源。缺一项都不能开始生产接入。
