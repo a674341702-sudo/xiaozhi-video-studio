@@ -75,7 +75,7 @@ console.log('人声优先与背景音压低规则测试通过');
 
 
 const shortNarration = limitNarrationLines(['今天带你了解这家门店。', '主打产品真实展示。'], 40);
-assert.equal(shortNarration.text, '今天带你了解这家门店。\\n主打产品真实展示。');
+assert.equal(shortNarration.text, '今天带你了解这家门店。\n主打产品真实展示。');
 assert.equal(shortNarration.omittedLines, 0);
 assert.equal(shortNarration.truncated, false);
 const longNarration = limitNarrationLines(['开场介绍。', '甲'.repeat(40), '后续活动信息。'], 24);
