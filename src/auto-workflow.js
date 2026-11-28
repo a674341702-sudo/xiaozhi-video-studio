@@ -454,7 +454,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       voiceRecorder.onerror = () => {
         stopVoiceRecordingTimer();
         stopVoiceTracks();
+        // Prevent a later onstop event from treating a failed partial recording as valid audio.
+        if (voiceRecorder) voiceRecorder.onstop = null;
         voiceRecorder = null;
+        voiceChunks = [];
         $('xzw-record-start').disabled = false;
         $('xzw-record-stop').disabled = true;
         $('xzw-record-status').textContent = '录音发生错误。请检查麦克风权限，或改用手机系统录音上传。';
