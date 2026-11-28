@@ -571,7 +571,7 @@ export class PropertiesPanel {
     const delBtn = document.getElementById('prop-delete-btn');
     if (delBtn) {
       delBtn.addEventListener('click', () => {
-        this.onMediaUrlRegistered?.(clip.id, null);
+        // Keep the temporary media URL registered while deletion remains undoable.
         this.comp.removeClip(clip.id);
         if (this.onChange) this.onChange();
       });
