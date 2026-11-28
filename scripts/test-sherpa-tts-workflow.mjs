@@ -35,7 +35,7 @@ for (const token of [
 for (const token of ['modelType=2','512MB','piper-phonemize','中国大陆','商用范围','workflow_dispatch']) {
   assert.ok(doc.toLowerCase().includes(token.toLowerCase()), 'technical record missing: '+token);
 }
-for (const token of ['#text','#generateBtn','#sound-clips audio','RIFF','WAVE','sampleRate','pageErrors','8 * 60 * 1000']) {
+for (const token of ['#text','#generateBtn','#sound-clips audio','RIFF','WAVE','sampleRate','channels','bitsPerSample','dataBytes','rms','nearly silent','pageErrors','8 * 60 * 1000']) {
   assert.ok(browserSmoke.includes(token), 'browser smoke test missing: '+token);
 }
 assert.ok(!/uses:\\s*[^\\n]*(deploy-pages|gh-pages|cloudflare|vercel)/i.test(workflow), 'experimental workflow must not deploy');
