@@ -409,8 +409,15 @@ export function validateCompositionMedia(composition) {
   }
   // Audio-only or empty timelines otherwise produce a valid-looking black MP4.
   // A text card is a legitimate visual composition, so include text clips here.
-  if (!composition.clips.some(clip => ['video', 'image', 'text'].includes(clip.type))) {
-    throw new Error('时间线上还没有画面内容，请先添加照片、视频或字幕片段后再导出。');
+  const hasVisibleVisualClip = composition.clips.some(clip => {
+    if (!['video', 'image', 'text'].includes(clip.type)) return false;
+    const track = typeof composition.getTrack === 'function'
+      ? composition.getTrack(clip.trackId)
+      : composition.tracks?.find(item => item.id === clip.trackId);
+    return !track || track.visible !== false;
+  });
+  if (!hasVisibleVisualClip) {
+    throw new Error('时间线上还没有可见的画面内容，请检查照片、视频或字幕轨道是否被隐藏。');
   }
   const mediaClips = composition.clips.filter(clip => ['video', 'image', 'audio'].includes(clip.type));
   for (const clip of mediaClips) {
