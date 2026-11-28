@@ -28,9 +28,10 @@ assert.throws(() => validateCompositionMedia({ clips: [{
   type: 'image', name: '未加载的照片', startTime: 0, duration: 5,
   element: { naturalWidth: 0, naturalHeight: 0 }
 }] }), /尚未加载/);
-assert.throws(() => validateCompositionMedia({ clips: [{
-  type: 'audio', name: '丢失的配音', startTime: 0, duration: 5
-}] }), /缺少原始文件/);
+assert.throws(() => validateCompositionMedia({ clips: [
+  { type: 'text', name: '片尾标题', startTime: 0, duration: 5 },
+  { type: 'audio', name: '丢失的配音', startTime: 0, duration: 5 }
+] }), /缺少原始文件/);
 assert.throws(() => validateCompositionMedia({ clips: [{
   type: 'image', name: '时间错误', startTime: -1, duration: 5,
   element: { naturalWidth: 100, naturalHeight: 100 }
