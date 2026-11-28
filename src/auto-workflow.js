@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -436,11 +436,13 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
   $('xzw-extract-requirements').addEventListener('click', () => {
     const source = $('xzw-brief').value.trim();
     invalidateProductionPreview();
-    const unique = splitMerchantRequirements(source, 16);
+    const stats = getMerchantRequirementStats(source, 16);
+    const unique = stats.requirements;
     const container = $('xzw-requirements');
     container.innerHTML = '';
     if (!unique.length) {
       container.dataset.sourceText = '';
+      container.dataset.omittedCount = '0';
       setStatus('请先上传文档或粘贴商家要求，再提取制作清单。');
       return;
     }
@@ -488,7 +490,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       container.appendChild(card);
     });
     container.dataset.sourceText = source;
-    setStatus('已拆出 ' + unique.length + ' 条商家要求。请检查每条要求并确认对应镜头，再点击自动编排。');
+    container.dataset.omittedCount = String(stats.omitted);
+    setStatus('已拆出 ' + unique.length + ' 条商家要求。请检查每条要求并确认对应镜头，再点击自动编排。' + (stats.omitted ? '\\n注意：文档还有 ' + stats.omitted + ' 条未显示，当前预览会阻止直接编排。请拆分文档分批制作，避免遗漏。' : ''));
   });
   $('xzw-industry').addEventListener('change', () => {
     renderTemplateGuide();
@@ -573,6 +576,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     if (files.length > 8) issues.push('素材超过手机首版每次8个的限制');
     const briefText = $('xzw-brief').value.trim();
     if (briefText && !requirements.length) issues.push('已填写商家文档/要求，但还没有拆解成制作清单');
+    if (Number($('xzw-requirements').dataset.omittedCount || 0) > 0) issues.push('商家文档共识别出更多要求，但当前清单只显示前16条；请拆分文档分批制作，避免遗漏');
     if (briefText && $('xzw-requirements').dataset.sourceText !== briefText) issues.push('商家要求文字有改动，请重新拆解制作清单，避免遗漏新要求');
     if (requirements.some(card => !card.querySelector('.xzw-requirement-text')?.value.trim())) issues.push('有商家要求内容为空');
     if (requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)) issues.push('有商家要求或禁止项尚未人工核对');
