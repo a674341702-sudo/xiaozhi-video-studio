@@ -113,3 +113,39 @@ export function getMerchantAudioMix({ hasVoice = false, keepOriginalAudio = fals
     voice: 1
   };
 }
+
+
+/**
+ * Keep generated narration within the mobile TTS lab's 500-character limit.
+ * Any omitted details remain in the merchant brief and shot checklist; they
+ * are never silently represented as spoken narration.
+ */
+export function limitNarrationLines(lines = [], maxChars = 480) {
+  const source = Array.from(lines || []).map(line => String(line || '').trim()).filter(Boolean);
+  const limit = Math.max(1, Math.floor(Number(maxChars) || 480));
+  const result = [];
+  let used = 0;
+  let truncated = false;
+  let omittedLines = 0;
+
+  for (let index = 0; index < source.length; index++) {
+    const line = source[index];
+    const separatorCost = result.length ? 1 : 0;
+    const remaining = limit - used - separatorCost;
+    if (line.length <= remaining) {
+      result.push(line);
+      used += separatorCost + line.length;
+      continue;
+    }
+    if (remaining >= 2) {
+      result.push(Array.from(line).slice(0, remaining - 1).join('') + '…');
+      truncated = true;
+    } else {
+      omittedLines = source.length - index;
+    }
+    if (truncated) omittedLines += source.length - index - 1;
+    break;
+  }
+
+  return { lines: result, text: result.join('\n'), truncated, omittedLines, totalLines: source.length };
+}
