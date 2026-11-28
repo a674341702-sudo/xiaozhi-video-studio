@@ -86,7 +86,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
 
       <div class="xzw-section">
         <h3>02 · 上传拍摄素材</h3>
-        <label class="xzw-field"><span>门店照片 / 产品照片 / 视频（可多选）</span><div class="xzw-file"><input id="xzw-files" type="file" accept="image/*,video/mp4,video/webm,video/quicktime,.mov" multiple><p class="xzw-note">建议 4–8 个素材；手机首测每次不超过8个，单个视频尽量不超过40MB。优先使用清晰、稳定、光线好的原片。</p></div></label>
+        <label class="xzw-field"><span>门店照片 / 产品照片 / 视频（可多选）</span><div class="xzw-file"><input id="xzw-files" type="file" accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,.mov" multiple><p class="xzw-note">建议 4–8 个素材；手机首测每次不超过8个，单个视频尽量不超过40MB。优先使用清晰、稳定、光线好的原片。</p></div></label>
         <div id="xzw-file-summary" class="xzw-note">尚未选择素材</div>
         <div id="xzw-media-map" class="xzw-media-map"></div>
         <p class="xzw-note">系统会按文件名和素材类型推荐镜头用途，你可以手动调整；没有明显匹配依据时会标记为待确认。</p>

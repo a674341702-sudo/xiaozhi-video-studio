@@ -137,6 +137,8 @@ console.log('商家活动与地址优先保留测试通过');
 const autoWorkflowSource = readFileSync(new URL('../src/auto-workflow.js', import.meta.url), 'utf8');
 assert.ok(autoWorkflowSource.includes('.xzw-shot{padding:9px 4px;border-bottom:1px solid #34344a;color:#ddd;font-size:13px}\n    .xzw-template-guide{'), '模板说明样式必须通过真实换行与前一条 CSS 规则分隔');
 console.log('商家工作流模板说明 CSS 分隔测试通过');
+assert.ok(autoWorkflowSource.includes('accept=".jpg,.jpeg,.png,.webp,.gif,.avif,image/jpeg,image/png,image/webp,image/gif,image/avif,video/mp4,video/webm,video/quicktime,.mov"'), 'merchant media picker must expose only formats accepted by validation, not generic HEIC images');
+
 
 
 assert.equal(suggestMerchantShotIndex('门头照片.jpg', ['开场门店亮相', '招牌展示']), 0);
