@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -121,3 +121,24 @@ assert.equal(suggestMerchantShotIndex('IMG_20261128_123456.jpg', ['开场门店�
 assert.equal(suggestMerchantShotIndex('unknown.mp4', ['开场门店亮相', '招牌展示']), null, '不能仅因视频素材位置自动猜测镜头用途');
 assert.equal(suggestMerchantShotIndex('优惠菜单.png', ['产品亮相', '空间展示']), null, '没有匹配的镜头角色时不得强行分配');
 console.log('素材镜头用途建议与待确认状态测试通过');
+
+
+assert.deepEqual(
+  orderMerchantMediaAssignments([
+    { fileIndex: 0, shotIndex: 2 },
+    { fileIndex: 1, shotIndex: 0 },
+    { fileIndex: 2, shotIndex: 1 },
+    { fileIndex: 3, shotIndex: 1 },
+    { fileIndex: 4, shotIndex: 0 }
+  ]),
+  [
+    { fileIndex: 1, shotIndex: 0 },
+    { fileIndex: 4, shotIndex: 0 },
+    { fileIndex: 2, shotIndex: 1 },
+    { fileIndex: 3, shotIndex: 1 },
+    { fileIndex: 0, shotIndex: 2 }
+  ],
+  '素材必须按镜头脚本顺序排列，同一镜头内保留上传顺序'
+);
+assert.deepEqual(orderMerchantMediaAssignments([{fileIndex:0,shotIndex:null},{fileIndex:1,shotIndex:-1},{fileIndex:2,shotIndex:2}]), [{fileIndex:2,shotIndex:2}], '忽略未确认或无效的镜头分配');
+console.log('商家素材按镜头脚本排序测试通过');
