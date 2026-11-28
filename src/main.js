@@ -633,6 +633,10 @@ function bindControls() {
       if (preset === 'custom') return;
       const dims = getPresetDimensions(preset, composition.width, composition.height);
       composition.setDimensions(dims.width, dims.height);
+      // Keep the actual MP4 output in the selected canvas ratio. Otherwise a
+      // portrait preview can silently export with the previous landscape size.
+      if (exportWidthEl) exportWidthEl.value = String(dims.width);
+      if (exportHeightEl) exportHeightEl.value = String(dims.height);
       onCompositionChanged();
     });
   }
