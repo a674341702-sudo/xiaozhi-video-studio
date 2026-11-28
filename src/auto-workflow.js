@@ -249,17 +249,24 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         option.textContent = '镜头 ' + (planIndex + 1) + ' · ' + plan.role;
         select.appendChild(option);
       });
-      let suggestedShot = mediaRoleByFile.has(file) ? mediaRoleByFile.get(file) : null;
-      // A shorter media list can shrink the shot plan. Never keep a stale
-      // out-of-range role that might unexpectedly become active if more files
-      // are added later.
-      if (!Number.isInteger(suggestedShot) || suggestedShot < 0 || suggestedShot >= plans.length) {
-        mediaRoleByFile.delete(file);
-        suggestedShot = suggestShotForFile(file, plans) ?? (index % Math.max(1, plans.length));
+      const hasSavedRole = mediaRoleByFile.has(file);
+      let suggestedShot = hasSavedRole ? mediaRoleByFile.get(file) : null;
+      if (hasSavedRole && suggestedShot === null) {
+        // Preserve an explicit "automatic arrangement" choice across reorder
+        // and rerender operations instead of silently replacing it with a guess.
+        select.value = '';
+      } else {
+        // A shorter media list can shrink the shot plan. Never keep a stale
+        // out-of-range role that might unexpectedly become active if more files
+        // are added later.
+        if (!Number.isInteger(suggestedShot) || suggestedShot < 0 || suggestedShot >= plans.length) {
+          mediaRoleByFile.delete(file);
+          suggestedShot = suggestShotForFile(file, plans) ?? (index % Math.max(1, plans.length));
+        }
+        select.value = String(suggestedShot);
       }
-      select.value = String(suggestedShot);
       select.addEventListener('change', () => {
-        if (select.value === '') mediaRoleByFile.delete(file);
+        if (select.value === '') mediaRoleByFile.set(file, null);
         else mediaRoleByFile.set(file, Number(select.value));
         invalidateProductionPreview();
       });
@@ -301,7 +308,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const selects = Array.from($('xzw-media-map').querySelectorAll('.xzw-media-role'));
     selects.forEach((select, index) => {
       const file = orderedMediaFiles[index];
-      if (file && select.value === '') mediaRoleByFile.delete(file);
+      if (file && select.value === '') mediaRoleByFile.set(file, null);
       else if (file) mediaRoleByFile.set(file, Number(select.value));
     });
   };
