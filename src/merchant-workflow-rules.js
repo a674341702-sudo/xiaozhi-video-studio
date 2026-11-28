@@ -210,3 +210,17 @@ export function orderMerchantMediaAssignments(assignments = []) {
     .filter(item => item && Number.isInteger(item.fileIndex) && Number.isInteger(item.shotIndex) && item.shotIndex >= 0)
     .sort((a, b) => a.shotIndex - b.shotIndex || a.fileIndex - b.fileIndex);
 }
+
+
+/**
+ * Calculate a shot duration without extending a video beyond its real source.
+ * Still images may use the planned duration; videos are capped at their known duration.
+ */
+export function getMerchantShotDuration({ plannedDuration, remainingDuration, isVideo = false, mediaDuration = 0 } = {}) {
+  const planned = Number(plannedDuration);
+  const remaining = Number(remainingDuration);
+  if (!Number.isFinite(planned) || !Number.isFinite(remaining) || planned <= 0 || remaining <= 0) return 0;
+  const available = isVideo ? Number(mediaDuration) : planned;
+  if (!Number.isFinite(available) || available <= 0) return 0;
+  return Math.min(planned, remaining, available);
+}

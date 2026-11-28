@@ -12,7 +12,7 @@ import { getSequenceEdgeOpacity } from './sequence-opacity.js';
 import { buildMerchantOutroText } from './merchant-outro.js';
 import { getAudioFadeKeyframes } from './audio-fades.js';
 import { getVoiceCoverageNote, getVoiceClipDuration } from './voice-coverage.js';
-import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments } from './merchant-workflow-rules.js';
+import { splitMerchantRequirements, isRestrictionRequirement, mergeCaptionRequirements, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from './merchant-workflow-rules.js';
 
 export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onCompositionChanged, releaseMediaUrls, onExport }) {
   if (document.getElementById('xiaozhi-workflow-launcher')) return;
@@ -683,7 +683,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
         // duration. The workflow has its own sequential shot schedule, so restore the
         // requested cursor before applying the shorter shot duration.
         clip.startTime = cursor;
-        const shotDuration = Math.min(perShot, targetSeconds - cursor, clip.type === 'video' ? Math.max(1, clip.duration) : perShot);
+        const shotDuration = getMerchantShotDuration({ plannedDuration: perShot, remainingDuration: targetSeconds - cursor, isVideo: clip.type === 'video', mediaDuration: clip.duration });
+        if (!shotDuration) throw new Error('视频“' + file.name + '”的有效时长无法识别，请换一个正常的视频文件');
         clip.duration = shotDuration;
         clip.trimEnd = (clip.trimStart || 0) + shotDuration;
         // Fill the whole output frame while preserving the source aspect ratio via centered crop.
