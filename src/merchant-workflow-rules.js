@@ -184,7 +184,7 @@ export function prioritizeMerchantNarrationLines({
 export function suggestMerchantShotIndex(fileName, planRoles = []) {
   const name = String(fileName || '').toLowerCase();
   const rules = [
-    [/菜|餐|产品|商品|主打|特写|招牌菜/, /招牌展示|产品亮相|核心产品|核心细节|服务项目/],
+    [/菜品|招牌菜|餐饮|餐品|产品|商品|主打|特写/, /招牌展示|产品亮相|核心产品|核心细节|服务项目/],
     [/门头|招牌|外观|入口|店面|logo/, /开场|门店亮相|外观位置|空间展示|氛围开场/],
     [/环境|大厅|房间|装修|内景|店内/, /环境|空间|房间全景|公共空间/],
     [/制作|过程|操作|服务|体验/, /制作过程|服务过程|操作细节|现场过程/],
