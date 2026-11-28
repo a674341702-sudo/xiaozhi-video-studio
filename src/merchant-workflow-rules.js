@@ -37,12 +37,24 @@ export function mergeCaptionRequirements(baseCaption, requirements = []) {
   const normalize = value => String(value || '').replace(/[\s，。！？、；：,.!?;:（）()【】《》“”"'‘’·…—_-]+/g, '').toLocaleLowerCase();
   const normalizedBase = normalize(base);
   const additions = [];
-  const seen = new Set();
+  const seen = new Map();
   for (const item of requirements) {
     const text = String(item || '').trim();
     const key = normalize(text);
-    if (!key || seen.has(key) || normalizedBase.includes(key)) continue;
-    seen.add(key);
+    if (!key || normalizedBase.includes(key)) continue;
+    // Requirements can repeat the same fact with extra words. Keep the more
+    // informative wording instead of showing two near-identical captions.
+    const containedKey = [...seen.keys()].find(existing => existing.includes(key) || key.includes(existing));
+    if (containedKey) {
+      if (key.length > containedKey.length && key.includes(containedKey)) {
+        const previousIndex = seen.get(containedKey);
+        additions[previousIndex] = text;
+        seen.delete(containedKey);
+        seen.set(key, previousIndex);
+      }
+      continue;
+    }
+    seen.set(key, additions.length);
     additions.push(text);
   }
   return [base, ...additions].filter(Boolean).join(' · ');
