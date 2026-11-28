@@ -593,7 +593,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
     }
 
     if (onProgress) onProgress(100, 'Export complete');
-    return { blob: new Blob([mp4Data.slice().buffer], { type: 'video/mp4' }), ext: 'mp4' };
+    return { blob: createMp4Blob(mp4Data), ext: 'mp4' };
   } finally {
     await cleanupFiles(inputFiles);
     if (offscreenCanvas) {
@@ -602,6 +602,12 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
       offscreenCanvas = null;
     }
   }
+}
+
+/** Create the output Blob directly from FFmpeg's byte view without an extra full-size slice copy. */
+export function createMp4Blob(data) {
+  if (!data || data.length === 0) throw new Error('FFmpeg failed to produce output MP4');
+  return new Blob([data], { type: 'video/mp4' });
 }
 
 export function downloadBlob(blob, filename) {
