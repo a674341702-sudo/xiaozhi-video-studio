@@ -406,7 +406,15 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       plan.map((item, index) => '<div class="xzw-shot"><span class="xzw-badge">0' + (index + 1) + '</span> <b>' + escapeHtml(item.role) + '</b><br>' +
         '<span>' + escapeHtml(item.caption) + '</span><br><small>拍摄建议：' + escapeHtml(item.tip) + '</small></div>').join('');
   };
-  $('xzw-industry').addEventListener('change', renderTemplateGuide);
+  $('xzw-industry').addEventListener('change', () => {
+    // Shot-role indexes belong to the previous industry's template. Rebuild
+    // the mapping instead of silently keeping an old index with a new meaning.
+    syncMediaRolesFromDOM();
+    mediaRoleByFile.clear();
+    renderTemplateGuide();
+    renderMediaMapping();
+    invalidateProductionPreview();
+  });
   const saveProfile = () => {
     try { localStorage.setItem('xiaozhi-merchant-profile-v1', JSON.stringify(readProfile())); setStatus('商家资料已保存在这台手机的当前浏览器中。'); }
     catch (e) { setStatus('浏览器暂时无法保存资料，请检查存储空间。'); }
