@@ -8,6 +8,7 @@ import { getPreciseMediaDuration } from './media-duration.js';
 import { takeSelectedFiles } from './media-file-selection.js';
 import { createImportGeneration } from './media-import-generation.js';
 import { validateImageDimensions, MAX_IMAGE_PIXELS } from './image-dimensions.js';
+import { cleanupFailedMediaElement } from './media-element-cleanup.js';
 
 // Mobile browsers can occasionally leave media metadata loading unresolved.
 // Bound the wait so the workflow can show a useful error instead of hanging forever.
@@ -163,13 +164,11 @@ export class MediaManager {
     video.load();
     const videoReady = await waitForMediaReady(video, () => video.readyState >= 2, 'loadeddata', 30000);
     if (!this.importGeneration.isCurrent(generation)) {
-      URL.revokeObjectURL(objectUrl);
-      video.removeAttribute('src');
-      video.load();
+      cleanupFailedMediaElement(video, objectUrl, 'video');
       return null;
     }
     if (!videoReady) {
-      URL.revokeObjectURL(objectUrl);
+      cleanupFailedMediaElement(video, objectUrl, 'video');
       showToast('手机读取视频失败或等待超时，请换成 MP4 文件或压缩后重试。', 'error');
       return null;
     }
@@ -248,12 +247,11 @@ export class MediaManager {
     img.src = objectUrl;
     const imageReady = await waitForMediaReady(img, () => img.complete && img.naturalWidth > 0, 'load');
     if (!this.importGeneration.isCurrent(generation)) {
-      URL.revokeObjectURL(objectUrl);
-      img.src = '';
+      cleanupFailedMediaElement(img, objectUrl, 'image');
       return null;
     }
     if (!imageReady) {
-      URL.revokeObjectURL(objectUrl);
+      cleanupFailedMediaElement(img, objectUrl, 'image');
       showToast('手机读取图片失败或等待超时，请换成 JPG、PNG 图片后重试。', 'error');
       return null;
     }
@@ -262,8 +260,7 @@ export class MediaManager {
     // Reject extreme dimensions before the image enters the composition/export pipeline.
     const dimensions = validateImageDimensions(img.naturalWidth, img.naturalHeight);
     if (!dimensions.valid) {
-      URL.revokeObjectURL(objectUrl);
-      img.src = '';
+      cleanupFailedMediaElement(img, objectUrl, 'image');
       showToast('图片分辨率过高（' + img.naturalWidth + ' × ' + img.naturalHeight + '）。手机端单张图片最多支持约 ' + Math.round(MAX_IMAGE_PIXELS / 1_000_000) + ' 百万像素，请先在相册中缩小尺寸后重新上传。', 'error');
       return null;
     }
@@ -319,14 +316,11 @@ export class MediaManager {
     audio.preload = 'metadata';
     const audioReady = await waitForMediaReady(audio, () => audio.readyState >= 1, 'loadedmetadata');
     if (!this.importGeneration.isCurrent(generation)) {
-      URL.revokeObjectURL(objectUrl);
-      audio.pause();
-      audio.removeAttribute('src');
-      audio.load();
+      cleanupFailedMediaElement(audio, objectUrl, 'audio');
       return null;
     }
     if (!audioReady) {
-      URL.revokeObjectURL(objectUrl);
+      cleanupFailedMediaElement(audio, objectUrl, 'audio');
       showToast('手机读取音频失败或等待超时，请换成 MP3 或 WAV 文件后重试。', 'error');
       return null;
     }
