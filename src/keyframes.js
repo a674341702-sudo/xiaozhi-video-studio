@@ -11,23 +11,46 @@ export const EASING = {
 };
 
 export function evaluateKeyframes(keyframes, property, time) {
-  const list = (keyframes?.[property] || []).sort((a, b) => a.time - b.time);
+  const requestedTime = Number(time);
+  if (!Number.isFinite(requestedTime)) return null;
+
+  // Never sort the project's live keyframe array: preview and export may evaluate
+  // the same data concurrently. Ignore malformed entries and work on a copy.
+  const source = keyframes?.[property];
+  if (!Array.isArray(source) || source.length === 0) return null;
+  const sorted = source
+    .map((point, index) => ({
+      time: Number(point?.time),
+      value: Number(point?.value),
+      easing: point?.easing,
+      index
+    }))
+    .filter(point => Number.isFinite(point.time) && Number.isFinite(point.value))
+    .sort((a, b) => a.time - b.time || a.index - b.index);
+
+  // Collapse duplicate timestamps deterministically (the last saved point wins)
+  // so interpolation can never divide by zero.
+  const list = [];
+  for (const point of sorted) {
+    const normalized = { time: point.time, value: point.value, easing: point.easing };
+    if (list.length && list[list.length - 1].time === point.time) {
+      list[list.length - 1] = normalized;
+    } else {
+      list.push(normalized);
+    }
+  }
   if (list.length === 0) return null;
 
-  // Before first keyframe
-  if (time <= list[0].time) return list[0].value;
-  // After last keyframe
-  if (time >= list[list.length - 1].time) return list[list.length - 1].value;
+  if (requestedTime <= list[0].time) return list[0].value;
+  if (requestedTime >= list[list.length - 1].time) return list[list.length - 1].value;
 
-  // Between two keyframes
   for (let i = 0; i < list.length - 1; i++) {
     const k1 = list[i];
     const k2 = list[i + 1];
-    if (time >= k1.time && time <= k2.time) {
-      const t = (time - k1.time) / (k2.time - k1.time);
+    if (requestedTime >= k1.time && requestedTime <= k2.time) {
+      const t = (requestedTime - k1.time) / (k2.time - k1.time);
       const easing = EASING[k2.easing] || EASING.linear;
-      const et = easing(t);
-      return k1.value + (k2.value - k1.value) * et;
+      return k1.value + (k2.value - k1.value) * easing(t);
     }
   }
 
