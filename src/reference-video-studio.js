@@ -167,5 +167,8 @@ export function initReferenceVideoStudio(workflowModal) {
     }
   });
   $('xzw-reference-clear').addEventListener('click', clearReference);
-  workflowModal.querySelector('.xzw-close')?.addEventListener('click', clearFrames);
+  workflowModal.querySelector('.xzw-close')?.addEventListener('click', () => {
+    clearReference();
+    workflowModal.classList.remove('open');
+  });
 }
