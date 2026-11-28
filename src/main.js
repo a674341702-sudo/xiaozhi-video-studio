@@ -185,6 +185,65 @@ function bindHomeDashboard() {
     showToast('已套用案例制作方案。填写店名和真实卖点，再上传自己的素材即可。', 'success');
   });
 
+  // Link intake MVP: recognize supported share-link domains and prepare a
+  // transparent creative-analysis brief. This does not fetch or download videos.
+  const referenceSubmit = document.getElementById('xh-reference-submit');
+  if (referenceSubmit) {
+    referenceSubmit.addEventListener('click', () => {
+      const urlInput = document.getElementById('xh-reference-url');
+      const notesInput = document.getElementById('xh-reference-notes');
+      const rawUrl = (urlInput?.value || '').trim();
+      if (!rawUrl) {
+        showToast('请先粘贴抖音或小红书的视频分享链接。', 'warning');
+        urlInput?.focus();
+        return;
+      }
+      let parsed;
+      try {
+        parsed = new URL(rawUrl);
+      } catch (_) {
+        showToast('链接格式不正确，请粘贴完整分享链接。', 'warning');
+        urlInput?.focus();
+        return;
+      }
+      if (parsed.protocol !== 'https:' && parsed.protocol !== 'http:') {
+        showToast('目前只支持 http 或 https 分享链接。', 'warning');
+        return;
+      }
+      const host = parsed.hostname.toLowerCase().replace(/^www\./, '');
+      const isDouyin = ['douyin.com', 'iesdouyin.com', 'v.douyin.com'].some(domain => host === domain || host.endsWith('.' + domain));
+      const isXhs = ['xiaohongshu.com', 'xhslink.com', 'xhslink.cn'].some(domain => host === domain || host.endsWith('.' + domain));
+      if (!isDouyin && !isXhs) {
+        showToast('暂时只识别抖音和小红书分享链接，请检查链接来源。', 'warning');
+        return;
+      }
+      const platform = isDouyin ? '抖音' : '小红书';
+      const notes = (notesInput?.value || '').trim();
+      const brief = [
+        '请参考以下' + platform + '视频链接，帮我设计一条原创的商家宣传视频方案。',
+        '参考链接：' + rawUrl,
+        notes ? '用户补充的标题、文案或观察：' + notes : '目前没有提供视频标题或文案。请先提示我补充视频截图、字幕/文案，或上传本人有权使用的视频素材，再进行具体拆解。',
+        '',
+        '请按以下维度拆解：1. 前3秒开头钩子；2. 内容结构与镜头顺序；3. 字幕与文案节奏；4. 情绪/氛围与转场方式；5. 商家卖点呈现；6. 结尾行动引导。',
+        '然后将其转化为适合我自己店铺的原创脚本和镜头清单。只借鉴创作结构与风格，不复制原视频画面、音乐、文字表达或他人肖像；不得编造店铺价格、服务、资质、效果和优惠。',
+        '',
+        '重要：当前系统尚未自动读取该链接的视频内容。请基于我实际补充的素材分析，不要假装已经观看了链接。'
+      ].join('\n');
+      const modal = document.getElementById('xiaozhi-workflow');
+      const copy = document.getElementById('xzw-copy');
+      if (!modal || !copy) {
+        showToast('制作工作台暂时不可用，请稍后再试。', 'warning');
+        return;
+      }
+      modal.classList.add('open');
+      copy.value = brief;
+      copy.dispatchEvent(new Event('input', { bubbles: true }));
+      document.getElementById('xzw-make-script')?.click();
+      document.getElementById('xzw-shop')?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showToast('已识别' + platform + '链接并整理拆解任务。请补充视频内容素材后再生成，当前不会自动抓取原视频。', 'success', 7000);
+    });
+  }
+
   // Search filters the bundled starter cases locally; it does not pretend to
   // search Douyin, Xiaohongshu, or a live external trend feed.
   const caseSearch = document.getElementById('xh-case-search');
