@@ -5,6 +5,7 @@
  */
 import { initReferenceVideoStudio } from './reference-video-studio.js';
 import { getMerchantExportReadiness } from './merchant-export-readiness.js';
+import { getMerchantShotPlan } from './merchant-templates.js';
 import { getMerchantWorkflowErrorMessage } from './merchant-workflow-error.js';
 import { extractMerchantDocumentText } from './merchant-document.js';
 import { getSubtitleSafeLayout } from './text-layout.js';
