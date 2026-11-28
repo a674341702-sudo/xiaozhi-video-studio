@@ -6,6 +6,8 @@ const [worker, main] = await Promise.all([
   readFile(new URL('../src/main.js', import.meta.url), 'utf8')
 ]);
 
+assert.match(worker, /const expectedWavBytes = getAudioWavByteLength\(audioBuffer\);[\\s\\S]*?assertFrameMemoryBudget\(0, expectedWavBytes, maxFrameBytes\);[\\s\\S]*?audioBufferToWav\(audioBuffer, abortSignal\)/,
+  '必须在分配完整 WAV 缓冲区之前预估大小并检查手机导出内存预算');
 assert.match(worker, /renderMixedAudio\(composition/,
   '导出必须先混合时间线中的配音、音乐和允许保留的现场声');
 assert.match(worker, /throw new Error\(\`配乐或配音处理失败，已停止导出/,
