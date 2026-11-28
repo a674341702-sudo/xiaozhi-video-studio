@@ -19,4 +19,14 @@ for (const frame of [...first.scale, ...first.x, ...first.y]) {
   assert.ok(Number.isFinite(frame.value));
   assert.equal(frame.easing, 'easeInOut');
 }
+
+const invalid = getPhotoMotionKeyframes(Number.NaN, Number.NaN, Infinity, Number.NaN, Infinity);
+for (const frame of [...invalid.scale, ...invalid.x, ...invalid.y]) {
+  assert.ok(Number.isFinite(frame.time), 'invalid timing must not produce non-finite keyframe timestamps');
+  assert.ok(Number.isFinite(frame.value), 'invalid dimensions must not produce non-finite motion values');
+}
+assert.deepEqual(invalid.scale.map(frame => frame.time), [0, 0]);
+const negativeDuration = getPhotoMotionKeyframes(0, 720, 1280, 3, -4);
+assert.deepEqual(negativeDuration.scale.map(frame => frame.time), [3, 3], 'negative duration should collapse safely to a zero-length motion interval');
+
 console.log('Gentle photo motion tests passed.');
