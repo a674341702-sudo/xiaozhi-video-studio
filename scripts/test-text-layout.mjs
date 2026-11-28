@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { getSubtitleSafeLayout, hasRenderableText, wrapTextLines } from '../src/text-layout.js';
+import { getSubtitlePositionLayout, getSubtitleSafeLayout, hasRenderableText, wrapTextLines } from '../src/text-layout.js';
 
 const ctx = { measureText: value => ({ width: Array.from(value).length * 10 }) };
 assert.equal(hasRenderableText('门店招牌'), true);
@@ -17,4 +17,13 @@ assert.equal(layout.width, 929);
 assert.equal(layout.height, 346);
 assert.equal(layout.y + layout.height, 1574);
 assert.ok(layout.y + layout.height <= 1920 * 0.82);
+const topLayout = getSubtitlePositionLayout(1080, 1920, 'top');
+assert.equal(topLayout.y, 230, 'top preset leaves a clear upper safe margin');
+assert.equal(topLayout.height, layout.height);
+const middleLayout = getSubtitlePositionLayout(1080, 1920, 'middle');
+assert.equal(middleLayout.y, Math.round((1920 - middleLayout.height) / 2), 'middle preset vertically centers the subtitle box');
+const bottomLayout = getSubtitlePositionLayout(1080, 1920, 'bottom');
+assert.deepEqual(bottomLayout, layout, 'bottom remains backward-compatible with the original default layout');
+const unknownLayout = getSubtitlePositionLayout(1080, 1920, 'unknown');
+assert.deepEqual(unknownLayout, layout, 'unknown positions safely fall back to bottom');
 console.log('Subtitle text layout tests passed.');
