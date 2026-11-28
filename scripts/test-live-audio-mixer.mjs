@@ -43,4 +43,33 @@ assert.equal(calls.resumed, 1, 'suspended audio context resumes from playback ac
 const unsupported = new LiveAudioMixer({ audioContextFactory: () => null });
 assert.equal(unsupported.connect({}), false, 'unsupported browsers must use native-volume fallback');
 assert.equal(unsupported.setGain({}, 1.2), false);
+
+const gainOutputFailure = {
+  state: 'running',
+  currentTime: 0,
+  destination: {},
+  createGain() { return { gain: { value: 1 }, connect() { throw new Error('destination unavailable'); } }; },
+  createMediaElementSource() { throw new Error('source should not be created before output is ready'); }
+};
+const safeFallback = new LiveAudioMixer({ audioContextFactory: () => gainOutputFailure });
+assert.equal(safeFallback.connect({}), false, 'prepare output before creating a media source');
+
+const directOutputContext = {
+  state: 'running',
+  currentTime: 0,
+  destination: {},
+  createGain() { return { gain: { value: 1 }, connect() {} }; },
+  createMediaElementSource() {
+    return { connect(target) {
+      if (target !== directOutputContext.destination) throw new Error('gain input rejected');
+      directOutputContext.directConnected = true;
+    } };
+  }
+};
+const directOutputMixer = new LiveAudioMixer({ audioContextFactory: () => directOutputContext });
+const directElement = {};
+assert.equal(directOutputMixer.connect(directElement), true, 'partially failed gain routing should keep direct audio output');
+assert.equal(directOutputContext.directConnected, true);
+assert.equal(directOutputMixer.setGain(directElement, 1.5), false, 'direct fallback intentionally uses unity gain');
+
 console.log('Live Web Audio mixer tests passed.');
