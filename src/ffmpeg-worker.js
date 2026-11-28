@@ -12,6 +12,7 @@ import { captureCanvasBlob } from './abortable-canvas-blob.js';
 import { waitForSharedTask } from './wait-for-shared-task.js';
 import { getExportableVideoClips } from './export-video-clips.js';
 import { releaseRenderedAudioNodes } from './audio-node-cleanup.js';
+import { validateExportSettings } from './export-settings.js';
 
 let ffmpeg = null;
 let ffmpegLoaded = false;
@@ -465,9 +466,9 @@ export function validateCompositionMedia(composition) {
  * High quality offline frame export with audio mixing and FFmpeg MP4 encoding.
  */
 export async function exportComposition(composition, canvasPreview, onProgress, abortSignal, options = {}) {
-  const duration = composition.duration;
-  if (duration <= 0) {
-    throw new Error('时间线上没有可导出的内容。');
+  const duration = composition?.duration;
+  if (!Number.isFinite(duration) || duration <= 0) {
+    throw new Error('时间线总时长无效或为空，请检查素材时长后重试。');
   }
 
   if (abortSignal?.aborted) {
@@ -484,7 +485,7 @@ export async function exportComposition(composition, canvasPreview, onProgress, 
   const height = options.height || composition.height || 1080;
   const fps = options.fps || 30;
   const quality = options.quality || 'high';
-  const totalFramesEstimate = Math.ceil(duration * fps);
+  const { totalFramesEstimate } = validateExportSettings({ duration, width, height, fps });
 
   validateCompositionMedia(composition);
 
