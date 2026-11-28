@@ -16,6 +16,7 @@ import { loadFFmpeg, exportComposition, downloadBlob } from './ffmpeg-worker.js'
 import { formatTime, showToast } from './utils.js';
 import { getExportErrorMessage } from './export-error-message.js';
 import { getClipPlaybackState, getMediaElementVolume } from './keyframes.js';
+import { LiveAudioMixer } from './live-audio-mixer.js';
 import { initAutoWorkflow } from './auto-workflow.js';
 import { initSubtitleStudio } from './subtitle-studio.js';
 import { saveLocalProject, loadLocalProject, loadLastActiveLocalProject, listLocalProjects, deleteLocalProject, createLocalProjectId, stripTemporaryMediaUrls } from './local-project-store.js';
@@ -37,6 +38,7 @@ let contextMenu = null;
 let toolbar = null;
 let store = null;
 
+let liveAudioMixer = new LiveAudioMixer();
 let isPlaying = false;
 let playAnimFrameId = null;
 let lastPlayTimestamp = 0;
@@ -421,8 +423,13 @@ function syncActiveMedia(time, playing) {
       Number.isFinite(element.duration) && element.duration > 0 ? element.duration : Infinity
     );
 
-    // Native media element volume is limited to 0..1; export mixing can amplify separately.
-    element.volume = getMediaElementVolume(state.volume);
+    // Use Web Audio for the editor's 0..150% gain range; fall back to native 0..100%.
+    if (liveAudioMixer.connect(element)) {
+      element.volume = 1;
+      liveAudioMixer.setGain(element, state.volume);
+    } else {
+      element.volume = getMediaElementVolume(state.volume);
+    }
     element.muted = Boolean(track?.muted);
     // Native looping is safe only when the selected source range is the
     // complete media file. Trimmed loops are wrapped against sourceTime above.
@@ -475,6 +482,8 @@ function setPlaybackRate(rate) {
 
 function play() {
   if (isPlaying) return;
+  // Resume inside the play gesture so mobile browsers can unlock audio output.
+  liveAudioMixer.resume().catch(() => {});
   isPlaying = true;
   if (canvasPreview) canvasPreview.setIsPlaying(true);
   lastPlayTimestamp = performance.now();
