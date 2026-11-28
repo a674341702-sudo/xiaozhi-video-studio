@@ -440,6 +440,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const container = $('xzw-requirements');
     container.innerHTML = '';
     if (!unique.length) {
+      container.dataset.sourceText = '';
       setStatus('请先上传文档或粘贴商家要求，再提取制作清单。');
       return;
     }
@@ -476,7 +477,9 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       confirmed.type = 'checkbox';
       confirmed.className = 'xzw-requirement-confirmed';
       const confirmationText = document.createElement('span');
-      confirmationText.textContent = '已核对这条要求，内容准确且可以用于宣传';
+      confirmationText.textContent = isRestrictionRequirement(text)
+        ? '已核对这条限制，制作时必须遵守（不会作为字幕）'
+        : '已核对这条要求，内容准确且可以用于宣传';
       confirmation.append(confirmed, confirmationText);
       textarea.addEventListener('input', invalidateProductionPreview);
       select.addEventListener('change', invalidateProductionPreview);
@@ -484,6 +487,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       card.append(label, textarea, select, confirmation);
       container.appendChild(card);
     });
+    container.dataset.sourceText = source;
     setStatus('已拆出 ' + unique.length + ' 条商家要求。请检查每条要求并确认对应镜头，再点击自动编排。');
   });
   $('xzw-industry').addEventListener('change', () => {
@@ -502,7 +506,8 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     try {
       const text = await extractMerchantDocumentText(file);
       $('xzw-brief').value = text;
-      $('xzw-brief-status').textContent = '已读取：' + file.name + ' · ' + text.length + ' 个字符。请核对文字后再生成视频。';
+      invalidateProductionPreview();
+      $('xzw-brief-status').textContent = '已读取：' + file.name + ' · ' + text.length + ' 个字符。请核对文字后，再点击“拆解成制作清单”。';
       setStatus('商家需求文档已读取。生成时会把这些要求与门店资料、图片和视频一起编排。');
     } catch (error) {
       $('xzw-brief-status').textContent = error?.message || '文档读取失败';
@@ -566,15 +571,18 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     const issues = [];
     if (!files.length) issues.push('还没有选择照片或视频素材');
     if (files.length > 8) issues.push('素材超过手机首版每次8个的限制');
+    const briefText = $('xzw-brief').value.trim();
+    if (briefText && !requirements.length) issues.push('已填写商家文档/要求，但还没有拆解成制作清单');
+    if (briefText && $('xzw-requirements').dataset.sourceText !== briefText) issues.push('商家要求文字有改动，请重新拆解制作清单，避免遗漏新要求');
     if (requirements.some(card => !card.querySelector('.xzw-requirement-text')?.value.trim())) issues.push('有商家要求内容为空');
-    if (requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)) issues.push('有商家要求尚未人工核对');
+    if (requirements.some(card => !card.querySelector('.xzw-requirement-confirmed')?.checked)) issues.push('有商家要求或禁止项尚未人工核对');
     const assignments = getMediaAssignments();
     if (assignments.length !== files.length || assignments.some(item => !Number.isInteger(item.shotIndex) || item.shotIndex < 0)) issues.push('有素材尚未确认镜头用途，请在每个素材下方选择对应镜头');
     const plans = roleOptions();
     const requirementLines = requirements.map((card, index) => {
       const text = card.querySelector('.xzw-requirement-text')?.value.trim() || '';
       const shot = Number(card.querySelector('.xzw-requirement-shot')?.value);
-      return { text, shot, index };
+      return { text, shot, index, restriction: isRestrictionRequirement(text) };
     });
     const mediaLines = files.map((file, index) => {
       const shotIndex = assignments[index]?.shotIndex;
@@ -592,7 +600,10 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
     status.className = 'xzw-note';
     status.textContent = '预计时长约 ' + targetSeconds + ' 秒 · 画幅 ' + ratio + ' · ' + files.length + ' 个素材 · ' + requirements.length + ' 条商家要求';
     const list = document.createElement('ul');
-    [...(issues.length ? issues.map(item => '待处理：' + item) : ['素材和商家要求检查通过']), ...mediaLines, ...requirementLines.map(item => '要求 → 镜头 ' + (item.shot + 1) + '：' + item.text)].forEach(line => {
+    const requirementPreviewLines = requirementLines.map(item =>
+      (item.restriction ? '制作限制（不会显示为字幕）' : '宣传要求') + ' → 镜头 ' + (item.shot + 1) + '：' + item.text
+    );
+    [...(issues.length ? issues.map(item => '待处理：' + item) : ['素材和商家要求检查通过']), ...mediaLines, ...requirementPreviewLines].forEach(line => {
       const li = document.createElement('li'); li.textContent = line; list.appendChild(li);
     });
     const facts = document.createElement('p');
