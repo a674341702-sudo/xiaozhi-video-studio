@@ -269,10 +269,10 @@ async function renderMixedAudio(composition, onProgress, abortSignal) {
 /**
  * Converts an AudioBuffer to a standard 16-bit stereo PCM WAV Blob.
  */
-function audioBufferToWav(buffer) {
+export async function audioBufferToWav(buffer, abortSignal, chunkFrames = 8192) {
   const numChannels = buffer.numberOfChannels;
   const sampleRate = buffer.sampleRate;
-  const format = 1; // PCM
+  const format = 1;
   const bitDepth = 16;
   const bytesPerSample = bitDepth / 8;
   const blockAlign = numChannels * bytesPerSample;
@@ -283,9 +283,10 @@ function audioBufferToWav(buffer) {
   const view = new DataView(arrayBuffer);
 
   function writeString(offset, string) {
-    for (let i = 0; i < string.length; i++) {
-      view.setUint8(offset + i, string.charCodeAt(i));
-    }
+    for (let i = 0; i < string.length; i++) view.setUint8(offset + i, string.charCodeAt(i));
+  }
+  function checkAborted() {
+    if (abortSignal?.aborted) throw new DOMException('Export aborted', 'AbortError');
   }
 
   writeString(0, 'RIFF');
@@ -302,21 +303,28 @@ function audioBufferToWav(buffer) {
   writeString(36, 'data');
   view.setUint32(40, dataByteCount, true);
 
-  let offset = 44;
   const channels = [];
-  for (let i = 0; i < numChannels; i++) {
-    channels.push(buffer.getChannelData(i));
-  }
+  for (let i = 0; i < numChannels; i++) channels.push(buffer.getChannelData(i));
 
-  for (let i = 0; i < buffer.length; i++) {
-    for (let c = 0; c < numChannels; c++) {
-      let sample = Math.max(-1, Math.min(1, channels[c][i]));
-      sample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
-      view.setInt16(offset, sample, true);
-      offset += 2;
+  let offset = 44;
+  for (let start = 0; start < buffer.length; start += chunkFrames) {
+    checkAborted();
+    const end = Math.min(buffer.length, start + chunkFrames);
+    for (let i = start; i < end; i++) {
+      for (let c = 0; c < numChannels; c++) {
+        let sample = Math.max(-1, Math.min(1, channels[c][i]));
+        sample = sample < 0 ? sample * 0x8000 : sample * 0x7fff;
+        view.setInt16(offset, sample, true);
+        offset += 2;
+      }
+    }
+    if (end < buffer.length) {
+      // Yield so cancel clicks and worker messages can be processed between chunks.
+      await new Promise(resolve => setTimeout(resolve, 0));
     }
   }
 
+  checkAborted();
   return new Blob([arrayBuffer], { type: 'audio/wav' });
 }
 
