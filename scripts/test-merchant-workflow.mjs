@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { validateFile } from '../src/utils.js';
-import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, limitMerchantCaption, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, getNarrationContentCoverage, getMerchantCaptionForShot, suggestMerchantShotIndex, orderMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
+import { splitMerchantRequirements, getMerchantRequirementStats, isRestrictionRequirement, mergeCaptionRequirements, limitMerchantCaption, validateMerchantMediaFiles, appendMerchantMediaFiles, isVideoMediaFile, getMerchantAudioMix, limitNarrationLines, prioritizeMerchantNarrationLines, getNarrationContentCoverage, getMerchantCaptionForShot, suggestMerchantShotIndex, orderMerchantMediaAssignments, resolveMerchantMediaAssignments, getMerchantShotDuration } from '../src/merchant-workflow-rules.js';
 assert.deepEqual(splitMerchantRequirements('必须出现门店地址\n- 突出招牌产品；突出店内环境\n必须出现门店地址', 10), ['必须出现门店地址', '突出招牌产品', '突出店内环境']);
 assert.deepEqual(splitMerchantRequirements('  \n；；', 16), []);
 assert.deepEqual(splitMerchantRequirements('要求一；要求二；要求三', 2), ['要求一', '要求二']);
@@ -194,6 +194,20 @@ assert.deepEqual(
 );
 assert.deepEqual(orderMerchantMediaAssignments([{fileIndex:0,shotIndex:null},{fileIndex:1,shotIndex:-1},{fileIndex:2,shotIndex:2}]), [{fileIndex:2,shotIndex:2}], '忽略未确认或无效的镜头分配');
 console.log('商家素材按镜头脚本排序测试通过');
+assert.deepEqual(resolveMerchantMediaAssignments([
+  { fileIndex: 0, shotIndex: null },
+  { fileIndex: 1, shotIndex: 2 },
+  { fileIndex: 2, shotIndex: null },
+  { fileIndex: 3, shotIndex: -1 }
+], 3), [
+  { fileIndex: 0, shotIndex: 0 },
+  { fileIndex: 1, shotIndex: 2 },
+  { fileIndex: 2, shotIndex: 2 },
+  { fileIndex: 3, shotIndex: 0 }
+], 'blank shot choices must fall back to upload order while preserving explicit choices');
+assert.deepEqual(resolveMerchantMediaAssignments([{ fileIndex: 4, shotIndex: null }], 0),
+  [{ fileIndex: 4, shotIndex: 0 }], 'fallback must remain safe when no shot plan is supplied');
+
 
 
 assert.equal(getMerchantShotDuration({ plannedDuration: 4, remainingDuration: 10, isVideo: true, mediaDuration: 0.35 }), 0.35, '不足1秒的视频必须保留真实时长，不得强行延长');
