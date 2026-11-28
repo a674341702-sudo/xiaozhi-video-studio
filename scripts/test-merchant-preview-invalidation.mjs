@@ -34,6 +34,24 @@ assert.ok(industryHandler.includes('renderMediaMapping()'),
 assert.ok(source.includes('suggestedShot < 0 || suggestedShot >= plans.length'),
   'out-of-range shot roles must be discarded when the shot plan shrinks');
 
+
+const mediaMappingStart = source.indexOf('const renderMediaMapping = () => {');
+const mediaMappingEnd = source.indexOf('const syncMediaRolesFromDOM', mediaMappingStart);
+assert.ok(mediaMappingStart >= 0 && mediaMappingEnd > mediaMappingStart,
+  'media mapping renderer must be present');
+const mediaMappingBlock = source.slice(mediaMappingStart, mediaMappingEnd);
+assert.match(mediaMappingBlock, /hasSavedRole && suggestedShot === null/,
+  'an explicit automatic shot choice must remain distinguishable from no saved choice');
+assert.match(mediaMappingBlock, /select\.value = '';/,
+  'rerendering a file with an explicit automatic choice must keep the automatic option selected');
+assert.match(mediaMappingBlock, /mediaRoleByFile\.set\(file, null\)/,
+  'choosing automatic assignment must be persisted instead of discarded');
+const syncMappingStart = source.indexOf('const syncMediaRolesFromDOM = () => {');
+const syncMappingEnd = source.indexOf('const moveMedia', syncMappingStart);
+assert.ok(syncMappingStart >= 0 && syncMappingEnd > syncMappingStart);
+assert.match(source.slice(syncMappingStart, syncMappingEnd), /mediaRoleByFile\.set\(file, null\)/,
+  'reordering media must preserve explicit automatic assignments');
+
 console.log('Merchant production preview invalidation tests passed.');
 
 assert.match(source, /let productionGeneration = 0/);
