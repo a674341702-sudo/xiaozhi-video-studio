@@ -516,7 +516,7 @@ export function initAutoWorkflow({ composition, mediaManager, canvasPreview, onC
       voiceRecorder = null;
       $('xzw-record-start').disabled = false;
       $('xzw-record-stop').disabled = true;
-      $('xzw-record-status').textContent = '无法开启麦克风： + (error?.name === 'NotAllowedError' ? '请在浏览器设置中允许麦克风权限。' : (error?.message || '未知错误')) + '。也可以用手机系统录音后上传。';
+      $('xzw-record-status').textContent = '无法开启麦克风：' + (error?.name === 'NotAllowedError' ? '请在浏览器设置中允许麦克风权限。' : (error?.message || '未知错误')) + '。也可以用手机系统录音后上传。';
     }
   });
   $('xzw-record-stop').addEventListener('click', () => {
