@@ -72,7 +72,7 @@ jobs:
           source "${RUNNER_TEMP}/emsdk/emsdk_env.sh"
           cd sherpa-onnx
           ./build-wasm-simd-tts.sh
-          OUT="wasm/tts/build-wasm-simd-tts/install/bin/wasm/tts"
+          OUT="build-wasm-simd-tts/install/bin/wasm/tts"
           test -s "$OUT/sherpa-onnx-wasm-main-tts.js"
           test -s "$OUT/sherpa-onnx-wasm-main-tts.wasm"
           test -s "$OUT/sherpa-onnx-wasm-main-tts.data"
