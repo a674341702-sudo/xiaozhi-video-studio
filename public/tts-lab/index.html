@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#101827">
+<title>小智视频 · 中文配音兼容性实验</title>
+<style>
+:root{color-scheme:dark;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;background:#101827;color:#edf2f7}
+*{box-sizing:border-box}body{margin:0;padding:20px 14px 40px;max-width:760px;margin-inline:auto}
+header{padding:10px 2px 18px}h1{font-size:23px;margin:0 0 8px}.muted{color:#9fb0c5;font-size:14px;line-height:1.65}
+.panel{background:#192638;border:1px solid #314258;border-radius:14px;padding:16px;margin:12px 0}
+.status{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid #304055;font-size:14px}.status:last-child{border:0}
+.pill{font-size:12px;border-radius:99px;padding:4px 9px;background:#334155;color:#dbeafe;white-space:nowrap}.ok{background:#14532d;color:#dcfce7}.warn{background:#713f12;color:#fef3c7}.bad{background:#7f1d1d;color:#fee2e2}
+button,label.file{display:inline-block;border:0;border-radius:10px;padding:12px 15px;background:#2563eb;color:white;font-size:15px;font-weight:600;margin:6px 6px 0 0}
+button:disabled{opacity:.45}input[type=file]{max-width:100%;margin-top:10px}audio{width:100%;margin-top:12px}
+.small{font-size:12px;color:#9fb0c5;line-height:1.6}pre{white-space:pre-wrap;word-break:break-word;font-size:12px;color:#cbd5e1}
+</style>
+</head>
+<body>
+<header><h1>小智视频 · 中文配音实验室</h1><div class="muted">第一阶段：检查手机浏览器是否具备端侧语音合成所需能力。此页面尚未加载 AI 模型，也不会联网下载模型或调用任何收费接口。</div></header>
+<section class="panel">
+<strong>设备能力检测</strong><div id="checks" aria-live="polite"></div>
+<button id="run">重新检测</button>
+</section>
+<section class="panel">
+<strong>现阶段音频导入测试</strong>
+<p class="muted">可选择手机已有的 WAV 音频，检查浏览器播放能力。这里不是 AI 生成；生成的 WAV 接入小智视频配音轨仍需后续集成。</p>
+<input id="audioFile" type="file" accept=".wav,audio/wav,audio/*">
+<audio id="player" controls hidden></audio>
+<div id="audioInfo" class="small" aria-live="polite"></div>
+</section>
+<section class="panel">
+<strong>实验状态</strong>
+<p class="muted">Matcha 中文模型、WASM 运行时、音素化资源尚未打包；大陆网络资源地址和 SHA-256 也尚未全部核实。因此本实验页不会假装已经具备 AI 配音能力。</p>
+<div class="small">隐私说明：本页不上传所选音频、不发起模型下载、不访问麦克风。检测结果只显示在本机页面。</div>
+</section>
+<script>
+const checks=document.getElementById('checks');
+function row(name,ok,detail,level){return '<div class="status"><span>'+name+'<br><span class="small">'+detail+'</span></span><span class="pill '+(level|| (ok?'ok':'warn'))+'">'+(ok?'支持':'待确认')+'</span></div>'}
+function detect(){
+ const secure=window.isSecureContext===true;
+ const items=[
+ ['安全上下文（HTTPS）',secure,secure?'可使用受限浏览器能力':'当前页面不是安全上下文'],
+ ['WebAssembly',typeof WebAssembly==='object','浏览器 WASM 运行基础'],
+ ['Web Worker',typeof Worker==='function','可将语音推理放到后台线程'],
+ ['AudioContext',!!(window.AudioContext||window.webkitAudioContext),'可试听和处理生成音频'],
+ ['IndexedDB',!!window.indexedDB,'可用于模型缓存管理'],
+ ['OPFS 持久化',!!(navigator.storage&&navigator.storage.getDirectory),'可选的较大模型文件存储能力'],
+ ['跨源隔离',window.crossOriginIsolated===true,'部分 WASM 线程优化需要；当前不是硬性通过条件'],
+ ['录音 API',!!(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia),'当前实验页不申请麦克风权限']
+ ];
+ checks.innerHTML=items.map(x=>row(x[0],x[1],x[2],x[0]==='安全上下文（HTTPS）'&&!x[1]?'bad':undefined)).join('');
+}
+document.getElementById('run').addEventListener('click',detect);
+detect();
+let currentUrl='';
+document.getElementById('audioFile').addEventListener('change',e=>{
+ const file=e.target.files&&e.target.files[0];const player=document.getElementById('player');const info=document.getElementById('audioInfo');
+ if(currentUrl)URL.revokeObjectURL(currentUrl);currentUrl='';
+ if(!file){player.hidden=true;info.textContent='';return}
+ if(file.size>40*1024*1024){player.hidden=true;info.textContent='文件超过 40MB，本轮测试不加载。';return}
+ currentUrl=URL.createObjectURL(file);player.src=currentUrl;player.hidden=false;
+ info.textContent='已在本机选择：'+file.name+'（'+(file.size/1024/1024).toFixed(2)+' MB）。文件未上传。';
+});
+window.addEventListener('pagehide',()=>{if(currentUrl)URL.revokeObjectURL(currentUrl)});
+</script>
+</body></html>
