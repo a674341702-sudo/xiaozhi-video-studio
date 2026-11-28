@@ -226,3 +226,30 @@ MOSS-TTS-Nano 暂不进入商家主流程；它的参考音频/声音克隆能�
 新增 `scripts/test-tts-wav-audio.mjs`，覆盖 RIFF/WAVE 头、单声道、采样率、16-bit PCM、样本边界、无效输入、静音拒绝和 File 命名；已加入构建回归测试。
 
 **边界：** 这是已经测试的格式适配器，不是已完成的 TTS Worker 集成。尚未把实验模型结果自动注入商家工作台的 `pendingVoiceFile`，因为实验 WASM 尚未在真实运行环境生成并验证中文音频；等模型端到端测试通过后再接线，避免把未验证模型接入现有 MP4 导出流程。
+
+
+## 2026-11-29：新增官方 Android 中文 TTS 实机验证入口
+
+本轮重新核对 sherpa-onnx 官方仓库 README 与中文用户 APK 清单，发现此前的验证计划遗漏了一条更直接的手机实测路线：
+
+- 官方项目 README 明确列出 Android 预构建 TTS APK，并提供中国用户入口。
+- 官方中文用户 TTS Engine 清单列出了 Matcha 中文 Baker 与 Matcha 中英双语模型的 APK，包含 arm64-v8a 和 armeabi-v7a 架构。
+- 官方说明 sherpa-onnx 的 TTS Engine APK 使用本地 TTS 引擎；其代码采用 Apache-2.0，但官方特别提醒：所选模型可能采用不同许可证，必须单独核查模型许可。
+- 官方中国用户入口： https://k2-fsa.github.io/sherpa/onnx/tts/apk-engine-cn.html
+- 官方普通 APK 入口： https://k2-fsa.github.io/sherpa/onnx/tts/apk-cn.html
+- 上游仓库： https://github.com/k2-fsa/sherpa-onnx
+
+### 对小智视频的工程决策
+
+1. 将官方 Android Matcha 中文 APK 作为**音质与设备性能基准工具**，优先在真实 Android 手机上试听普通话、测生成速度和稳定性。它不是小智视频的内嵌功能，也不能替代浏览器 WASM 集成。
+2. 不要求商家安装第三方 APK；APK 仅用于研发验证，最终目标仍是小智视频网页内一键生成配音。
+3. 若手机实测音质与性能合格，再继续把相同模型/引擎路线整合进现有 WASM Worker，并通过现有 `src/tts/wav-audio.js` 接入配音轨。
+4. APK 清单提供中国用户镜像入口是积极线索，但不能据此推断 GitHub Pages 上的模型下载、浏览器 WASM 资源或所有模型文件在中国大陆均稳定可用；仍需逐个核对文件来源、哈希、许可，并用中国大陆普通网络实测。
+5. 不把 APK 或模型二进制直接提交到 Git 仓库，不引入付费托管，不修改生产 Pages 入口。
+
+### 当前状态
+
+- 已确认官方中文 APK 清单存在 Matcha 中文 Baker 与中英双语版本。
+- 尚未在用户手机上安装/试听；没有音质、耗时、内存或大陆网络实测结果。
+- 尚未改变现有 WASM 构建工作流，也未把 TTS 接入商家工作台。
+- 当前方案仍为实验阶段，录音上传继续作为可靠回退路径。
