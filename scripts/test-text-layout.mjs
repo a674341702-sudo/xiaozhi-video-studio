@@ -1,10 +1,14 @@
 import assert from 'node:assert/strict';
-import { getSubtitlePositionLayout, getSubtitleSafeLayout, hasRenderableText, wrapTextLines } from '../src/text-layout.js';
+import { getSubtitlePositionLayout, getSubtitleSafeLayout, getTextClipLineLimit, hasRenderableText, wrapTextLines } from '../src/text-layout.js';
 
 const ctx = { measureText: value => ({ width: Array.from(value).length * 10 }) };
 assert.equal(hasRenderableText('门店招牌'), true);
 assert.equal(hasRenderableText('  \n  '), false, 'whitespace-only text should not create an empty subtitle clip');
 assert.equal(hasRenderableText(null), false);
+assert.equal(getTextClipLineLimit(346, 37, 2), 2, 'generated subtitles can be capped at two lines');
+assert.equal(getTextClipLineLimit(346, 37, null), 7, 'ordinary text clips keep their height-based line capacity');
+assert.equal(getTextClipLineLimit(60, 37, 2), 1, 'the physical clip height always takes precedence over the configured cap');
+assert.equal(getTextClipLineLimit(346, 37, 0), 7, 'invalid caps fall back to the height-based capacity');
 assert.deepEqual(wrapTextLines(ctx, '昆明特色美食探店体验', 50, 3), ['昆明特色美', '食探店体验']);
 assert.deepEqual(wrapTextLines(ctx, '第一行\n第二行', 100, 3), ['第一行', '第二行']);
 assert.deepEqual(wrapTextLines(ctx, '这是一段非常非常长的中文宣传文案', 50, 2), ['这是一段非', '常非常长…']);

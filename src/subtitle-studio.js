@@ -291,6 +291,7 @@ export function initSubtitleStudio({ composition, onCompositionChanged }) {
         fontSize: Math.max(30, Math.round(composition.width * 0.034)),
         fontFamily: 'Noto Sans CJK SC',
         fontWeight: 'bold',
+        maxLines: 2,
         color: $('xzs-style').value === 'yellow' ? '#ffe66d' : '#ffffff',
         bgColor: $('xzs-style').value === 'clean' ? 'transparent' : '#202020',
         textAlign: 'center'

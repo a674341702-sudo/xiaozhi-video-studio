@@ -5,7 +5,7 @@
  */
 import { clamp } from './utils.js';
 import { applyClipTransformsAtTime } from './keyframes.js';
-import { hasRenderableText, wrapTextLines } from './text-layout.js';
+import { getTextClipLineLimit, hasRenderableText, wrapTextLines } from './text-layout.js';
 import { getMediaDrawGeometry } from './media-fit.js';
 
 export class CanvasPreview {
@@ -293,7 +293,7 @@ export class CanvasPreview {
     const maxTextWidth = Math.max(1, clip.width - horizontalPadding * 2);
     const lineHeight = fontSize * 1.2;
     const verticalPadding = Math.max(4, Math.round(fontSize * 0.18));
-    const maxLines = Math.max(1, Math.floor((clip.height - verticalPadding * 2) / lineHeight));
+    const maxLines = getTextClipLineLimit(clip.height, fontSize, clip.maxLines);
     const lines = wrapTextLines(ctx, clip.text, maxTextWidth, maxLines);
     const totalHeight = lines.length * lineHeight;
     const startY = clip.y + clip.height / 2 - totalHeight / 2 + lineHeight / 2;
