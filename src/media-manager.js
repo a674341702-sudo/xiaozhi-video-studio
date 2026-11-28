@@ -181,6 +181,12 @@ export class MediaManager {
     const dur = getPreciseMediaDuration(video.duration);
     const vW = video.videoWidth || 1920;
     const vH = video.videoHeight || 1080;
+    const videoDimensions = validateImageDimensions(vW, vH);
+    if (!videoDimensions.valid) {
+      cleanupFailedMediaElement(video, objectUrl, 'video');
+      showToast('视频分辨率过高（' + vW + ' × ' + vH + '）。当前版本单个视频最多支持约 ' + Math.round(MAX_IMAGE_PIXELS / 1_000_000) + ' 百万像素，请先转换为较低分辨率后重新上传。', 'error');
+      return null;
+    }
 
     let targetW = this.comp.width;
     let targetH = Math.round(targetW * (vH / vW));
